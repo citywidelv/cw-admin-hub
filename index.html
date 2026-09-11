@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>CW Admin Hub | Business Operations Management</title>
-<!-- build 2026-09-11 (renamed Admin Hub, Vendor of the Month card). 2026-09-05b (Team Emails quick link; gate via cw-auth.js in admin-shared.js). 2026-09-05a (COI request card + quick link). The Business Operations Manager's front door, a sibling of the
+<!-- build 2026-09-11b: retired the vendor packet, walkthrough email and Exhibit A request Asana forms; the Ops Hub does all three itself now (vendor-invite.html, postings.html, create-exhibit-a.html). 2026-09-11 (renamed Admin Hub, Vendor of the Month card). 2026-09-05b (Team Emails quick link; gate via cw-auth.js in admin-shared.js). 2026-09-05a (COI request card + quick link). The Business Operations Manager's front door, a sibling of the
 Ops Hub (cw-ops-desk) on the Nevada Team Portal. Passcode gate checked server-side
 (kind vd_bom_auth in VendorDirectory.gs; the Ops Hub team passcode also unlocks it).
 Background check roster and Asana boards are read live; nothing on this page is
@@ -145,13 +145,13 @@ hardcoded data except the menu tree and the Asana project registry in admin-shar
 <ul>
 <li><span>Background Checks</span> &nbsp;record, request, notify</li>
 <li><span>COI Requests</span> &nbsp;customer certificates, broker checklist, status</li>
-<li><span>Vendors</span> &nbsp;onboarding boards, packets, Vendor of the Month</li>
+<li><span>Vendors</span> &nbsp;onboarding boards, new vendor invites, Vendor of the Month</li>
 <li><span>Asana Boards</span> &nbsp;every project, live</li>
 <li><span>Team &amp; Admin</span> &nbsp;portal, hubs, ADP, CRM</li>
 </ul>
 </div>
 <div class="card">
-<div class="chead"><span class="bar-accent"></span><h3>Vendor forms</h3></div>
+<div class="chead"><span class="bar-accent"></span><h3>Vendor requests</h3></div>
 <div class="cbody" id="formlinks"></div>
 </div>
 </aside>
@@ -197,16 +197,12 @@ document.getElementById("quickrow").innerHTML = QUICK.map(function(q){
 }).join("");
 
 var FL = [
-  ["Background Check and Name Badge", ADMIN.FORMS.bgcheck],
-  ["Request an Exhibit A", ADMIN.FORMS.exhibitA],
-  ["Request a Walkthrough Email", ADMIN.FORMS.walkthrough],
-  ["Vendor Packet, LV Janitorial", ADMIN.FORMS.packetLvJs],
-  ["Vendor Packet, LV Other Services", ADMIN.FORMS.packetLvOs],
-  ["Vendor Packet, NNV Janitorial", ADMIN.FORMS.packetNnvJs],
-  ["Vendor Packet, NNV Other Services", ADMIN.FORMS.packetNnvOs]
+  ["Background Check and Name Badge", ADMIN.FORMS.bgcheck, "Asana form"],
+  ["Invite a New Vendor", ADMIN.OPS + "vendor-invite.html", "Ops Hub"],
+  ["Create an Exhibit A", ADMIN.OPS + "create-exhibit-a.html", "Ops Hub"]
 ];
 document.getElementById("formlinks").innerHTML = '<div class="bclist">' + FL.map(function(f){
-  return '<div class="row">' + icon("mail", 13) + '<b><a href="' + esc(f[1]) + '" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">' + esc(f[0]) + '</a></b><span class="m">Asana form</span></div>';
+  return '<div class="row">' + icon("mail", 13) + '<b><a href="' + esc(f[1]) + '" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">' + esc(f[0]) + '</a></b><span class="m">' + esc(f[2]) + '</span></div>';
 }).join("") + '</div>';
 
 function loadBc(){

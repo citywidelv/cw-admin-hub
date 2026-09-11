@@ -32,14 +32,12 @@ var ASANA_PROJECTS = [
 function asanaUrl(gid){ return "https://app.asana.com/1/" + ASANA_WS + "/project/" + gid; }
 
 /* Asana forms (form.asana.com allows embedding; app.asana.com does not) */
+/* Sep 11 2026: the vendor packet forms, the walkthrough email form and the
+   Exhibit A request form were retired. The Ops Hub does all three itself now
+   (vendor-invite.html, postings.html, create-exhibit-a.html). The background
+   check form is still live and is also linked from the Vendor Hub. */
 var FORMS = {
-  bgcheck: "https://form.asana.com/?k=FRCnQmbTGjAVPieFt4bnWQ&d=" + ASANA_WS,
-  exhibitA: "https://form.asana.com/?k=Ch8IqpDXjkcNqdqvjV5-oA&d=" + ASANA_WS,
-  walkthrough: "https://form.asana.com/?k=lnuBJNlGrHJNAeW8QWbXzA&d=" + ASANA_WS,
-  packetLvJs: "https://form.asana.com/?k=RdHag7PTO7L2imrLsWCCVQ&d=" + ASANA_WS,
-  packetLvOs: "https://form.asana.com/?k=uX5QbBSefsA-Gq34EmjeJA&d=" + ASANA_WS,
-  packetNnvJs: "https://form.asana.com/?k=fF2mqfxy9BFvXbF-pnLYJA&d=" + ASANA_WS,
-  packetNnvOs: "https://form.asana.com/?k=J4_mbPCYb_6P2MesPMxUPw&d=" + ASANA_WS
+  bgcheck: "https://form.asana.com/?k=FRCnQmbTGjAVPieFt4bnWQ&d=" + ASANA_WS
 };
 
 var ICONS = {
@@ -110,11 +108,11 @@ var MENU = [
       {label:"NNV Onboarding - Other Services ICs", href:asanaUrl("1211502025994512"), tag:"Asana"},
       {label:"NNV IC Transfers", href:asanaUrl("1212873397063867"), tag:"Asana"}
     ]},
-    {sub:"Vendor Packets", items:[
-      {label:"Request a Packet (LV Janitorial)", href:FORMS.packetLvJs, tag:"Form"},
-      {label:"Request a Packet (LV Other Services)", href:FORMS.packetLvOs, tag:"Form"},
-      {label:"Request a Packet (NNV Janitorial)", href:FORMS.packetNnvJs, tag:"Form"},
-      {label:"Request a Packet (NNV Other Services)", href:FORMS.packetNnvOs, tag:"Form"}
+    {sub:"New Vendors", items:[
+      {label:"Invite for Las Vegas", href:OPS + "vendor-invite.html?region=lv", tag:"Ops Hub"},
+      {label:"Invite for Northern Nevada", href:OPS + "vendor-invite.html?region=nnv", tag:"Ops Hub"},
+      {label:"New Vendor Steps (Vendor Hub)", href:VS + "new-vendors.html", tag:"Vendor Hub"},
+      {label:"Background Check and Name Badge", href:FORMS.bgcheck, tag:"Form"}
     ]},
     {sub:"Vendor of the Month", items:[
       {label:"Add a Vendor of the Month", href:"recognition.html#add", tag:"Hub"},
@@ -132,8 +130,7 @@ var MENU = [
     {label:"Business Ops team in Asana", href:ASANA_TEAM_URL, tag:"Asana"},
     {ghead:"Requests"},
     {label:"Exhibit A Requests", href:asanaUrl("1211502025570262"), tag:"Asana"},
-    {label:"Request an Exhibit A (form)", href:FORMS.exhibitA, tag:"Form"},
-    {label:"Request a Walkthrough Email (form)", href:FORMS.walkthrough, tag:"Form"},
+    {label:"Create an Exhibit A", href:OPS + "create-exhibit-a.html", tag:"Ops Hub"},
     {ghead:"Office"},
     {label:"Office Management board", href:asanaUrl("1211522761691094"), tag:"Asana"}
   ]},
