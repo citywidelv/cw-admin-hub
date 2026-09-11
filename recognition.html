@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Vendor of the Month | CW Admin Hub</title>
+<!-- build 2026-09-11. The only place a Vendor of the Month or G.O.A.T. of the Month plate
+is logged. Reads and writes the "CW Recognition" sheet through Recognition.gs (kinds
+rec_list, rec_save, rec_remove, rec_nom_status; team passcode checked on the server).
+Nominations arrive from the Vendor Hub (public) and the Ops Hub (team); nobody is emailed.
+The vendor picker reads the CW Vendor Directory (vd_list) so a plate carries the vendor_id;
+the G.O.A.T. picker reads the CW Team Directory (staff_list). The wall on the Vendor Hub
+reads rec_wall and shows the moment a plate is saved. -->
+<link rel="stylesheet" href="admin.css">
+<link rel="stylesheet" href="https://citywidelv.github.io/cw-base.css">
+<link rel="icon" href="https://citywidelv.github.io/cw-ops-desk/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="https://citywidelv.github.io/cw-ops-desk/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://citywidelv.github.io/cw-ops-desk/apple-touch-icon.png">
+<style>
+.topbar{position:relative;z-index:5;margin-top:-46px}
+.topbar .qcard{padding:14px 18px 12px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.topbar .qcard .qhead{margin:0}
+.topbar .who{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--grey)}
+.topbar .who input{font-size:11.5px;border:1px solid var(--border);border-radius:6px;padding:5px 8px;width:150px}
+.topbar .sp{flex:1}
+.frm{display:grid;gap:12px}
+.frm label{display:block;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--grey);margin-bottom:5px}
+.frm input,.frm select,.frm textarea{width:100%;font:inherit;font-size:13.5px;border:1.5px solid var(--border);border-radius:9px;padding:10px 12px;background:#fff;color:var(--black)}
+.frm input:focus,.frm select:focus,.frm textarea:focus{outline:none;border-color:var(--red)}
+.frm textarea{min-height:76px;resize:vertical}
+.frm .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.frm .row3{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:10px}
+.frm .hint{font-size:11.5px;color:var(--grey);margin-top:5px}
+.frm .hint b{color:var(--black)}
+.seg{display:inline-flex;border:1.5px solid var(--border);border-radius:9px;overflow:hidden;background:#fff}
+.seg button{border:none;background:none;font:inherit;font-size:12px;font-weight:700;padding:9px 14px;cursor:pointer;color:var(--grey);white-space:nowrap}
+.seg button.on{background:var(--black);color:#fff}
+.seg button:hover:not(.on){background:var(--light);color:var(--black)}
+.linked{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--green)}
+.linked.no{color:var(--grey);font-weight:400}
+.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:4px}
+.nom{border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:#fff}
+.nom.done{opacity:.62}
+.nom .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.nom .top b{font-size:14px}
+.nom .why{font-size:13px;color:var(--black);margin:6px 0 8px;line-height:1.5}
+.nom .meta{font-size:11.5px;color:var(--grey)}
+.nom .acts{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.pill.goat{background:var(--black);color:var(--gold)}
+.pill.vend{background:var(--red-bg);color:var(--red)}
+.pill.new{background:var(--blue-bg);color:var(--blue)}
+.pill.awd{background:var(--green-bg);color:var(--green)}
+.pill.dec{background:var(--light);color:var(--grey);border:1px solid var(--border)}
+.yearblk{margin-bottom:18px}
+.yearblk h4{font-size:13px;display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.yearblk h4 .pill{margin-left:4px}
+.plates{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.plate{display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:9px;padding:9px 12px;background:linear-gradient(180deg,#f7f7f7,#e9e9e9);font-size:12.5px}
+.plate .mo{flex:none;width:34px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--grey)}
+.plate .nm{flex:1;min-width:0;font-weight:700;line-height:1.3}
+.plate .nm small{display:block;font-weight:400;color:var(--grey);font-size:10.5px}
+.plate button{border:none;background:none;color:var(--grey);cursor:pointer;font-size:11px;font-weight:700;padding:4px 6px;border-radius:6px}
+.plate button:hover{background:#fff;color:var(--red)}
+.plate.empty{background:#fff;border-style:dashed;color:#bbb;cursor:pointer}
+.plate.empty:hover{border-color:var(--red);color:var(--red)}
+.loading{color:var(--grey);font-size:12.5px}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:sp .8s linear infinite;vertical-align:middle;margin-right:8px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+@media(max-width:700px){.frm .row,.frm .row3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="gate" class="gate"></div>
+<div id="app" class="hidden">
+<header class="head" id="adminhead"></header>
+
+<section class="hero slim">
+<div class="bg" style="background-image:url('https://citywidelv.github.io/cw-ops-desk/images/fsm-team.jpg')"></div>
+<div class="wrap">
+<div class="htext">
+<div class="kick">Recognition</div>
+<h1>Vendor of the Month and G.O.A.T. of the Month</h1>
+<p>Plates saved here go straight onto the wall on the Vendor Hub. Nominations from the Vendor Hub and the Ops Hub collect on the right; award one and the plate is filled in for you.</p>
+</div>
+</div>
+</section>
+
+<div class="wrap topbar">
+<div class="qcard">
+<div class="qhead"><span class="bar-accent"></span><h2>Recognition desk</h2></div>
+<span class="who">Saving as <input id="who" placeholder="Your name"></span>
+<span class="sp"></span>
+<a class="btn" href="https://citywidelv.github.io/cw-vendor-hub/#recognition" target="_blank" rel="noopener">See the wall</a>
+<a class="btn" id="sheetlink" href="#" target="_blank" rel="noopener">Sheet</a>
+<button class="btn" id="reload" type="button">Refresh</button>
+</div>
+</div>
+
+<div class="wrap section">
+<div class="grid2">
+<div>
+<div class="card" id="add" style="margin-bottom:16px">
+<div class="chead"><span class="bar-accent"></span><h3 id="formTitle">Add a Vendor of the Month</h3><span class="sub" id="formSub"></span></div>
+<div class="cbody">
+<form class="frm" id="frm" autocomplete="off">
+<div>
+<label>Award</label>
+<div class="seg" id="typeSeg"><button type="button" data-t="vendor" class="on">Vendor of the Month</button><button type="button" data-t="goat">G.O.A.T. of the Month</button></div>
+<div class="hint" id="typeHint">A vendor crew that earned the plate. Pick from the vendor directory so the plate links to their record.</div>
+</div>
+<div class="row3">
+<div><label>Region</label><select id="region"><option>Las Vegas</option><option>Northern Nevada</option></select></div>
+<div><label>Month</label><select id="month"></select></div>
+<div><label>Year</label><input id="year" type="number" min="2015" max="2100" step="1"></div>
+</div>
+<div id="vendorField">
+<label>Vendor</label>
+<input id="vendorName" list="vendorList" placeholder="Start typing the vendor name">
+<datalist id="vendorList"></datalist>
+<div class="hint" id="vendorLink"><span class="linked no">Not linked to a directory record yet</span></div>
+</div>
+<div id="staffField" class="hidden">
+<label>Team member</label>
+<select id="staffName"><option value="">Loading the team directory...</option></select>
+<div class="hint">From the CW Team Directory. Missing someone? Add them on the Staff tab first.</div>
+</div>
+<div><label>Why they earned it <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional, shows on the wall)</span></label><textarea id="blurb" maxlength="600" placeholder="One or two sentences. Skip it and the wall shows the name only, like the plaque."></textarea></div>
+<input type="hidden" id="nomId">
+<div class="actions">
+<button class="btn solid" id="save" type="submit">Save the plate</button>
+<button class="btn" id="clear" type="button">Clear</button>
+<span class="hint" id="saveNote"></span>
+</div>
+</form>
+</div>
+</div>
+
+<div class="card">
+<div class="chead"><span class="bar-accent"></span><h3>Plates on the wall</h3><span class="sub" id="plateCount"></span></div>
+<div class="cbody">
+<div class="filters">
+<div class="seg" id="wallRegion"><button type="button" data-r="Las Vegas" class="on">Las Vegas</button><button type="button" data-r="Northern Nevada">Northern Nevada</button></div>
+<div class="seg" id="wallType"><button type="button" data-t="vendor" class="on">Vendor</button><button type="button" data-t="goat">G.O.A.T.</button></div>
+</div>
+<div id="wall"><span class="loading"><span class="spin"></span>Reading the plates...</span></div>
+</div>
+</div>
+</div>
+
+<aside>
+<div class="card">
+<div class="chead"><span class="bar-accent"></span><h3>Nominations</h3><span class="sub" id="nomCount"></span></div>
+<div class="cbody">
+<div class="filters"><label style="font-size:11.5px;color:var(--grey);display:inline-flex;align-items:center;gap:5px"><input type="checkbox" id="showDone"> Show awarded and declined</label></div>
+<div id="noms"><span class="loading"><span class="spin"></span>Reading nominations...</span></div>
+</div>
+</div>
+</aside>
+</div>
+</div>
+</div>
+
+<script src="https://citywidelv.github.io/cw-ops-desk/cw-auth.js"></script>
+<script src="admin-shared.js"></script>
+<script>
+(function(){
+var esc = ADMIN.esc, api = ADMIN.api, toast = ADMIN.toast;
+function $(id){ return document.getElementById(id); }
+var MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+var DATA = { winners:[], nominations:[] }, VENDORS = [], STAFF = [];
+var TYPE = "vendor", WALL = { region:"Las Vegas", type:"vendor" };
+
+/* month select: default to the current month and year */
+var now = new Date();
+$("month").innerHTML = MONTHS.map(function(m, i){ return '<option value="' + (i + 1) + '"' + (i === now.getMonth() ? ' selected' : '') + '>' + m + '</option>'; }).join("");
+$("year").value = now.getFullYear();
+
+function setType(t){
+  TYPE = t;
+  Array.prototype.forEach.call($("typeSeg").querySelectorAll("button"), function(b){ b.classList.toggle("on", b.getAttribute("data-t") === t); });
+  $("vendorField").classList.toggle("hidden", t !== "vendor");
+  $("staffField").classList.toggle("hidden", t !== "goat");
+  $("formTitle").textContent = t === "goat" ? "Add a G.O.A.T. of the Month" : "Add a Vendor of the Month";
+  $("typeHint").textContent = t === "goat" ? "Greatest of All Time. A City Wide team member, picked from the team directory." : "A vendor crew that earned the plate. Pick from the vendor directory so the plate links to their record.";
+}
+$("typeSeg").addEventListener("click", function(e){ var b = e.target.closest("button"); if(b) setType(b.getAttribute("data-t")); });
+
+/* vendor directory picker */
+function vendorMatch(name){
+  var k = String(name || "").trim().toLowerCase();
+  if(!k) return null;
+  return VENDORS.filter(function(v){ return v.dba.toLowerCase() === k || (v.legal && v.legal.toLowerCase() === k); })[0] || null;
+}
+function showLink(){
+  var v = vendorMatch($("vendorName").value);
+  $("vendorLink").innerHTML = v
+    ? '<span class="linked">&#10003; Linked to ' + esc(v.dba) + ' (' + esc(v.id) + ', ' + esc(v.region) + ')</span>'
+    : '<span class="linked no">' + ($("vendorName").value.trim() ? 'No directory match. The plate saves with the name as typed.' : 'Not linked to a directory record yet') + '</span>';
+}
+$("vendorName").addEventListener("input", showLink);
+function loadVendors(){
+  api({ kind:"vd_list" }).then(function(r){
+    if(!r.ok) return;
+    VENDORS = (r.vendors || []).map(function(v){ return { id:v.vendor_id, dba:String(v.dba_name || ""), legal:String(v.legal_name || ""), region:v.region || "" }; })
+      .filter(function(v){ return v.dba; }).sort(function(a, b){ return a.dba.toLowerCase() < b.dba.toLowerCase() ? -1 : 1; });
+    $("vendorList").innerHTML = VENDORS.map(function(v){ return '<option value="' + esc(v.dba) + '">' + esc(v.region) + '</option>'; }).join("");
+    showLink();
+  }).catch(function(){});
+}
+function loadStaff(){
+  api({ kind:"staff_list" }).then(function(r){
+    if(!r.ok) return;
+    STAFF = (r.staff || []).sort(function(a, b){ return a.name < b.name ? -1 : 1; });
+    $("staffName").innerHTML = '<option value="">Pick a team member</option>' + STAFF.map(function(s){ return '<option value="' + esc(s.name) + '">' + esc(s.name) + ' (' + esc(s.role) + ')</option>'; }).join("");
+  }).catch(function(){ $("staffName").innerHTML = '<option value="">Could not load the team directory</option>'; });
+}
+
+/* save */
+$("frm").addEventListener("submit", function(e){
+  e.preventDefault();
+  var name = TYPE === "goat" ? $("staffName").value : $("vendorName").value.trim();
+  if(!name){ toast(TYPE === "goat" ? "Pick a team member." : "Type or pick the vendor.", "err"); return; }
+  var v = TYPE === "vendor" ? vendorMatch(name) : null;
+  var w = { type:TYPE, region:$("region").value, year:Number($("year").value), month:Number($("month").value), name:name,
+            vendor_id: v ? v.id : "", blurb:$("blurb").value.trim(), nomination_id:$("nomId").value };
+  var exists = DATA.winners.filter(function(x){ return x.type === w.type && x.region === w.region && x.year === w.year && x.month === w.month; })[0];
+  if(exists && exists.name !== w.name && !confirm(MONTHS[w.month - 1] + " " + w.year + " (" + w.region + ") already reads " + exists.name + ". Replace it with " + w.name + "?")) return;
+  $("save").disabled = true; $("saveNote").textContent = "Saving...";
+  api({ kind:"rec_save", winner:w, who:ADMIN.who() }).then(function(r){
+    $("save").disabled = false; $("saveNote").textContent = "";
+    if(!r.ok){ toast(r.error || "Could not save.", "err"); return; }
+    toast((r.replaced ? "Plate updated: " : "Plate added: ") + MONTHS[w.month - 1] + " " + w.year + ", " + name, "ok");
+    clearForm(); load();
+  }).catch(function(){ $("save").disabled = false; $("saveNote").textContent = ""; toast("Could not reach the server.", "err"); });
+});
+function clearForm(){
+  $("vendorName").value = ""; $("staffName").value = ""; $("blurb").value = ""; $("nomId").value = ""; $("formSub").textContent = "";
+  showLink();
+}
+$("clear").addEventListener("click", clearForm);
+
+/* nominations */
+function nomPill(s){ return s === "Awarded" ? "awd" : s === "Declined" ? "dec" : "new"; }
+function renderNoms(){
+  var showDone = $("showDone").checked;
+  var list = DATA.nominations.filter(function(n){ return showDone || n.status === "New" || !n.status; });
+  var open = DATA.nominations.filter(function(n){ return n.status === "New" || !n.status; }).length;
+  $("nomCount").textContent = open ? open + " waiting" : "none waiting";
+  if(!list.length){ $("noms").innerHTML = '<div class="loading">No nominations yet. They come in from the Vendor Hub and the Ops Hub.</div>'; return; }
+  $("noms").innerHTML = list.map(function(n){
+    var done = n.status && n.status !== "New";
+    return '<div class="nom' + (done ? ' done' : '') + '">' +
+      '<div class="top"><span class="pill ' + (n.type === "goat" ? 'goat' : 'vend') + '">' + (n.type === "goat" ? 'G.O.A.T.' : 'Vendor') + '</span><b>' + esc(n.nominee) + '</b><span class="pill ' + (n.region === "Northern Nevada" ? 'nnv' : 'lv') + '">' + (n.region === "Northern Nevada" ? 'NNV' : 'LV') + '</span>' + (done ? '<span class="pill ' + nomPill(n.status) + '">' + esc(n.status) + '</span>' : '') + '</div>' +
+      '<div class="why">' + esc(n.reason) + '</div>' +
+      '<div class="meta">From ' + esc(n.nominator_first || "?") + (n.nominator_company ? ' (' + esc(n.nominator_company) + ')' : '') + ' &middot; ' + esc(n.source === "ops-hub" ? "Ops Hub" : "Vendor Hub") + ' &middot; ' + esc((n.received || "").slice(0, 16)) + (done && n.reviewed_by ? ' &middot; ' + esc(n.status.toLowerCase()) + ' by ' + esc(n.reviewed_by) : '') + '</div>' +
+      (done ? '' : '<div class="acts"><button class="btn sm solid" data-act="award" data-id="' + esc(n.id) + '">Award this one</button><button class="btn sm" data-act="decline" data-id="' + esc(n.id) + '">Decline</button></div>') +
+      '</div>';
+  }).join("");
+}
+$("showDone").addEventListener("change", renderNoms);
+$("noms").addEventListener("click", function(e){
+  var b = e.target.closest("button[data-act]"); if(!b) return;
+  var n = DATA.nominations.filter(function(x){ return x.id === b.getAttribute("data-id"); })[0]; if(!n) return;
+  if(b.getAttribute("data-act") === "award"){
+    setType(n.type);
+    $("region").value = n.region === "Northern Nevada" ? "Northern Nevada" : "Las Vegas";
+    if(n.type === "goat"){
+      var hit = STAFF.filter(function(s){ return s.name.toLowerCase() === n.nominee.toLowerCase(); })[0];
+      $("staffName").value = hit ? hit.name : "";
+      if(!hit) toast("Not in the team directory as typed. Pick the right person.", "err");
+    } else { $("vendorName").value = n.nominee; showLink(); }
+    $("nomId").value = n.id; $("formSub").textContent = "from a nomination";
+    $("blurb").value = "";
+    $("add").scrollIntoView({ behavior:"smooth", block:"start" });
+    ($("blurb")).focus();
+    return;
+  }
+  b.disabled = true;
+  api({ kind:"rec_nom_status", id:n.id, status:"Declined", who:ADMIN.who() }).then(function(r){
+    if(!r.ok){ toast(r.error || "Could not update.", "err"); b.disabled = false; return; }
+    toast("Declined. It stays on the sheet.", "ok"); load();
+  }).catch(function(){ b.disabled = false; toast("Could not reach the server.", "err"); });
+});
+
+/* wall */
+function renderWall(){
+  var rows = DATA.winners.filter(function(w){ return w.region === WALL.region && w.type === WALL.type && !w.hidden; });
+  $("plateCount").textContent = rows.length + (rows.length === 1 ? " plate" : " plates");
+  if(!rows.length){
+    $("wall").innerHTML = '<div class="loading">No ' + (WALL.type === "goat" ? "G.O.A.T." : "Vendor of the Month") + ' plates for ' + esc(WALL.region) + ' yet. Save the first one above.</div>';
+    return;
+  }
+  var years = {}; rows.forEach(function(w){ (years[w.year] = years[w.year] || [])[w.month] = w; });
+  var ys = Object.keys(years).sort(function(a, b){ return b - a; });
+  $("wall").innerHTML = ys.map(function(y){
+    var cur = Number(y) === now.getFullYear();
+    var html = '<div class="yearblk"><h4>' + y + (cur ? '<span class="pill grey">this year</span>' : '') + '</h4><div class="plates">';
+    for(var m = 1; m <= 12; m++){
+      var w = years[y][m];
+      if(w) html += '<div class="plate"><span class="mo">' + MONTHS[m - 1].slice(0, 3) + '</span><span class="nm">' + esc(w.name) + (w.vendor_id ? '<small>' + esc(w.vendor_id) + '</small>' : '') + '</span><button type="button" data-edit="' + esc(w.id) + '" title="Edit">Edit</button><button type="button" data-remove="' + esc(w.id) + '" title="Remove">&#10005;</button></div>';
+      else if(cur && m > now.getMonth() + 1) html += '';
+      else html += '<div class="plate empty" data-blank="' + m + '|' + y + '"><span class="mo">' + MONTHS[m - 1].slice(0, 3) + '</span><span class="nm" style="font-weight:400">open, click to fill</span></div>';
+    }
+    return html + '</div></div>';
+  }).join("");
+}
+$("wallRegion").addEventListener("click", function(e){ var b = e.target.closest("button"); if(!b) return; WALL.region = b.getAttribute("data-r"); Array.prototype.forEach.call(this.querySelectorAll("button"), function(x){ x.classList.toggle("on", x === b); }); renderWall(); });
+$("wallType").addEventListener("click", function(e){ var b = e.target.closest("button"); if(!b) return; WALL.type = b.getAttribute("data-t"); Array.prototype.forEach.call(this.querySelectorAll("button"), function(x){ x.classList.toggle("on", x === b); }); renderWall(); });
+$("wall").addEventListener("click", function(e){
+  var t = e.target.closest("[data-remove],[data-edit],[data-blank]"); if(!t) return;
+  if(t.hasAttribute("data-blank")){
+    var p = t.getAttribute("data-blank").split("|");
+    setType(WALL.type); $("region").value = WALL.region; $("month").value = p[0]; $("year").value = p[1];
+    $("add").scrollIntoView({ behavior:"smooth", block:"start" }); (WALL.type === "goat" ? $("staffName") : $("vendorName")).focus();
+    return;
+  }
+  var w = DATA.winners.filter(function(x){ return x.id === (t.getAttribute("data-remove") || t.getAttribute("data-edit")); })[0]; if(!w) return;
+  if(t.hasAttribute("data-edit")){
+    setType(w.type); $("region").value = w.region; $("month").value = w.month; $("year").value = w.year; $("blurb").value = w.blurb || "";
+    if(w.type === "goat") $("staffName").value = w.name; else { $("vendorName").value = w.name; showLink(); }
+    $("formSub").textContent = "editing " + MONTHS[w.month - 1] + " " + w.year;
+    $("add").scrollIntoView({ behavior:"smooth", block:"start" });
+    return;
+  }
+  if(!confirm("Take " + w.name + " off " + MONTHS[w.month - 1] + " " + w.year + "? The row is cleared on the sheet.")) return;
+  api({ kind:"rec_remove", id:w.id }).then(function(r){
+    if(!r.ok){ toast(r.error || "Could not remove.", "err"); return; }
+    toast("Removed.", "ok"); load();
+  }).catch(function(){ toast("Could not reach the server.", "err"); });
+});
+
+function load(){
+  api({ kind:"rec_list" }).then(function(r){
+    if(!r.ok){
+      var msg = /rec_setup/.test(r.error || "") ? "The recognition sheet has not been created yet. Ask TJ to run the setup once." : (r.error || "Could not load.");
+      $("wall").innerHTML = $("noms").innerHTML = '<span class="loading">' + esc(msg) + '</span>'; return;
+    }
+    DATA = r; if(r.url) $("sheetlink").href = r.url;
+    renderWall(); renderNoms();
+  }).catch(function(){ $("wall").innerHTML = $("noms").innerHTML = '<span class="loading">Could not reach the server.</span>'; });
+}
+$("reload").addEventListener("click", load);
+
+ADMIN.init({ page:"vendors", onReady:function(){
+  $("who").value = ADMIN.who();
+  $("who").addEventListener("change", function(){ ADMIN.setWho($("who").value.trim()); });
+  if(location.hash === "#add") setTimeout(function(){ $("add").scrollIntoView({ block:"start" }); $("vendorName").focus(); }, 50);
+  load(); loadVendors(); loadStaff();
+} });
+})();
+</script>
+</body>
+</html>
