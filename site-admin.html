@@ -430,6 +430,7 @@ function renderTree(){
     if(mode === "vendor" || mode === "cards" || (mode === "dd" && !top.items)) th += '<input class="href" data-f="href" value="' + esc(top.href || "") + '" placeholder="' + (top.items ? "link when clicked (optional)" : "link") + '">';
     if(mode === "vendor" && !top.items) th += '<label class="hidechk"><input type="checkbox" data-f="cta"' + (top.cta ? " checked" : "") + '> button style</label>';
     if(mode === "cards" || mode === "panel") th += '<input class="href" data-f="note" value="' + esc(top.note || "") + '" placeholder="note line under the heading">';
+    if(mode === "cards") th += '<select class="sm2" data-f="style"><option value=""' + (!top.style ? " selected" : "") + '>sidecard</option><option value="dbis"' + (top.style === "dbis" ? " selected" : "") + '>sidecard, red top</option><option value="strip"' + (top.style === "strip" ? " selected" : "") + '>long narrow box (link only)</option></select>';
     th += '<label class="hidechk"><input type="checkbox" data-f="hidden"' + (top.hidden ? " checked" : "") + '> hidden</label>' +
       '<span style="flex:1"></span>' +
       '<button class="mini" data-act="up" title="Move left">&#9650;</button><button class="mini" data-act="down" title="Move right">&#9660;</button>' +
@@ -438,7 +439,7 @@ function renderTree(){
     d.innerHTML = th + '<div class="tb"></div>';
     var tb = d.querySelector(".tb");
     if(top.items){ renderList(tb, top.items, 0, [ti]); }
-    else tb.innerHTML = '<div class="help">A plain link in the top bar. "make a dropdown" turns it into a menu with links under it.</div>';
+    else tb.innerHTML = '<div class="help">' + (mode === "cards" ? 'A long narrow box with one link. Set the style back to sidecard and "make a dropdown" to give it links.' : 'A plain link in the top bar. "make a dropdown" turns it into a menu with links under it.') + '</div>';
     d.querySelector(".th").addEventListener("input", function(e){ var f = e.target.getAttribute("data-f"); if(!f) return; if(e.target.type === "checkbox") top[f] = e.target.checked; else top[f] = e.target.value; if(f === "hidden") d.classList.toggle("hid", !!top.hidden); setDirty(true); if(f === "label" || f === "hidden") preview(); });
     d.querySelector(".th").addEventListener("click", function(e){
       var b = e.target.closest("button[data-act]"); if(!b) return;
@@ -578,7 +579,7 @@ function preview(){
     var t0 = tops[0] || { items:[] };
     html = '<div class="pv-sales"><b>' + esc(t0.label || "Sales Tools") + ' &#9660;</b> one dropdown with ' + (t0.items || []).filter(function(i){ return i.href && !i.hidden; }).length + ' links in ' + (t0.items || []).filter(function(i){ return i.ghead !== undefined && !i.hidden; }).length + ' groups. It never wraps.</div>';
   } else {
-    html = '<div class="pv-portal">' + tops.map(function(t){ return '<b>' + esc(t.label) + '</b> (' + (t.items || []).filter(function(i){ return i.href && !i.hidden; }).length + ' links)'; }).join(" &nbsp;|&nbsp; ") + ' as sidecards. They stack; nothing wraps.</div>';
+    html = '<div class="pv-portal">' + tops.map(function(t){ return '<b>' + esc(t.label) + '</b> ' + (t.style === "strip" ? '(long narrow box)' : '(' + (t.items || []).filter(function(i){ return i.href && !i.hidden; }).length + ' links)'); }).join(" &nbsp;|&nbsp; ") + '. Sidecards stack; nothing wraps.</div>';
   }
   f.innerHTML = html;
   var v = wrapCheck();
