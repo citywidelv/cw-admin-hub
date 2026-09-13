@@ -639,10 +639,10 @@ function renderRows(){
   var t = $("edtbl"), cols = ROWS.cols;
   var html = '<tr>' + cols.map(function(c){ return '<th>' + esc(c.name) + '</th>'; }).join("") + '<th></th></tr>';
   ROWS.rows.forEach(function(row){
-    var lockedRow = ROWS.mode === "kv" && ROWS.locked.indexOf(row.key) >= 0;
+    var lockedRow = ROWS.mode === "kv" && ROWS.locked.indexOf(row[ROWS.kcol || "key"]) >= 0;
     html += '<tr data-row="' + row._row + '"' + (lockedRow ? ' class="locked"' : '') + '>';
     cols.forEach(function(c){
-      if(lockedRow) html += '<td>' + esc(row[c.name]) + (c.name === "value" ? ' <span class="lock">safety switch, see Safety Switches</span>' : '') + '</td>';
+      if(lockedRow) html += '<td>' + esc(row[c.name]) + (c.name === (ROWS.vcol || "value") ? ' <span class="lock">safety switch, see Safety Switches</span>' : '') + '</td>';
       else html += '<td>' + inputFor(c, row[c.name] || "", row._row, false) + '</td>';
     });
     html += '<td class="acts">' + (lockedRow ? '' : '<button class="btn sm" data-act="save">Save</button>' + (SURF.positional ? '' : '<button class="btn sm" data-act="clear" title="Clears the row; it stays in place empty">Clear</button>')) + '</td></tr>';
