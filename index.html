@@ -11,7 +11,6 @@ Ops Hub (cw-ops-desk) on the Nevada Team Portal. Passcode gate checked server-si
 Background check roster and Asana boards are read live; nothing on this page is
 hardcoded data except the menu tree and the Asana project registry in admin-shared.js. -->
 <link rel="stylesheet" href="admin.css">
-<link rel="stylesheet" href="https://citywidelv.github.io/cw-base.css">
 <link rel="icon" href="https://citywidelv.github.io/cw-ops-desk/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="https://citywidelv.github.io/cw-ops-desk/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="https://citywidelv.github.io/cw-ops-desk/favicon-16x16.png">
@@ -61,6 +60,7 @@ hardcoded data except the menu tree and the Asana project registry in admin-shar
 .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:sp .8s linear infinite;vertical-align:middle;margin-right:8px}
 @keyframes sp{to{transform:rotate(360deg)}}
 </style>
+<link rel="stylesheet" href="https://citywidelv.github.io/cw-base.css">
 </head>
 <body>
 <div id="gate" class="gate"></div>
@@ -173,6 +173,8 @@ hardcoded data except the menu tree and the Asana project registry in admin-shar
 </div>
 
 <script src="https://citywidelv.github.io/cw-ops-desk/cw-auth.js"></script>
+<script src="nav.js"></script>
+<script src="https://citywidelv.github.io/cw-ops-desk/cw-nav.js"></script>
 <script src="admin-shared.js"></script>
 <script>
 (function(){

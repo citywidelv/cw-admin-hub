@@ -12,7 +12,6 @@ loads each tab in chunks (vd_act_seed, mode replace on the first chunk of every 
 running it twice replaces rather than duplicates). Team passcode only. The seed file is
 not in any repo; it lives in TJ's Key Reports folder. -->
 <link rel="stylesheet" href="admin.css">
-<link rel="stylesheet" href="https://citywidelv.github.io/cw-base.css">
 <style>
 .drop{border:2px dashed var(--border);border-radius:12px;padding:30px;text-align:center;color:var(--grey);font-size:13px;background:#fff;cursor:pointer}
 .drop.on{border-color:var(--red);background:#FFF6F6}
@@ -25,6 +24,7 @@ not in any repo; it lives in TJ's Key Reports folder. -->
 .bar div{height:100%;background:var(--red);width:0;transition:width .2s}
 .warn{background:var(--gold-bg);border:1px solid #F3DFA0;border-radius:8px;padding:10px 14px;font-size:12.5px;margin:12px 0}
 </style>
+<link rel="stylesheet" href="https://citywidelv.github.io/cw-base.css">
 </head>
 <body>
 <div id="gate" class="gate"></div>
@@ -47,6 +47,8 @@ not in any repo; it lives in TJ's Key Reports folder. -->
 </div>
 </div>
 <script src="https://citywidelv.github.io/cw-ops-desk/cw-auth.js"></script>
+<script src="nav.js"></script>
+<script src="https://citywidelv.github.io/cw-ops-desk/cw-nav.js"></script>
 <script src="admin-shared.js"></script>
 <script>
 var SEED = null;

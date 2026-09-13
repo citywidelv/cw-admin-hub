@@ -12,7 +12,6 @@ CoiRequest.gs (kinds vd_coi_rows, vd_coi_status). Status moves Requested -> Sent
 certificate link, and the history live on the row. New requests come from the Ops Hub
 page coi-request.html. Nothing on this page deletes anything. -->
 <link rel="stylesheet" href="admin.css">
-<link rel="stylesheet" href="https://citywidelv.github.io/cw-base.css">
 <link rel="icon" href="https://citywidelv.github.io/cw-ops-desk/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="https://citywidelv.github.io/cw-ops-desk/favicon-32x32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="https://citywidelv.github.io/cw-ops-desk/apple-touch-icon.png">
@@ -81,6 +80,7 @@ page coi-request.html. Nothing on this page deletes anything. -->
 .legend{font-size:11.5px;color:var(--grey);padding:12px 18px;border-top:1px solid var(--border);line-height:1.9}
 .empty{padding:28px 18px;color:var(--grey);font-size:13px;text-align:center}
 </style>
+<link rel="stylesheet" href="https://citywidelv.github.io/cw-base.css">
 </head>
 <body>
 <div id="gate" class="gate"></div>
@@ -140,6 +140,8 @@ page coi-request.html. Nothing on this page deletes anything. -->
 </div>
 
 <script src="https://citywidelv.github.io/cw-ops-desk/cw-auth.js"></script>
+<script src="nav.js"></script>
+<script src="https://citywidelv.github.io/cw-ops-desk/cw-nav.js"></script>
 <script src="admin-shared.js"></script>
 <script>
 var ROWS = [], STATUSES = ["Requested", "Sent to broker", "Received", "Delivered to customer"];

@@ -13,7 +13,6 @@ The vendor picker reads the CW Vendor Directory (vd_list) so a plate carries the
 the G.O.A.T. picker reads the CW Team Directory (staff_list). The wall on the Vendor Hub
 reads rec_wall and shows the moment a plate is saved. -->
 <link rel="stylesheet" href="admin.css">
-<link rel="stylesheet" href="https://citywidelv.github.io/cw-base.css">
 <link rel="icon" href="https://citywidelv.github.io/cw-ops-desk/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="https://citywidelv.github.io/cw-ops-desk/favicon-32x32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="https://citywidelv.github.io/cw-ops-desk/apple-touch-icon.png">
@@ -70,6 +69,7 @@ reads rec_wall and shows the moment a plate is saved. -->
 .filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
 @media(max-width:700px){.frm .row,.frm .row3{grid-template-columns:1fr}}
 </style>
+<link rel="stylesheet" href="https://citywidelv.github.io/cw-base.css">
 </head>
 <body>
 <div id="gate" class="gate"></div>
@@ -163,6 +163,8 @@ reads rec_wall and shows the moment a plate is saved. -->
 </div>
 
 <script src="https://citywidelv.github.io/cw-ops-desk/cw-auth.js"></script>
+<script src="nav.js"></script>
+<script src="https://citywidelv.github.io/cw-ops-desk/cw-nav.js"></script>
 <script src="admin-shared.js"></script>
 <script>
 (function(){

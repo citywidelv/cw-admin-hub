@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Site Admin | CW Admin Hub</title>
+<!-- build 2026-09-13. The Site Admin hub: edit the hub menus, the Sheet tabs behind the
+forms, and the three live email switches without opening Google Sheets or editing HTML.
+Backend is SiteAdmin.gs on the CW Solicitations script (kinds sa_*). Two gates: the Admin
+Hub gate (ADMIN.init, team or Admin passcode) and then the Site Admin passcode, which only
+the sa_ kinds accept (script property SA_PASSCODE). Every change is logged to the Site
+Admin Log tab with its previous value; the Change Log tab here undoes them.
+Menus are drafts on the Site Nav tab until Publish commits nav.js to the hub's repo. -->
+<link rel="stylesheet" href="admin.css">
+<link rel="icon" href="https://citywidelv.github.io/cw-ops-desk/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="https://citywidelv.github.io/cw-ops-desk/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://citywidelv.github.io/cw-ops-desk/apple-touch-icon.png">
+<style>
+.topbar{position:relative;z-index:5;margin-top:-46px}
+.topbar .qcard{padding:12px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.topbar .who{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--grey)}
+.topbar .who input{font-size:11.5px;border:1px solid var(--border);border-radius:6px;padding:5px 8px;width:150px}
+.topbar .sp{flex:1}
+.tabs{display:inline-flex;flex-wrap:wrap;border:1.5px solid var(--border);border-radius:9px;overflow:hidden;background:#fff}
+.tabs button{border:none;background:none;font:inherit;font-size:12px;font-weight:700;padding:9px 14px;cursor:pointer;color:var(--grey);white-space:nowrap}
+.tabs button.on{background:var(--black);color:#fff}
+.tabs button:hover:not(.on){background:var(--light);color:var(--black)}
+.pane{display:none}.pane.on{display:block}
+.sagate{max-width:460px;margin:26px auto}
+.sagate input{width:100%;font:inherit;font-size:14px;border:1.5px solid var(--border);border-radius:9px;padding:10px 12px;margin:10px 0}
+.sagate .err{color:var(--red);font-size:12.5px;min-height:18px}
+.help{font-size:12.5px;color:var(--grey);line-height:1.5}
+.help b{color:var(--black)}
+.side{display:grid;grid-template-columns:250px minmax(0,1fr);gap:16px;align-items:start}
+.side>*{min-width:0}
+.slist{background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.slist .g{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);padding:11px 14px 4px;border-top:1px solid var(--border)}
+.slist .g:first-child{border-top:none}
+.slist button{display:block;width:100%;text-align:left;border:none;background:none;font:inherit;font-size:13px;font-weight:700;padding:9px 14px;cursor:pointer;color:var(--black)}
+.slist button:hover{background:var(--light);color:var(--red)}
+.slist button.on{background:var(--red);color:#fff}
+.tblwrap{overflow-x:auto}
+table.ed{width:100%;border-collapse:collapse;font-size:12.5px}
+table.ed th{text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--grey);padding:8px 8px;border-bottom:2px solid var(--border);white-space:nowrap}
+table.ed td{padding:5px 6px;border-bottom:1px solid var(--light);vertical-align:top}
+table.ed tr.dirty td{background:#fff8e6}
+table.ed tr.locked td{opacity:.6}
+table.ed input[type=text],table.ed input[type=email],table.ed input[type=number],table.ed select,table.ed textarea{width:100%;min-width:110px;font:inherit;font-size:12.5px;border:1px solid var(--border);border-radius:6px;padding:6px 8px;background:#fff}
+table.ed textarea{min-height:34px;min-width:220px;resize:vertical}
+table.ed input.key{font-weight:700;background:var(--light)}
+table.ed td.acts{white-space:nowrap}
+table.ed td.acts .btn{margin-right:4px}
+table.ed tr.addrow td{background:#f4fbf6;border-top:2px solid var(--border)}
+.lock{font-size:11px;color:var(--grey)}
+.note{font-size:12px;color:var(--grey);margin-top:8px}
+.sw{border:1px solid var(--border);border-radius:12px;padding:14px 16px;background:#fff;margin-bottom:12px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center}
+.sw h4{font-size:14px;margin-bottom:4px}
+.sw .st{font-size:12.5px;color:var(--grey)}
+.sw .val{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:6px 12px;border-radius:8px}
+.sw .val.on{background:var(--red);color:#fff}
+.sw .val.off{background:var(--light);color:var(--black);border:1px solid var(--border)}
+.confirm{grid-column:1/-1;border-top:1px solid var(--border);padding-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.confirm input{font:inherit;font-size:13px;border:1.5px solid var(--red);border-radius:8px;padding:8px 10px;width:220px}
+/* nav editor */
+.navtop{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.navtop .stat{font-size:12px;color:var(--grey)}
+.tree{display:grid;gap:10px}
+.top{border:1px solid var(--border);border-radius:12px;background:#fff}
+.top.hid{opacity:.55}
+.top .th{display:flex;gap:8px;align-items:center;padding:10px 12px;background:var(--light);border-radius:12px 12px 0 0;flex-wrap:wrap}
+.top .th input{font:inherit;font-size:13px;font-weight:700;border:1px solid var(--border);border-radius:6px;padding:6px 8px}
+.top .th .lab{min-width:180px;flex:1}
+.top .th .sm2{width:120px;font-weight:400}
+.top .th .href{width:220px;font-weight:400}
+.top .tb{padding:8px 12px 10px}
+.top.closed .tb{display:none}
+.it{display:flex;gap:6px;align-items:center;padding:4px 0;flex-wrap:wrap}
+.it.hid{opacity:.5}
+.it.drop{border-top:2px solid var(--red)}
+.it .grip{cursor:grab;color:#bbb;font-size:16px;padding:0 4px;user-select:none}
+.it .kind{font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-radius:6px;padding:2px 6px;background:var(--light);color:var(--grey);white-space:nowrap;min-width:52px;text-align:center}
+.it .kind.gh{background:#e8e6e2;color:var(--black)}
+.it .kind.sub{background:var(--black);color:#fff}
+.it input{font:inherit;font-size:12.5px;border:1px solid var(--border);border-radius:6px;padding:5px 7px}
+.it .lab{flex:1;min-width:160px}
+.it .href{flex:1.4;min-width:200px;color:#444}
+.it .tag{width:80px}
+.it select.mini{max-width:150px}
+.it .mini{border:1px solid var(--border);background:#fff;border-radius:6px;font:inherit;font-size:11px;padding:4px 7px;cursor:pointer;color:var(--grey)}
+.it .mini:hover{color:var(--red);border-color:var(--red)}
+.it label.hidechk{font-size:11px;color:var(--grey);display:inline-flex;gap:3px;align-items:center}
+.sublist{margin-left:34px;padding-left:10px;border-left:2px solid var(--border)}
+.addbar{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.addbar button{border:1px dashed var(--border);background:#fff;border-radius:6px;font:inherit;font-size:11.5px;padding:5px 9px;cursor:pointer;color:var(--grey)}
+.addbar button:hover{color:var(--red);border-color:var(--red)}
+.preview{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:#fff}
+.preview .ph{display:flex;gap:10px;align-items:center;padding:8px 12px;font-size:11.5px;color:var(--grey);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.preview .pv{overflow-x:auto;padding:10px}
+.preview .frame{border:1px solid var(--border)}
+.warn{display:inline-block;font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:7px;background:var(--amber-bg);color:var(--amber)}
+.ok{display:inline-block;font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:7px;background:var(--green-bg);color:var(--green)}
+/* preview replicas of each hub's top bar */
+.pv-ops{background:#2D2A26;border-bottom:3px solid #D22730;display:flex;flex-wrap:wrap;gap:2px;padding:0 12px}
+.pv-ops span{color:#fff;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:14px 12px;white-space:nowrap}
+.pv-vendor{display:flex;gap:4px;align-items:center;padding:12px 16px;border-bottom:1px solid #ddd;flex-wrap:wrap}
+.pv-vendor img{height:34px;margin-right:auto}
+.pv-vendor span{font-size:12.5px;font-weight:700;color:#2D2A26;padding:8px 10px;white-space:nowrap}
+.pv-vendor span.cta{background:#D22730;color:#fff;border-radius:6px;padding:9px 16px}
+.pv-sales,.pv-portal{padding:10px 14px;font-size:12.5px;color:var(--grey)}
+.pv-sales b,.pv-portal b{color:var(--black)}
+/* log */
+table.log{width:100%;border-collapse:collapse;font-size:12px}
+table.log th{text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--grey);padding:8px;border-bottom:2px solid var(--border)}
+table.log td{padding:7px 8px;border-bottom:1px solid var(--light);vertical-align:top;max-width:280px;overflow-wrap:anywhere}
+table.log td.v{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:#444}
+.jsonbox{width:100%;min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;border:1px solid var(--border);border-radius:9px;padding:10px}
+@media(max-width:820px){.side{grid-template-columns:1fr}.sw{grid-template-columns:1fr}}
+</style>
+<link rel="stylesheet" href="https://citywidelv.github.io/cw-base.css">
+</head>
+<body>
+<div id="gate" class="gate"></div>
+<div id="app" class="hidden">
+<header class="head" id="adminhead"></header>
+
+<section class="hero slim">
+<div class="bg" style="background-image:url('https://citywidelv.github.io/cw-ops-desk/images/fsm-team.jpg')"></div>
+<div class="wrap">
+<div class="htext">
+<div class="kick">Site Admin</div>
+<h1>Menus, lists and switches for every hub</h1>
+<p>Change what the hubs link to, edit the lists behind the forms, and flip the live email switches. Everything is logged with its previous value and can be undone from the Change Log.</p>
+</div>
+</div>
+</section>
+
+<div class="wrap topbar">
+<div class="qcard">
+<div class="tabs" id="tabs">
+<button data-t="menus" class="on">Menus</button>
+<button data-t="lists">Forms &amp; Lists</button>
+<button data-t="switches">Safety Switches</button>
+<button data-t="log">Change Log</button>
+</div>
+<span class="who">Editing as <input id="who" placeholder="Your name"></span>
+<span class="sp"></span>
+<button class="btn sm" id="salock" type="button">Lock Site Admin</button>
+</div>
+</div>
+
+<main class="wrap" style="padding-top:18px">
+
+<div class="card sagate" id="sagate">
+<div class="cbody">
+<h3>Site Admin passcode</h3>
+<p class="help" style="margin-top:6px">This is a separate passcode from the team and Admin Hub passcodes, because this page can change what every hub links to. Ask TJ.</p>
+<input type="password" id="sapc" placeholder="Site Admin passcode" autocomplete="off">
+<div class="err" id="saerr"></div>
+<button class="btn solid" id="saenter" type="button">Unlock</button>
+</div>
+</div>
+
+<div id="work" class="hidden">
+
+<!-- ================= MENUS ================= -->
+<div class="pane on" id="pane-menus">
+<div class="navtop">
+<div class="tabs" id="hubpick">
+<button data-h="ops" class="on">Ops Hub</button>
+<button data-h="admin">Admin Hub</button>
+<button data-h="sales">Sales Hub</button>
+<button data-h="portal">Team Portal</button>
+<button data-h="vendor">Vendor Hub</button>
+</div>
+<span class="stat" id="navstat"></span>
+<span class="sp" style="flex:1"></span>
+<button class="btn sm" id="navreload" type="button">Reload draft</button>
+<button class="btn sm" id="navimport" type="button">Import live menu</button>
+<button class="btn sm dark" id="navsave" type="button">Save draft</button>
+<button class="btn sm solid" id="navpublish" type="button">Publish</button>
+</div>
+
+<div class="preview" style="margin-bottom:14px">
+<div class="ph">Top bar preview at <select id="pvw"><option value="1180">1180 px (desktop)</option><option value="1024">1024 px (laptop)</option><option value="900">900 px (small laptop)</option></select>
+<span id="pvverdict"></span>
+<span style="margin-left:auto">Rule: the top row never wraps. Group new things under an existing heading.</span></div>
+<div class="pv"><div class="frame" id="pvframe"></div></div>
+</div>
+
+<div class="tree" id="tree"></div>
+<div class="addbar" style="margin-top:10px"><button id="addtop" type="button">+ Add a top-level item</button> <button id="showjson" type="button">Show JSON</button></div>
+<div id="jsonwrap" class="hidden" style="margin-top:10px">
+<textarea class="jsonbox" id="jsonbox" spellcheck="false"></textarea>
+<div class="addbar"><button id="applyjson" type="button">Apply JSON to the editor</button></div>
+</div>
+<p class="note">Save draft keeps your work on the Site Nav tab. Publish commits nav.js to the hub's GitHub repo; the live site picks it up within a minute or two (the CDN can hold the old file for up to ten). Hidden items stay in the draft and leave the live menu.</p>
+</div>
+
+<!-- ================= LISTS ================= -->
+<div class="pane" id="pane-lists">
+<div class="side">
+<div class="slist" id="slist"></div>
+<div>
+<div class="card">
+<div class="chead"><h3 id="surfname">Pick a list</h3><span class="sub" id="surftab"></span></div>
+<div class="cbody">
+<p class="help" id="surfhelp">Each list here is a tab on one of the Google Sheets the hubs read. Fields come from the tab's own header row.</p>
+<div class="actions" style="margin:10px 0">
+<a class="btn sm" id="surfsheet" href="#" target="_blank" rel="noopener">Open the tab</a>
+<button class="btn sm" id="surfreload" type="button">Reload</button>
+<button class="btn sm solid" id="surfsaveall" type="button">Save changed rows</button>
+<span class="note" id="surfnote" style="margin:0"></span>
+</div>
+<div class="tblwrap"><table class="ed" id="edtbl"></table></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ================= SWITCHES ================= -->
+<div class="pane" id="pane-switches">
+<div class="card"><div class="cbody">
+<p class="help">Each of these is a "start emailing real vendors" switch. While it is off, that module sends every email to the test address instead. Turning one on asks you to type the confirmation phrase.</p>
+<div id="swlist" style="margin-top:12px"></div>
+</div></div>
+</div>
+
+<!-- ================= LOG ================= -->
+<div class="pane" id="pane-log">
+<div class="card"><div class="chead"><h3>Change log</h3><span class="sub">newest first</span></div>
+<div class="cbody">
+<div class="actions" style="margin-bottom:10px"><button class="btn sm" id="logreload" type="button">Reload</button><span class="note" style="margin:0">Undo puts the previous value back and logs that too. A menu undo restores the draft; publish again to push it live.</span></div>
+<div class="tblwrap"><table class="log" id="logtbl"></table></div>
+</div></div>
+</div>
+
+</div><!-- /work -->
+</main>
+</div><!-- /app -->
+
+<script src="https://citywidelv.github.io/cw-ops-desk/cw-auth.js"></script>
+<script src="nav.js"></script>
+<script src="https://citywidelv.github.io/cw-ops-desk/cw-nav.js"></script>
+<script src="admin-shared.js"></script>
+<script>
+(function(){
+"use strict";
+var WEBHOOK = "https://script.google.com/macros/s/AKfycbzfNnrpidCbWB1DeUNgXvRhDFMQgApfpn-3C9GU45wMEHcJpWFl8ZQVo6PUBSRfEVfRdg/exec";
+var SAKEY = "cwSiteAdminPass";
+var SAPASS = "";
+var CONFIRM = "START EMAILING";
+var HUB_URL = { portal:"https://citywidelv.github.io/", ops:"https://citywidelv.github.io/cw-ops-desk/", admin:"https://citywidelv.github.io/cw-admin-hub/", sales:"https://citywidelv.github.io/sales-hub/", vendor:"https://citywidelv.github.io/cw-vendor-hub/" };
+var HUB_LABEL = { portal:"Team Portal", ops:"Ops Hub", admin:"Admin Hub", sales:"Sales Hub", vendor:"Vendor Hub" };
+var ICON_LIST = ["sheet","clip","shield","route","home","board","plus","mail","users","clock","work","margin","map","asana","search","refresh"];
+var esc = ADMIN.esc, toast = ADMIN.toast;
+function $(id){ return document.getElementById(id); }
+function who(){ return ($("who").value || ADMIN.who() || "").trim() || "unknown"; }
+function post(payload){
+  payload = payload || {}; payload.passcode = SAPASS; payload.who = who();
+  return fetch(WEBHOOK, { method:"POST", headers:{ "Content-Type":"text/plain" }, body: JSON.stringify(payload) })
+    .then(function(r){ return r.json(); })
+    .then(function(r){ if(r && r.ok === false && /site admin passcode/i.test(r.error || "")) lock(r.error); return r; })
+    .catch(function(){ return { ok:false, error:"Could not reach the server. For one kind only, that usually means an error inside the handler." }; });
+}
+function busy(btn, on){ if(!btn) return; btn.disabled = !!on; }
+
+/* ---------- second gate ---------- */
+function lock(msg){
+  SAPASS = ""; try{ localStorage.removeItem(SAKEY); }catch(e){}
+  $("work").classList.add("hidden"); $("sagate").classList.remove("hidden");
+  $("saerr").textContent = msg || ""; $("sapc").value = ""; $("sapc").focus();
+}
+function tryPass(pass, quiet){
+  if(!pass){ if(!quiet) $("saerr").textContent = "Enter the passcode."; return; }
+  busy($("saenter"), true);
+  fetch(WEBHOOK, { method:"POST", headers:{ "Content-Type":"text/plain" }, body: JSON.stringify({ kind:"sa_auth", passcode:pass }) })
+    .then(function(r){ return r.json(); })
+    .then(function(r){
+      busy($("saenter"), false);
+      if(r && r.ok){
+        SAPASS = pass; try{ localStorage.setItem(SAKEY, pass); }catch(e){}
+        if(r.confirm) CONFIRM = r.confirm;
+        $("sagate").classList.add("hidden"); $("work").classList.remove("hidden");
+        if(!r.gh) toast("No GitHub token on the script yet. Drafts save; Publish will not work until GH_TOKEN is set.", "err");
+        start();
+      } else { $("saerr").textContent = (r && r.error) || "That passcode is not right."; if(quiet) lock(""); }
+    })
+    .catch(function(){ busy($("saenter"), false); $("saerr").textContent = "Could not reach the server."; });
+}
+$("saenter").addEventListener("click", function(){ tryPass($("sapc").value.trim()); });
+$("sapc").addEventListener("keydown", function(e){ if(e.key === "Enter") tryPass($("sapc").value.trim()); });
+$("salock").addEventListener("click", function(){ lock("Locked."); });
+
+/* ---------- tabs ---------- */
+$("tabs").addEventListener("click", function(e){
+  var b = e.target.closest("button[data-t]"); if(!b) return;
+  document.querySelectorAll("#tabs button").forEach(function(x){ x.classList.toggle("on", x === b); });
+  document.querySelectorAll(".pane").forEach(function(p){ p.classList.toggle("on", p.id === "pane-" + b.getAttribute("data-t")); });
+  var t = b.getAttribute("data-t");
+  if(t === "switches") loadSwitches();
+  if(t === "log") loadLog();
+  if(t === "lists" && !SURFACES.length) loadSurfaces();
+});
+var started = false;
+function start(){
+  if(started) return; started = true;
+  loadNav(HUB);
+}
+
+/* ================= MENUS ================= */
+var HUB = "ops", NAV = null, NAVMETA = {};
+$("hubpick").addEventListener("click", function(e){
+  var b = e.target.closest("button[data-h]"); if(!b) return;
+  if(NAVDIRTY && !confirm("You have unsaved menu changes for the " + HUB_LABEL[HUB] + ". Switch hubs and lose them?")) return;
+  HUB = b.getAttribute("data-h");
+  document.querySelectorAll("#hubpick button").forEach(function(x){ x.classList.toggle("on", x === b); });
+  loadNav(HUB);
+});
+var NAVDIRTY = false;
+function setDirty(v){ NAVDIRTY = v; renderStat(); }
+function renderStat(){
+  var s = $("navstat");
+  var m = NAVMETA || {};
+  var bits = [];
+  if(!NAV) bits.push("no draft");
+  else {
+    if(m.updated) bits.push("draft saved " + m.updated + (m.by ? " by " + m.by : ""));
+    if(m.published) bits.push("published " + m.published + (m.published_by ? " by " + m.published_by : ""));
+    else bits.push("never published from here");
+    if(NAVDIRTY) bits.push("UNSAVED CHANGES");
+    else if(m.dirty) bits.push("draft differs from published");
+  }
+  s.textContent = bits.join(" | ");
+}
+function loadNav(hub){
+  NAV = null; NAVMETA = {}; NAVDIRTY = false;
+  $("tree").innerHTML = '<div class="loading"><span class="spin"></span> Loading the ' + esc(HUB_LABEL[hub]) + ' draft</div>';
+  post({ kind:"sa_nav_get", hub:hub }).then(function(r){
+    if(!r.ok){ $("tree").innerHTML = '<div class="help">' + esc(r.error || "Failed") + '</div>'; renderStat(); return; }
+    NAVMETA = r;
+    if(r.nav){ NAV = normalize(r.nav, hub); renderTree(); }
+    else { $("tree").innerHTML = '<div class="help">No draft for the ' + esc(HUB_LABEL[hub]) + ' yet. Click <b>Import live menu</b> to start from what is on the site now.</div>'; }
+    renderStat();
+  });
+}
+function normalize(nav, hub){
+  nav = nav || {}; nav.hub = hub; nav.label = nav.label || HUB_LABEL[hub];
+  nav.menu = Array.isArray(nav.menu) ? nav.menu : [];
+  if(hub === "ops" && !Array.isArray(nav.quick)) nav.quick = [];
+  return nav;
+}
+function importLive(){
+  var url = HUB_URL[HUB] + "nav.js?cb=" + Date.now();
+  busy($("navimport"), true);
+  fetch(url, { cache:"no-store" }).then(function(r){ if(!r.ok) throw new Error("HTTP " + r.status); return r.text(); }).then(function(txt){
+    var m = /window\.CW_NAV\s*=\s*([\s\S]*?);\s*$/.exec(txt.trim());
+    if(!m) throw new Error("nav.js did not look right");
+    var nav = JSON.parse(m[1]);
+    if(nav.hub !== HUB) throw new Error("that nav.js is for " + nav.hub);
+    delete nav.build; delete nav.by;
+    NAV = normalize(nav, HUB); renderTree(); setDirty(true);
+    toast("Imported the live " + HUB_LABEL[HUB] + " menu. Save draft to keep it.");
+  }).catch(function(e){ toast("Could not import: " + e.message + ". The hub may not carry a nav.js yet.", "err"); })
+  .then(function(){ busy($("navimport"), false); });
+}
+$("navimport").addEventListener("click", function(){ if(NAV && NAVDIRTY && !confirm("Replace your unsaved changes with the live menu?")) return; importLive(); });
+$("navreload").addEventListener("click", function(){ if(NAVDIRTY && !confirm("Discard unsaved changes?")) return; loadNav(HUB); });
+$("navsave").addEventListener("click", saveNav);
+$("navpublish").addEventListener("click", publishNav);
+function saveNav(){
+  if(!NAV) return toast("Nothing to save.", "err");
+  var why = validate(NAV); if(why) return toast(why, "err");
+  busy($("navsave"), true);
+  return post({ kind:"sa_nav_save", hub:HUB, nav:NAV }).then(function(r){
+    busy($("navsave"), false);
+    if(!r.ok){ toast(r.error || "Save failed", "err"); return false; }
+    NAVMETA.updated = "just now"; NAVMETA.by = who(); NAVMETA.dirty = true;
+    setDirty(false); toast(r.unchanged ? "No changes to save." : "Draft saved.");
+    return true;
+  });
+}
+function publishNav(){
+  if(!NAV) return toast("Nothing to publish.", "err");
+  var w = wrapCheck();
+  if(w.wraps && !confirm("The preview says the top bar wraps to a second row at " + w.width + " px. Publish anyway?")) return;
+  if(!confirm("Publish the " + HUB_LABEL[HUB] + " menu to the live site?")) return;
+  busy($("navpublish"), true);
+  var p = NAVDIRTY ? saveNav() : Promise.resolve(true);
+  p.then(function(ok){
+    if(!ok){ busy($("navpublish"), false); return; }
+    return post({ kind:"sa_nav_publish", hub:HUB }).then(function(r){
+      busy($("navpublish"), false);
+      if(!r.ok) return toast(r.error || "Publish failed", "err");
+      NAVMETA.published = "just now"; NAVMETA.published_by = who(); NAVMETA.dirty = false; renderStat();
+      toast("Published. " + (r.note || ""));
+    });
+  });
+}
+function validate(nav){
+  var bad = "";
+  function walk(list, depth, where){
+    (list || []).forEach(function(it, i){
+      if(bad) return;
+      if(it.ghead !== undefined){ if(!String(it.ghead).trim()) bad = where + ": a group heading is blank."; return; }
+      if(it.sub !== undefined){ if(!String(it.sub).trim()) bad = where + ": a cascade has no label."; else if(depth > 0) bad = where + ": cascades cannot nest twice."; else walk(it.items, depth + 1, where + " > " + it.sub); return; }
+      if(!String(it.label || "").trim()) bad = where + ": a link has no label.";
+      else if(!String(it.href || "").trim()) bad = where + ': "' + it.label + '" has no link.';
+      else if(/[<>"'\s]/.test(it.href) || /^javascript:/i.test(it.href)) bad = where + ': "' + it.label + '" has an unsafe link.';
+    });
+  }
+  nav.menu.forEach(function(t){ if(bad) return; if(!String(t.label || "").trim()) bad = "A top-level item has no label."; else if(t.items) walk(t.items, 0, t.label); else if(!String(t.href || "").trim()) bad = '"' + t.label + '" needs either links under it or a link of its own.'; });
+  if(!bad && nav.quick) walk(nav.quick, 0, "Most used");
+  return bad;
+}
+
+/* ---- tree editor ---- */
+var TOPMODE = { ops:"dd", admin:"dd", vendor:"vendor", sales:"panel", portal:"cards" };
+function renderTree(){
+  var host = $("tree"); host.innerHTML = "";
+  var mode = TOPMODE[HUB];
+  NAV.menu.forEach(function(top, ti){
+    var d = document.createElement("div");
+    d.className = "top" + (top.hidden ? " hid" : "") + (top._closed ? " closed" : "");
+    var th = '<div class="th">' +
+      '<button class="mini" data-act="toggle" title="Collapse">' + (top._closed ? "&#9656;" : "&#9662;") + '</button>' +
+      '<input class="lab" data-f="label" value="' + esc(top.label) + '" placeholder="Label">';
+    if(mode === "dd") th += '<input class="sm2" data-f="icon" list="iconlist" value="' + esc(top.icon || "") + '" placeholder="icon">';
+    if(mode === "vendor" || mode === "cards" || (mode === "dd" && !top.items)) th += '<input class="href" data-f="href" value="' + esc(top.href || "") + '" placeholder="' + (top.items ? "link when clicked (optional)" : "link") + '">';
+    if(mode === "vendor" && !top.items) th += '<label class="hidechk"><input type="checkbox" data-f="cta"' + (top.cta ? " checked" : "") + '> button style</label>';
+    if(mode === "cards" || mode === "panel") th += '<input class="href" data-f="note" value="' + esc(top.note || "") + '" placeholder="note line under the heading">';
+    th += '<label class="hidechk"><input type="checkbox" data-f="hidden"' + (top.hidden ? " checked" : "") + '> hidden</label>' +
+      '<span style="flex:1"></span>' +
+      '<button class="mini" data-act="up" title="Move left">&#9650;</button><button class="mini" data-act="down" title="Move right">&#9660;</button>' +
+      (top.items ? '' : '<button class="mini" data-act="makegroup">make a dropdown</button>') +
+      '<button class="mini" data-act="deltop">delete</button></div>';
+    d.innerHTML = th + '<div class="tb"></div>';
+    var tb = d.querySelector(".tb");
+    if(top.items){ renderList(tb, top.items, 0, [ti]); }
+    else tb.innerHTML = '<div class="help">A plain link in the top bar. "make a dropdown" turns it into a menu with links under it.</div>';
+    d.querySelector(".th").addEventListener("input", function(e){ var f = e.target.getAttribute("data-f"); if(!f) return; if(e.target.type === "checkbox") top[f] = e.target.checked; else top[f] = e.target.value; if(f === "hidden") d.classList.toggle("hid", !!top.hidden); setDirty(true); if(f === "label" || f === "hidden") preview(); });
+    d.querySelector(".th").addEventListener("click", function(e){
+      var b = e.target.closest("button[data-act]"); if(!b) return;
+      var act = b.getAttribute("data-act");
+      if(act === "toggle"){ top._closed = !top._closed; renderTree(); return; }
+      if(act === "up" && ti > 0){ NAV.menu.splice(ti - 1, 0, NAV.menu.splice(ti, 1)[0]); }
+      if(act === "down" && ti < NAV.menu.length - 1){ NAV.menu.splice(ti + 1, 0, NAV.menu.splice(ti, 1)[0]); }
+      if(act === "makegroup"){ top.items = top.href ? [{ label: top.label, href: top.href }] : []; delete top.cta; }
+      if(act === "deltop"){ if(!confirm('Delete "' + top.label + '" and everything under it? (Hiding it keeps it in the draft.)')) return; NAV.menu.splice(ti, 1); }
+      setDirty(true); renderTree();
+    });
+    host.appendChild(d);
+  });
+  if(HUB === "ops"){
+    var q = document.createElement("div"); q.className = "top";
+    q.innerHTML = '<div class="th"><b style="font-size:13px">Most used (quick bar)</b><span class="help" style="margin-left:8px">The row of buttons under the search box. icon, one flagged primary.</span></div><div class="tb"></div>';
+    renderList(q.querySelector(".tb"), NAV.quick, 0, ["quick"], true);
+    host.appendChild(q);
+  }
+  if(!document.getElementById("iconlist")){
+    var dl = document.createElement("datalist"); dl.id = "iconlist";
+    ICON_LIST.forEach(function(i){ var o = document.createElement("option"); o.value = i; dl.appendChild(o); });
+    document.body.appendChild(dl);
+  }
+  preview();
+}
+function listAt(path){
+  if(path[0] === "quick") return NAV.quick;
+  var list = NAV.menu[path[0]].items;
+  for(var i = 1; i < path.length; i++) list = list[path[i]].items;
+  return list;
+}
+function renderList(host, list, depth, path, isQuick){
+  host.innerHTML = "";
+  var mode = TOPMODE[HUB];
+  list.forEach(function(it, i){
+    var row = document.createElement("div");
+    var kind = it.ghead !== undefined ? "gh" : it.sub !== undefined ? "sub" : "link";
+    row.className = "it" + (it.hidden ? " hid" : ""); row.draggable = true; row.setAttribute("data-i", i);
+    var h = '<span class="grip" title="Drag to reorder">&#8942;&#8942;</span><span class="kind ' + kind + '">' + (kind === "gh" ? "heading" : kind === "sub" ? "cascade" : "link") + '</span>';
+    if(kind === "gh") h += '<input class="lab" data-f="ghead" value="' + esc(it.ghead) + '" placeholder="Group heading">';
+    else if(kind === "sub") h += '<input class="lab" data-f="sub" value="' + esc(it.sub) + '" placeholder="Cascade label">';
+    else {
+      h += '<input class="lab" data-f="label" value="' + esc(it.label) + '" placeholder="Label">' +
+        '<input class="href" data-f="href" value="' + esc(it.href || "") + '" placeholder="Link (page.html or https://...)">';
+      if(mode === "dd" && HUB === "admin") h += '<input class="tag" data-f="tag" value="' + esc(it.tag || "") + '" placeholder="tag">';
+      if(isQuick) h += '<input class="tag" data-f="icon" list="iconlist" value="' + esc(it.icon || "") + '" placeholder="icon"><label class="hidechk"><input type="checkbox" data-f="primary"' + (it.primary ? " checked" : "") + '> primary</label>';
+      if(mode === "panel") h += '<label class="hidechk"><input type="checkbox" data-f="primary"' + (it.primary ? " checked" : "") + '> red</label>';
+    }
+    h += '<label class="hidechk"><input type="checkbox" data-f="hidden"' + (it.hidden ? " checked" : "") + '> hidden</label>' +
+      '<button class="mini" data-act="up" title="Move up">&#9650;</button><button class="mini" data-act="down" title="Move down">&#9660;</button>';
+    if(!isQuick) h += '<select class="mini" data-act="moveto" title="Move to another menu"><option value="">move to...</option>' + moveTargets(path) + '</select>';
+    if(kind === "link" && depth === 0 && mode === "dd" && !isQuick) h += '<button class="mini" data-act="promote" title="Turn this link into a cascade group">make cascade</button>';
+    h += '<button class="mini" data-act="del">&#10005;</button>';
+    row.innerHTML = h;
+    row.addEventListener("input", function(e){ var f = e.target.getAttribute("data-f"); if(!f) return; if(e.target.type === "checkbox") it[f] = e.target.checked; else it[f] = e.target.value; if(f === "hidden") row.classList.toggle("hid", !!it.hidden); if(f === "tag" && !it.tag) delete it.tag; setDirty(true); });
+    row.addEventListener("click", function(e){
+      var b = e.target.closest("button[data-act]"); if(!b) return;
+      var act = b.getAttribute("data-act");
+      if(act === "up" && i > 0) list.splice(i - 1, 0, list.splice(i, 1)[0]);
+      if(act === "down" && i < list.length - 1) list.splice(i + 1, 0, list.splice(i, 1)[0]);
+      if(act === "promote"){ list[i] = { sub: it.label, items: [{ label: it.label, href: it.href }] }; }
+      if(act === "del"){ if(kind === "sub" && it.items && it.items.length && !confirm('Delete the "' + it.sub + '" cascade and its ' + it.items.length + ' items?')) return; list.splice(i, 1); }
+      setDirty(true); renderTree();
+    });
+    row.addEventListener("change", function(e){
+      if(e.target.getAttribute("data-act") !== "moveto" || !e.target.value) return;
+      var dest = listAt(JSON.parse(e.target.value));
+      list.splice(i, 1); dest.push(it); setDirty(true); renderTree();
+    });
+    row.addEventListener("dragstart", function(e){ DRAG = { list:list, i:i }; e.dataTransfer.effectAllowed = "move"; try{ e.dataTransfer.setData("text/plain", String(i)); }catch(x){} });
+    row.addEventListener("dragover", function(e){ if(DRAG && DRAG.list === list){ e.preventDefault(); row.classList.add("drop"); } });
+    row.addEventListener("dragleave", function(){ row.classList.remove("drop"); });
+    row.addEventListener("drop", function(e){ e.preventDefault(); row.classList.remove("drop"); if(!DRAG || DRAG.list !== list || DRAG.i === i) return; var moved = list.splice(DRAG.i, 1)[0]; list.splice(i, 0, moved); DRAG = null; setDirty(true); renderTree(); });
+    host.appendChild(row);
+    if(kind === "sub"){
+      var sl = document.createElement("div"); sl.className = "sublist";
+      renderList(sl, it.items = it.items || [], depth + 1, path.concat([i]));
+      host.appendChild(sl);
+    }
+  });
+  var add = document.createElement("div"); add.className = "addbar";
+  add.innerHTML = '<button data-add="link">+ link</button>' + (isQuick ? "" : '<button data-add="ghead">+ group heading</button>') + (!isQuick && depth === 0 && mode === "dd" ? '<button data-add="sub">+ cascade</button>' : "");
+  add.addEventListener("click", function(e){
+    var b = e.target.closest("button[data-add]"); if(!b) return;
+    var t = b.getAttribute("data-add");
+    list.push(t === "link" ? { label:"", href:"" } : t === "ghead" ? { ghead:"" } : { sub:"", items:[] });
+    setDirty(true); renderTree();
+    var inputs = host.querySelectorAll(".it .lab"); if(inputs.length) inputs[inputs.length - 1].focus();
+  });
+  host.appendChild(add);
+}
+var DRAG = null;
+function moveTargets(cur){
+  var out = "";
+  NAV.menu.forEach(function(t, ti){
+    if(!t.items) return;
+    var p = JSON.stringify([ti]);
+    if(p !== JSON.stringify(cur)) out += '<option value="' + esc(p) + '">' + esc(t.label) + '</option>';
+    t.items.forEach(function(it, ii){
+      if(it.sub === undefined) return;
+      var p2 = JSON.stringify([ti, ii]);
+      if(p2 !== JSON.stringify(cur)) out += '<option value="' + esc(p2) + '">' + esc(t.label + " > " + it.sub) + '</option>';
+    });
+  });
+  return out;
+}
+$("addtop").addEventListener("click", function(){
+  if(!NAV) return;
+  var mode = TOPMODE[HUB];
+  NAV.menu.push(mode === "vendor" ? { label:"", href:"" } : { label:"", items:[] });
+  setDirty(true); renderTree();
+});
+$("showjson").addEventListener("click", function(){
+  var w = $("jsonwrap"); w.classList.toggle("hidden");
+  if(!w.classList.contains("hidden") && NAV) $("jsonbox").value = JSON.stringify(stripPrivate(NAV), null, 1);
+});
+$("applyjson").addEventListener("click", function(){
+  try{ var n = JSON.parse($("jsonbox").value); NAV = normalize(n, HUB); setDirty(true); renderTree(); toast("Applied."); }
+  catch(e){ toast("That JSON does not parse: " + e.message, "err"); }
+});
+function stripPrivate(o){ return JSON.parse(JSON.stringify(o, function(k, v){ return k.charAt(0) === "_" ? undefined : v; })); }
+
+/* ---- preview and the no-wrap check ---- */
+$("pvw").addEventListener("change", preview);
+function preview(){
+  var f = $("pvframe"); if(!NAV){ f.innerHTML = ""; return; }
+  var w = Number($("pvw").value);
+  f.style.width = w + "px";
+  var mode = TOPMODE[HUB], html = "";
+  var tops = NAV.menu.filter(function(t){ return !t.hidden; });
+  if(mode === "dd"){
+    html = '<div class="pv-ops"><span>&#9638; Home</span>' + tops.map(function(t){ return '<span>' + esc(t.label) + (t.items ? ' &#9660;' : '') + '</span>'; }).join("") + '</div>';
+  } else if(mode === "vendor"){
+    html = '<div class="pv-vendor"><img src="' + ADMIN.LOGO + '" alt="">' + tops.map(function(t){ return '<span' + (t.cta ? ' class="cta"' : '') + '>' + esc(t.label) + (t.items ? ' &#9662;' : '') + '</span>'; }).join("") + '</div>';
+  } else if(mode === "panel"){
+    var t0 = tops[0] || { items:[] };
+    html = '<div class="pv-sales"><b>' + esc(t0.label || "Sales Tools") + ' &#9660;</b> one dropdown with ' + (t0.items || []).filter(function(i){ return i.href && !i.hidden; }).length + ' links in ' + (t0.items || []).filter(function(i){ return i.ghead !== undefined && !i.hidden; }).length + ' groups. It never wraps.</div>';
+  } else {
+    html = '<div class="pv-portal">' + tops.map(function(t){ return '<b>' + esc(t.label) + '</b> (' + (t.items || []).filter(function(i){ return i.href && !i.hidden; }).length + ' links)'; }).join(" &nbsp;|&nbsp; ") + ' as sidecards. They stack; nothing wraps.</div>';
+  }
+  f.innerHTML = html;
+  var v = wrapCheck();
+  $("pvverdict").innerHTML = v.na ? "" : v.wraps ? '<span class="warn">Wraps to ' + v.rows + ' rows at ' + v.width + ' px. Group something under an existing heading.</span>' : '<span class="ok">Fits on one row at ' + v.width + ' px</span>';
+}
+function wrapCheck(){
+  var mode = TOPMODE[HUB];
+  if(mode !== "dd" && mode !== "vendor") return { na:true };
+  var bar = $("pvframe").firstElementChild; if(!bar) return { na:true };
+  /* cluster the vertical centres: a taller button on the same row is not a second row */
+  var mids = []; bar.querySelectorAll("span").forEach(function(s){ var r = s.getBoundingClientRect(); mids.push(r.top + r.height / 2); });
+  mids.sort(function(a, b){ return a - b; });
+  var rows = 0, last = -1e9;
+  mids.forEach(function(m){ if(m - last > 14){ rows++; last = m; } });
+  return { wraps: rows > 1, rows: rows, width: Number($("pvw").value) };
+}
+
+/* ================= LISTS ================= */
+var SURFACES = [], SURF = null, ROWS = null;
+function loadSurfaces(){
+  $("slist").innerHTML = '<div class="loading" style="padding:12px"><span class="spin"></span></div>';
+  post({ kind:"sa_surfaces" }).then(function(r){
+    if(!r.ok){ $("slist").innerHTML = '<div class="help" style="padding:12px">' + esc(r.error) + '</div>'; return; }
+    SURFACES = r.surfaces; if(r.confirm) CONFIRM = r.confirm;
+    var html = "", g = "";
+    SURFACES.forEach(function(s){ if(s.group !== g){ g = s.group; html += '<div class="g">' + esc(g) + '</div>'; } html += '<button data-s="' + esc(s.key) + '">' + esc(s.label) + '</button>'; });
+    $("slist").innerHTML = html;
+  });
+}
+$("slist").addEventListener("click", function(e){
+  var b = e.target.closest("button[data-s]"); if(!b) return;
+  if(hasDirtyRows() && !confirm("Unsaved row edits will be lost. Continue?")) return;
+  document.querySelectorAll("#slist button").forEach(function(x){ x.classList.toggle("on", x === b); });
+  openSurface(b.getAttribute("data-s"));
+});
+$("surfreload").addEventListener("click", function(){ if(SURF) openSurface(SURF.key); });
+function openSurface(key){
+  SURF = SURFACES.filter(function(s){ return s.key === key; })[0]; ROWS = null;
+  $("surfname").textContent = SURF.group + ": " + SURF.label; $("surftab").textContent = "tab " + SURF.tab;
+  $("surfhelp").innerHTML = esc(SURF.help) + (SURF.positional ? " <b>Columns are positional; rows cannot be cleared here, only set inactive.</b>" : "");
+  $("edtbl").innerHTML = '<tr><td class="loading"><span class="spin"></span> Loading</td></tr>'; $("surfnote").textContent = "";
+  post({ kind:"sa_rows", surface:key }).then(function(r){
+    if(!r.ok){ $("edtbl").innerHTML = '<tr><td class="help">' + esc(r.error) + '</td></tr>'; return; }
+    ROWS = r; $("surfsheet").href = r.url; renderRows();
+  });
+}
+function inputFor(col, val, rowIdx, isNew){
+  var t = col.type, n = ' data-c="' + esc(col.name) + '"';
+  if(col.locked && !isNew) return '<input type="text" class="key" value="' + esc(val) + '" readonly' + n + '>';
+  if(t === "bool") return '<select' + n + '><option value="TRUE"' + (String(val).toUpperCase() === "TRUE" ? " selected" : "") + '>TRUE</option><option value="FALSE"' + (String(val).toUpperCase() !== "TRUE" ? " selected" : "") + '>FALSE</option></select>';
+  if(col.options) return '<select' + n + '>' + col.options.map(function(o){ return '<option value="' + esc(o) + '"' + (o === val ? " selected" : "") + '>' + esc(o || "(blank)") + '</option>'; }).join("") + (col.options.indexOf(val) < 0 && val !== "" ? '<option value="' + esc(val) + '" selected>' + esc(val) + '</option>' : "") + '</select>';
+  if(t === "long" || String(val).length > 60) return '<textarea' + n + '>' + esc(val) + '</textarea>';
+  if(t === "number") return '<input type="number" step="any" value="' + esc(val) + '"' + n + '>';
+  if(t === "email") return '<input type="email" value="' + esc(val) + '"' + n + '>';
+  return '<input type="text" value="' + esc(val) + '"' + n + '>';
+}
+function renderRows(){
+  var t = $("edtbl"), cols = ROWS.cols;
+  var html = '<tr>' + cols.map(function(c){ return '<th>' + esc(c.name) + '</th>'; }).join("") + '<th></th></tr>';
+  ROWS.rows.forEach(function(row){
+    var lockedRow = ROWS.mode === "kv" && ROWS.locked.indexOf(row.key) >= 0;
+    html += '<tr data-row="' + row._row + '"' + (lockedRow ? ' class="locked"' : '') + '>';
+    cols.forEach(function(c){
+      if(lockedRow) html += '<td>' + esc(row[c.name]) + (c.name === "value" ? ' <span class="lock">safety switch, see Safety Switches</span>' : '') + '</td>';
+      else html += '<td>' + inputFor(c, row[c.name] || "", row._row, false) + '</td>';
+    });
+    html += '<td class="acts">' + (lockedRow ? '' : '<button class="btn sm" data-act="save">Save</button>' + (SURF.positional ? '' : '<button class="btn sm" data-act="clear" title="Clears the row; it stays in place empty">Clear</button>')) + '</td></tr>';
+  });
+  html += '<tr class="addrow">' + cols.map(function(c){ return '<td>' + inputFor(c, c.type === "bool" ? "TRUE" : "", 0, true) + '</td>'; }).join("") + '<td class="acts"><button class="btn sm solid" data-act="add">Add row</button></td></tr>';
+  t.innerHTML = html;
+  $("surfnote").textContent = ROWS.rows.length + " rows";
+}
+function rowChanges(tr){
+  var rowNo = Number(tr.getAttribute("data-row"));
+  var orig = ROWS.rows.filter(function(r){ return r._row === rowNo; })[0];
+  var ch = {};
+  tr.querySelectorAll("[data-c]").forEach(function(inp){
+    var c = inp.getAttribute("data-c"); var nv = inp.value; var ov = orig[c] || "";
+    if(String(nv) !== String(ov)) ch[c] = { old: ov, "new": nv };
+  });
+  return { row: rowNo, changes: ch, orig: orig };
+}
+function hasDirtyRows(){ return !!document.querySelector("#edtbl tr.dirty"); }
+$("edtbl").addEventListener("input", function(e){
+  var tr = e.target.closest("tr[data-row]"); if(!tr) return;
+  tr.classList.toggle("dirty", Object.keys(rowChanges(tr).changes).length > 0);
+});
+$("edtbl").addEventListener("click", function(e){
+  var b = e.target.closest("button[data-act]"); if(!b) return;
+  var act = b.getAttribute("data-act"), tr = b.closest("tr");
+  if(act === "save") saveRow(tr, b);
+  if(act === "clear"){
+    var rc = rowChanges(tr);
+    if(!confirm("Clear this row? It stays in place, empty, and can be undone from the Change Log.")) return;
+    busy(b, true);
+    post({ kind:"sa_clear", surface:SURF.key, row:rc.row }).then(function(r){ busy(b, false); if(!r.ok) return toast(r.error, "err"); toast("Row cleared."); openSurface(SURF.key); });
+  }
+  if(act === "add"){
+    var vals = {};
+    tr.querySelectorAll("[data-c]").forEach(function(inp){ vals[inp.getAttribute("data-c")] = inp.value; });
+    busy(b, true);
+    post({ kind:"sa_add", surface:SURF.key, values:vals }).then(function(r){ busy(b, false); if(!r.ok) return toast(r.error, "err"); toast("Row " + r.row + " added."); openSurface(SURF.key); });
+  }
+});
+function saveRow(tr, b){
+  var rc = rowChanges(tr);
+  if(!Object.keys(rc.changes).length) return toast("No changes on that row.");
+  busy(b, true);
+  return post({ kind:"sa_save", surface:SURF.key, row:rc.row, changes:rc.changes }).then(function(r){
+    busy(b, false);
+    if(!r.ok){ toast(r.error || "Save failed", "err"); return false; }
+    Object.keys(rc.changes).forEach(function(c){ if(r.written.indexOf(c) >= 0) rc.orig[c] = rc.changes[c]["new"]; });
+    tr.classList.remove("dirty");
+    if(r.stale && r.stale.length) toast("Saved " + r.written.join(", ") + ". Not saved (changed by someone else): " + r.stale.join(", "), "err");
+    return true;
+  });
+}
+$("surfsaveall").addEventListener("click", function(){
+  var rows = document.querySelectorAll("#edtbl tr.dirty"); if(!rows.length) return toast("Nothing changed.");
+  var n = 0, p = Promise.resolve();
+  rows.forEach(function(tr){ p = p.then(function(){ return saveRow(tr, tr.querySelector("button[data-act=save]")).then(function(ok){ if(ok) n++; }); }); });
+  p.then(function(){ toast(n + " row" + (n === 1 ? "" : "s") + " saved."); });
+});
+
+/* ================= SWITCHES ================= */
+function loadSwitches(){
+  $("swlist").innerHTML = '<div class="loading"><span class="spin"></span></div>';
+  post({ kind:"sa_switches" }).then(function(r){
+    if(!r.ok){ $("swlist").innerHTML = '<div class="help">' + esc(r.error) + '</div>'; return; }
+    if(r.confirm) CONFIRM = r.confirm;
+    $("swlist").innerHTML = r.switches.map(function(s){
+      var on = s.value === true;
+      return '<div class="sw" data-w="' + esc(s.which) + '"><div><h4>' + esc(s.label) + '</h4><div class="st">' + esc(s.what) + '<br><span class="lock">' + esc(s.tab) + ' tab, key ' + esc(s.key) + (s.error ? ' - ' + esc(s.error) : '') + '</span></div></div>' +
+        '<div><span class="val ' + (on ? "on" : "off") + '">' + (s.value === null ? "unknown" : on ? "LIVE" : "TEST MODE") + '</span> ' +
+        (s.error ? '' : '<button class="btn sm" data-act="flip">' + (on ? "Switch to test mode" : "Go live") + '</button>') + '</div></div>';
+    }).join("");
+  });
+}
+$("swlist").addEventListener("click", function(e){
+  var b = e.target.closest("button[data-act]"); if(!b) return;
+  var card = b.closest(".sw"), which = card.getAttribute("data-w");
+  var act = b.getAttribute("data-act");
+  var on = card.querySelector(".val").classList.contains("on");
+  if(act === "flip"){
+    if(on){
+      if(!confirm("Switch " + card.querySelector("h4").textContent + " back to test mode? Emails go to the test address until it is turned on again.")) return;
+      busy(b, true);
+      post({ kind:"sa_switch_set", which:which, value:"FALSE" }).then(function(r){ if(!r.ok) toast(r.error, "err"); else toast("Now in test mode."); loadSwitches(); });
+      return;
+    }
+    if(card.querySelector(".confirm")) return;
+    var c = document.createElement("div"); c.className = "confirm";
+    c.innerHTML = '<span>This starts emailing real vendors. Type <b>' + esc(CONFIRM) + '</b> to confirm:</span><input placeholder="' + esc(CONFIRM) + '"><button class="btn sm solid" data-act="golive">Turn it on</button><button class="btn sm" data-act="cancel">Cancel</button>';
+    card.appendChild(c); c.querySelector("input").focus();
+  }
+  if(act === "cancel") card.querySelector(".confirm").remove();
+  if(act === "golive"){
+    var typed = card.querySelector(".confirm input").value.trim();
+    if(typed !== CONFIRM) return toast("Type the phrase exactly.", "err");
+    busy(b, true);
+    post({ kind:"sa_switch_set", which:which, value:"TRUE", confirm:typed }).then(function(r){ if(!r.ok) toast(r.error, "err"); else toast("Live. Real vendors receive email now."); loadSwitches(); });
+  }
+});
+
+/* ================= LOG ================= */
+$("logreload").addEventListener("click", loadLog);
+function loadLog(){
+  $("logtbl").innerHTML = '<tr><td class="loading"><span class="spin"></span></td></tr>';
+  post({ kind:"sa_log", limit:150 }).then(function(r){
+    if(!r.ok){ $("logtbl").innerHTML = '<tr><td class="help">' + esc(r.error) + '</td></tr>'; return; }
+    if(!r.rows.length){ $("logtbl").innerHTML = '<tr><td class="help">Nothing logged yet.</td></tr>'; return; }
+    var html = '<tr><th>When</th><th>Who</th><th>Action</th><th>Where</th><th>Field</th><th>Before</th><th>After</th><th></th></tr>';
+    r.rows.forEach(function(e){
+      var canUndo = !e.undone && /^(edit|add|clear|switch|nav_save)$/.test(e.action);
+      html += '<tr><td>' + esc(e.when) + '</td><td>' + esc(e.who) + '</td><td><span class="pill ' + (e.action === "undo" ? "grey" : e.action === "switch" ? "fail" : e.action === "nav_publish" ? "pass" : "std") + '">' + esc(e.action.replace("_", " ")) + '</span></td>' +
+        '<td>' + esc(e.surface) + (e.tab ? ' <span class="lock">' + esc(e.tab) + (e.row ? ' row ' + esc(e.row) : '') + '</span>' : '') + '</td><td>' + esc(e.field) + '</td>' +
+        '<td class="v">' + esc(e.old) + '</td><td class="v">' + esc(e["new"]) + '</td>' +
+        '<td>' + (canUndo ? '<button class="btn sm" data-undo="' + esc(e.log_id) + '">Undo</button>' : e.undone ? '<span class="lock">undone</span>' : '') + '</td></tr>';
+    });
+    $("logtbl").innerHTML = html;
+  });
+}
+$("logtbl").addEventListener("click", function(e){
+  var b = e.target.closest("button[data-undo]"); if(!b) return;
+  if(!confirm("Put the previous value back?")) return;
+  busy(b, true);
+  post({ kind:"sa_undo", log_id:b.getAttribute("data-undo") }).then(function(r){
+    if(!r.ok) toast(r.error, "err"); else toast("Undone. " + (r.note || ""));
+    loadLog(); if(SURF) openSurface(SURF.key);
+  });
+});
+
+/* ---------- boot ---------- */
+ADMIN.init({ page:"emails", onReady:function(){
+  $("who").value = ADMIN.who();
+  $("who").addEventListener("change", function(){ ADMIN.setWho($("who").value.trim()); });
+  var cached = ""; try{ cached = localStorage.getItem(SAKEY) || ""; }catch(e){}
+  if(cached) tryPass(cached, true); else $("sapc").focus();
+} });
+})();
+</script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-/* CW Admin Hub shared script. Build 2026-09-11 (renamed from the BOM Hub; cascade submenus; Vendor of the Month).
+/* CW Admin Hub shared script. Build 2026-09-13 (Site Admin: MENU below is the fallback, nav.js is live; cascade submenus; Vendor of the Month).
    Gate, header, cascading nav, webhook helper, Asana project registry.
    Every page: <link admin.css> ... <div id="gate"> + <div id="app" class="hidden">, then
    this file, then ADMIN.init({page:'...'}). Data lives in Google Sheets through the
@@ -135,6 +135,8 @@ var MENU = [
     {label:"Office Management board", href:asanaUrl("1211522761691094"), tag:"Asana"}
   ]},
   { label:"Team & Admin", icon:"home", page:"emails", items:[
+    {ghead:"Site"},
+    {label:"Site Admin (menus, lists, switches)", href:"site-admin.html", tag:"Hub"},
     {ghead:"Power BI"},
     {label:"Reports and targets", href:"powerbi.html", tag:"Hub"},
     {label:"FSM and Director", href:OPS + "powerbi.html", tag:"Ops Hub"},
@@ -159,6 +161,9 @@ var MENU = [
     {label:"City Wide Company Store", href:"https://shopcitywide.mybrightsites.com/"}
   ]}
 ];
+
+/* Site Admin (2026-09-13): nav.js publishes window.CW_NAV; the MENU above stays as the fallback. */
+if(window.CWNav){ var __m = CWNav.menuFor("admin"); if(__m) MENU = __m; }
 
 function isExternal(href){ return /^https?:/.test(href) && href.indexOf("citywidelv.github.io") < 0; }
 function menuLink(it){
