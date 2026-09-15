@@ -5,8 +5,9 @@
    CW Solicitations Apps Script (VendorDirectory.gs, kinds vd_*). */
 (function(){
 var WEBHOOK = "https://script.google.com/macros/s/AKfycbzfNnrpidCbWB1DeUNgXvRhDFMQgApfpn-3C9GU45wMEHcJpWFl8ZQVo6PUBSRfEVfRdg/exec";
-var KEY = "cwAdminHubPass";          // Admin Hub passcode, this hub
-var OPSKEY = "cwOpsHubPass";        // team passcode cached by the Ops Hub (same origin, also accepted)
+// Sep 15 2026: one password for the whole platform. The Admin Hub no longer has a
+// passcode of its own; cw-auth.js keeps the single team key and deletes the old one.
+var OPSKEY = "cwOpsHubPass";        // the one team passcode key, shared by every hub
 var NAMEKEY = "cwAdminName";
 var PORTAL = "https://citywidelv.github.io/";
 var OPS = "https://citywidelv.github.io/cw-ops-desk/";
@@ -274,18 +275,18 @@ function toast(msg, kind){
 function gateHtml(){
   return '<div class="box"><img src="' + LOGO + '" alt="City Wide Facility Solutions">' +
     '<div class="k">Business Operations Management</div><h1>Admin Hub</h1>' +
-    '<p id="gnote">Internal team access. Enter the Admin Hub passcode once. This browser stays unlocked until the passcode changes.</p>' +
-    '<input type="password" id="pc" placeholder="Passcode" autocomplete="current-password" autofocus>' +
+    '<p id="gnote">Internal team access. Enter the team passcode. This browser stays signed in.</p>' +
+    '<input type="password" id="pc" placeholder="Team passcode" autocomplete="current-password" autofocus>' +
     '<button id="enter">Enter</button><div class="err" id="gerr"></div>' +
-    '<div class="note">Ask TJ if you do not have the passcode. The Ops Hub team passcode also works.</div>' +
+    '<div class="note">Ask TJ if you do not have the passcode.</div>' +
     '<a class="backlink" href="' + PORTAL + '">&larr; Back to the Nevada Team Portal</a></div>';
 }
 /* One unlock per device (cw-auth.js, shared by every internal page on this origin).
    The hub page keeps the passcode box. Sub pages never show one: without a cached
    passcode they bounce to the hub gate with ?next= and come straight back. A rotated
    passcode is rejected by the server on the next call, which clears the cache and
-   bounces the same way. The Admin-only passcode (script property BOM_PASSCODE) unlocks
-   the Admin Hub kinds; the team passcode unlocks everything. */
+   bounces the same way. Sep 15 2026: the separate Admin-only passcode is retired. One
+   team passcode unlocks every hub, and the device is remembered for 90 days of no use. */
 function isHubPage(){
   var p = location.pathname.replace(/\/+$/, "");
   return /\/cw-admin-hub$/.test(p) || /\/cw-admin-hub\/index\.html$/.test(p);
