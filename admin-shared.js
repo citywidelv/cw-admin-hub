@@ -123,6 +123,7 @@ var MENU = [
     ]},
     {ghead:"Directory"},
     {label:"Add a Vendor", href:OPS + "vendor-add.html", tag:"Ops Hub"},
+    {label:"Do Not Email or Remove a Vendor", href:OPS + "vendor-dne.html?from=admin", tag:"Ops Hub"},
     {label:"Active Vendors (Las Vegas)", href:OPS + "vendors.html#/lv/janitorial", tag:"Ops Hub"},
     {label:"Active Vendors (Northern Nevada)", href:OPS + "vendors.html#/nnv/janitorial", tag:"Ops Hub"}
   ]},

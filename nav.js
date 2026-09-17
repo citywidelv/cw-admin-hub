@@ -239,6 +239,11 @@ window.CW_NAV = {
      "tag": "Ops Hub"
     },
     {
+     "label": "Do Not Email or Remove a Vendor",
+     "href": "https://citywidelv.github.io/cw-ops-desk/vendor-dne.html?from=admin",
+     "tag": "Ops Hub"
+    },
+    {
      "label": "Active Vendors (Las Vegas)",
      "href": "https://citywidelv.github.io/cw-ops-desk/vendors.html#/lv/janitorial",
      "tag": "Ops Hub"
