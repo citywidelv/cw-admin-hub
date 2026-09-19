@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Sheet | CW Admin Hub</title>
+<!-- build 2026-09-19. Frames one of the pricing or catalog tabs inside the Admin Hub, for the
+few things (prices, catalog rows) where the Sheet itself is the better tool. Only the books
+listed in BOOKS below can be framed; ?b=key&gid=N picks the tab. Google Sheets needs the
+viewer signed in to a Google account with access, so the Open in Google Sheets button is
+always shown. -->
+<link rel="stylesheet" href="admin.css">
+<link rel="icon" href="https://citywidelv.github.io/cw-ops-desk/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="https://citywidelv.github.io/cw-ops-desk/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://citywidelv.github.io/cw-ops-desk/apple-touch-icon.png">
+<style>
+.sbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 18px}
+.sbar h2{font-size:15px}
+.sbar .sub{font-size:12px;color:var(--grey)}
+.sbar .sp{flex:1}
+.frame{background:#fff;border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;margin-top:12px}
+.frame iframe{display:block;width:100%;height:calc(100vh - 250px);min-height:520px;border:none;background:#fff}
+.note{font-size:12px;color:var(--grey);padding:10px 18px;border-top:1px solid var(--border)}
+.pickb{display:flex;gap:8px;flex-wrap:wrap;padding:0 18px 12px}
+.pickb a{font-size:12px;font-weight:700;color:var(--black);text-decoration:none;border:1px solid var(--border);border-radius:8px;padding:6px 10px}
+.pickb a.on{background:var(--black);color:#fff;border-color:var(--black)}
+</style>
+<link rel="stylesheet" href="https://citywidelv.github.io/cw-base.css">
+</head>
+<body>
+<div id="gate" class="gate"></div>
+<div id="app" class="hidden">
+<header class="head" id="adminhead"></header>
+<main class="wrap" style="padding-top:18px">
+<div class="card">
+<div class="sbar"><a class="btn sm" href="desk.html">&larr; Desk</a><h2 id="title">Sheet</h2><span class="sub" id="sub"></span><span class="sp"></span><a class="btn sm solid" id="open" href="#" target="_blank" rel="noopener">Open in Google Sheets</a></div>
+<div class="pickb" id="pick"></div>
+</div>
+<div class="frame"><iframe id="fr" title="Google Sheet" allow="clipboard-read; clipboard-write"></iframe></div>
+<p class="note">If the frame stays blank or asks you to sign in, use Open in Google Sheets. You need to be signed in to Google with access to this book. Changes you make here are live on the Sheet at once, and the hubs read them within minutes.</p>
+</main>
+<footer class="foot"><div class="fin">
+<b>City Wide Facility Solutions</b> &middot; Admin Hub &middot; Internal use only &middot; Something missing? Tell TJ. &middot; <a href="https://www.gocitywide.com" target="_blank" rel="noopener">GoCityWide.com</a>
+<span class="fr">Las Vegas<span>&bull;</span>Reno</span>
+</div></footer>
+</div>
+<script src="https://citywidelv.github.io/cw-ops-desk/cw-auth.js"></script>
+<script src="nav.js"></script>
+<script src="https://citywidelv.github.io/cw-ops-desk/cw-nav.js"></script>
+<script src="admin-shared.js"></script>
+<script>
+(function(){
+var BOOKS = {
+  shop:   { id:"1p0CJVr6UJnYTBvAF3-VPBA_6uBHG9BLlByryXLwlOTw", label:"Vendor shop catalog", sub:"products, prices, sizes and colors the shop sells" },
+  supply: { id:"1_T1hxLt7WLIRYqkVVESGwD94f-IpPYAHVPWVoddbS_0", label:"CW Supply and Inventory", sub:"EnvirOx catalog and pricing, supplies reports" },
+  sol:    { id:"1ymbqR7LMvA7sbgZe2Ro5o2dNiXhP08Tn9Hw1b-H5AeQ", label:"CW Solicitations", sub:"postings, responses, change log" },
+  vd:     { id:"1kHRyeQzDsi-bnfE5YpD_KPV17GeD5aJ_5vrDQGU_s-0", label:"CW Vendor Directory", sub:"vendors, service types, background checks" }
+};
+function param(n){ var m = new RegExp("[?&]" + n + "=([^&]*)").exec(location.search); return m ? decodeURIComponent(m[1]) : ""; }
+ADMIN.init({ page:"emails", onReady:function(){
+  var key = BOOKS[param("b")] ? param("b") : "shop", gid = /^\d+$/.test(param("gid")) ? param("gid") : "";
+  var b = BOOKS[key];
+  document.getElementById("title").textContent = b.label;
+  document.getElementById("sub").textContent = b.sub;
+  document.title = b.label + " | CW Admin Hub";
+  var base = "https://docs.google.com/spreadsheets/d/" + b.id + "/edit";
+  document.getElementById("open").href = base + (gid ? "#gid=" + gid : "");
+  document.getElementById("fr").src = base + "?rm=minimal" + (gid ? "#gid=" + gid : "");
+  var h = "";
+  Object.keys(BOOKS).forEach(function(k){ h += '<a href="sheet.html?b=' + k + '" class="' + (k === key ? "on" : "") + '">' + ADMIN.esc(BOOKS[k].label) + '</a>'; });
+  document.getElementById("pick").innerHTML = h;
+}});
+})();
+</script>
+</body>
+</html>

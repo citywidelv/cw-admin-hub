@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Records | CW Admin Hub</title>
+<!-- build 2026-09-19. Ops Admin Desk record editor. One form submission per page instead of
+one row on a Google Sheet. Backend: AdminRecords.gs on the CW Solicitations script (kinds
+adr_*). The page paints its shell first and fetches the list after; the last list is kept in
+sessionStorage so coming back is instant. Every save carries the value the editor last saw,
+so nobody overwrites a change made on the Sheet in the meantime. Every change is logged with
+its previous value and can be undone from the Recent changes card. -->
+<link rel="stylesheet" href="admin.css">
+<link rel="icon" href="https://citywidelv.github.io/cw-ops-desk/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="https://citywidelv.github.io/cw-ops-desk/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://citywidelv.github.io/cw-ops-desk/apple-touch-icon.png">
+<style>
+.topbar{position:relative;z-index:5;margin-top:-46px}
+.topbar .qcard{padding:12px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.topbar .who{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--grey)}
+.topbar .who input{font-size:11.5px;border:1px solid var(--border);border-radius:6px;padding:5px 8px;width:150px}
+.topbar .sp{flex:1}
+.stabs{display:flex;flex-wrap:wrap;gap:6px}
+.stabs a{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--black);text-decoration:none;border:1.5px solid var(--border);border-radius:9px;padding:7px 11px;background:#fff;white-space:nowrap;min-height:36px}
+.stabs a:hover{border-color:var(--red);color:var(--red)}
+.stabs a.on{background:var(--black);color:#fff;border-color:var(--black)}
+.stabs .g{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);align-self:center;margin-left:6px}
+.help{font-size:12.5px;color:var(--grey);line-height:1.5}
+.help b{color:var(--black)}
+/* list */
+.ltools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.ltools input[type=search]{flex:1;min-width:220px;font:inherit;font-size:13px;border:1.5px solid var(--border);border-radius:9px;padding:9px 12px;min-height:40px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--border);background:#fff;border-radius:16px;font:inherit;font-size:11.5px;font-weight:700;padding:6px 11px;cursor:pointer;color:var(--grey);min-height:32px}
+.chip:hover{border-color:var(--red);color:var(--red)}
+.chip.on{background:var(--red);border-color:var(--red);color:#fff}
+.count{font-size:11.5px;color:var(--grey);white-space:nowrap}
+.tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.lst{width:100%;border-collapse:collapse;font-size:12.5px}
+table.lst th{text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--grey);padding:8px 8px;border-bottom:2px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+table.lst th.sorted{color:var(--red)}
+table.lst td{padding:9px 8px;border-bottom:1px solid var(--light);vertical-align:top;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+table.lst tr.r{cursor:pointer}
+table.lst tr.r:hover td{background:var(--light)}
+table.lst tr.r.on td{background:#FDF1F2}
+table.lst td.t{font-weight:700;color:var(--black)}
+table.lst td.b .y{color:var(--green);font-weight:700}
+table.lst td.b .n{color:var(--grey)}
+.skel{height:12px;border-radius:6px;background:linear-gradient(90deg,#eee 25%,#f7f7f7 50%,#eee 75%);background-size:200% 100%;animation:sk 1.2s infinite}
+@keyframes sk{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.empty{padding:26px;text-align:center;color:var(--grey);font-size:13px}
+/* record */
+.rec{display:grid;grid-template-columns:260px minmax(0,1fr);gap:16px;align-items:start}
+.rec>*{min-width:0}
+.mini{background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;position:sticky;top:130px;max-height:calc(100vh - 150px);display:flex;flex-direction:column}
+.mini .mh{padding:10px 12px;border-bottom:1px solid var(--border);font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);display:flex;gap:8px;align-items:center}
+.mini .mh a{margin-left:auto;font-size:11px;color:var(--red);text-decoration:none;text-transform:none;letter-spacing:0}
+.mini .ml{overflow-y:auto}
+.mini button{display:block;width:100%;text-align:left;border:none;border-bottom:1px solid var(--light);background:none;font:inherit;padding:9px 12px;cursor:pointer;color:var(--black)}
+.mini button b{display:block;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini button span{display:block;font-size:11px;color:var(--grey);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini button:hover{background:var(--light)}
+.mini button.on{background:var(--red);color:#fff}
+.mini button.on span{color:#fbd9db}
+.rbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 18px;border-bottom:1px solid var(--border)}
+.rbar .pos{font-size:11.5px;color:var(--grey);white-space:nowrap}
+.rbar .sp{flex:1}
+.rhead{padding:16px 18px 6px}
+.rhead .id{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--grey)}
+.rhead h2{font-size:19px;line-height:1.3;margin-top:2px;overflow-wrap:anywhere}
+.rhead .sub{font-size:12px;color:var(--grey);margin-top:4px;display:flex;gap:14px;flex-wrap:wrap}
+.pub{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-radius:6px;padding:2px 7px;background:var(--amber-bg);color:var(--amber);margin-left:6px;vertical-align:middle}
+.intl{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-radius:6px;padding:2px 7px;background:var(--light);color:var(--grey);border:1px solid var(--border);margin-left:6px;vertical-align:middle}
+.sec{padding:8px 18px 14px}
+.sec h4{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--grey);padding:10px 0 8px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.sec h4 .bar-accent{width:14px}
+.sec.pubsec h4{color:var(--amber)}
+.fgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 22px}
+.f{min-width:0}
+.f.wide{grid-column:1/-1}
+.f label{display:block;font-size:11px;font-weight:700;color:var(--grey);margin-bottom:3px;letter-spacing:.02em}
+.f .v{font-size:13.5px;line-height:1.5;overflow-wrap:anywhere;white-space:pre-wrap;min-height:20px}
+.f .v.muted{color:#aaa;font-style:italic;white-space:normal}
+.f .v a{color:var(--red);text-decoration:none;font-weight:700}
+.f .v .yes{color:var(--green);font-weight:700}
+.f .v .no{color:var(--grey)}
+.f input[type=text],.f input[type=email],.f input[type=url],.f input[type=date],.f input[type=datetime-local],.f input[type=number],.f select,.f textarea{width:100%;font:inherit;font-size:13px;border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;background:#fff;min-height:40px}
+.f textarea{min-height:88px;resize:vertical;line-height:1.5}
+.f.ro input,.f.ro textarea,.f.ro select{background:var(--light);color:var(--grey)}
+.f.dirty label{color:var(--red)}
+.f.dirty input,.f.dirty textarea,.f.dirty select{border-color:var(--red);background:#fff8e6}
+.f .tog{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;cursor:pointer;min-height:40px}
+.f .tog input{width:20px;height:20px;accent-color:var(--red)}
+.items{border:1px solid var(--border);border-radius:9px;overflow:hidden;font-size:12.5px}
+.items div{display:flex;gap:10px;padding:6px 10px;border-bottom:1px solid var(--light)}
+.items div:last-child{border-bottom:none}
+.items b{flex:1;min-width:0}
+.items span{color:var(--grey);white-space:nowrap}
+.rfoot{padding:12px 18px 16px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rfoot .note{font-size:11.5px;color:var(--grey)}
+.rfoot .sp{flex:1}
+.banner{margin:10px 18px 0;background:var(--amber-bg);color:var(--amber);border-radius:9px;padding:9px 12px;font-size:12px;font-weight:700}
+.banner.red{background:var(--red-bg);color:var(--red)}
+/* log */
+table.log{width:100%;border-collapse:collapse;font-size:12px}
+table.log th{text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--grey);padding:8px;border-bottom:2px solid var(--border)}
+table.log td{padding:7px 8px;border-bottom:1px solid var(--light);vertical-align:top;max-width:260px;overflow-wrap:anywhere}
+table.log td.v{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:#444}
+.btn.busy{opacity:.6;pointer-events:none}
+@media(max-width:900px){.rec{grid-template-columns:1fr}.mini{display:none}.fgrid{grid-template-columns:1fr}.topbar .who{order:9}}
+</style>
+<link rel="stylesheet" href="https://citywidelv.github.io/cw-base.css">
+</head>
+<body>
+<div id="gate" class="gate"></div>
+<div id="app" class="hidden">
+<header class="head" id="adminhead"></header>
+
+<section class="hero slim">
+<div class="bg" style="background-image:url('https://citywidelv.github.io/cw-ops-desk/images/fsm-team.jpg')"></div>
+<div class="wrap">
+<div class="htext">
+<div class="kick">Ops Admin Desk</div>
+<h1 id="htitle">Records</h1>
+<p id="hhelp">Read and change form submissions one at a time. The Google Sheet is the last resort, not the first stop.</p>
+</div>
+</div>
+</section>
+
+<div class="wrap topbar">
+<div class="qcard">
+<div class="stabs" id="stabs"></div>
+<span class="sp"></span>
+<span class="who">Editing as <input id="who" placeholder="Your name"></span>
+<a class="btn sm" href="desk.html">Desk home</a>
+</div>
+</div>
+
+<main class="wrap" style="padding-top:18px">
+
+<div id="pick" class="card hidden"><div class="cbody"><p class="help">Pick a record type above to start.</p></div></div>
+
+<!-- ============ BROWSE ============ -->
+<div id="browse" class="card hidden">
+<div class="cbody">
+<div class="ltools">
+<input type="search" id="q" placeholder="Search" autocomplete="off">
+<div class="chips" id="chips"></div>
+<span class="count" id="count"></span>
+<button class="btn sm" id="reload" type="button">Refresh</button>
+<button class="btn sm solid hidden" id="addbtn" type="button">Add</button>
+<a class="btn sm" id="sheetlink" href="#" target="_blank" rel="noopener">Open the Sheet</a>
+</div>
+<div class="tblwrap"><table class="lst" id="lst"></table></div>
+<div class="empty hidden" id="empty"></div>
+</div>
+</div>
+
+<!-- ============ RECORD ============ -->
+<div id="record" class="rec hidden">
+<aside class="mini">
+<div class="mh"><span id="minihead">List</span><a href="#" id="miniback">All</a></div>
+<div class="ml" id="minilist"></div>
+</aside>
+<div class="card" id="reccard">
+<div class="rbar">
+<button class="btn sm" id="back" type="button">&larr; Back to the list</button>
+<button class="btn sm" id="prev" type="button">&larr; Prev</button>
+<span class="pos" id="pos"></span>
+<button class="btn sm" id="next" type="button">Next &rarr;</button>
+<span class="sp"></span>
+<a class="btn sm" id="rowlink" href="#" target="_blank" rel="noopener">This row in the Sheet</a>
+<button class="btn sm dark" id="edit" type="button">Edit</button>
+<button class="btn sm hidden" id="cancel" type="button">Cancel</button>
+<button class="btn sm solid hidden" id="save" type="button">Save changes</button>
+</div>
+<div id="rbody"></div>
+</div>
+</div>
+
+<!-- ============ LOG ============ -->
+<div class="card" id="logcard" style="margin-top:16px">
+<div class="chead"><h3>Recent changes made here</h3><span class="sub" id="logsub"></span></div>
+<div class="cbody">
+<div class="actions" style="margin-bottom:10px"><button class="btn sm" id="logload" type="button">Show recent changes</button><span class="help" style="margin-left:8px">Undo puts the previous value back and logs that too.</span></div>
+<div class="tblwrap"><table class="log" id="logtbl"></table></div>
+</div>
+</div>
+
+</main>
+<footer class="foot"><div class="fin">
+<b>City Wide Facility Solutions</b> &middot; Admin Hub &middot; Internal use only &middot; Something missing? Tell TJ. &middot; <a href="https://www.gocitywide.com" target="_blank" rel="noopener">GoCityWide.com</a>
+<span class="fr">Las Vegas<span>&bull;</span>Reno</span>
+</div></footer>
+</div><!-- /app -->
+
+<script src="https://citywidelv.github.io/cw-ops-desk/cw-auth.js"></script>
+<script src="nav.js"></script>
+<script src="https://citywidelv.github.io/cw-ops-desk/cw-nav.js"></script>
+<script src="admin-shared.js"></script>
+<script>
+(function(){
+"use strict";
+var esc = ADMIN.esc, toast = ADMIN.toast;
+function $(id){ return document.getElementById(id); }
+
+/* The record types this page can open. The server (AdminRecords.gs) is the whitelist;
+   this list only draws the tab strip before the first fetch. */
+var SURFACES = [
+  { key:"postings",    group:"Opportunity Wall", label:"Opportunity postings" },
+  { key:"responses",   group:"Opportunity Wall", label:"Vendor responses" },
+  { key:"supplies",    group:"Supplies",         label:"Supplies needed" },
+  { key:"envirox",     group:"Supplies",         label:"EnvirOx orders" },
+  { key:"shop",        group:"Supplies",         label:"Shop orders" },
+  { key:"vendors_lv",  group:"Vendors",          label:"Las Vegas" },
+  { key:"vendors_nnv", group:"Vendors",          label:"Northern Nevada" },
+  { key:"staff",       group:"Team",             label:"Roster" }
+];
+
+var S = { key:"", meta:null, cols:[], rows:[], view:[], sortCol:"", sortDir:-1, q:"", chip:-1, row:0, rec:null, fields:[], editing:false, adding:false, busy:false };
+
+function who(){ return ($("who").value || ADMIN.who() || "").trim() || "unknown"; }
+function post(payload){ payload.who = who(); return ADMIN.api(payload); }
+function cacheKey(){ return "adr:list:" + S.key; }
+function param(n){ var m = new RegExp("[?&]" + n + "=([^&]*)").exec(location.search); return m ? decodeURIComponent(m[1].replace(/\+/g, " ")) : ""; }
+function setUrl(){ var u = "records.html?s=" + encodeURIComponent(S.key) + (S.row ? "&row=" + S.row : ""); try{ history.replaceState(null, "", u); }catch(e){} }
+
+/* ---------- surface strip ---------- */
+function renderTabs(){
+  var h = "", g = "";
+  SURFACES.forEach(function(s){
+    if(s.group !== g){ g = s.group; h += '<span class="g">' + esc(g) + '</span>'; }
+    h += '<a href="records.html?s=' + esc(s.key) + '" data-k="' + esc(s.key) + '" class="' + (s.key === S.key ? "on" : "") + '">' + esc(s.label) + '</a>';
+  });
+  $("stabs").innerHTML = h;
+}
+$("stabs").addEventListener("click", function(e){
+  var a = e.target.closest("a[data-k]"); if(!a) return;
+  e.preventDefault(); open(a.getAttribute("data-k"), 0);
+});
+
+/* ---------- open a surface ---------- */
+function open(key, row){
+  if(S.editing && !confirm("You have unsaved changes. Leave without saving?")) return;
+  S.key = key; S.row = row || 0; S.rec = null; S.editing = false; S.adding = false; S.q = ""; S.chip = -1; S.sortCol = ""; S.rows = []; S.cols = [];
+  $("q").value = "";
+  var s = SURFACES.filter(function(x){ return x.key === key; })[0];
+  $("htitle").textContent = s ? (s.group === "Vendors" ? "Vendors, " + s.label : s.label) : "Records";
+  $("hhelp").textContent = "Loading...";
+  renderTabs(); setUrl();
+  $("pick").classList.add("hidden");
+  $("logtbl").innerHTML = ""; $("logsub").textContent = "";
+  var cached = null;
+  try{ cached = JSON.parse(sessionStorage.getItem(cacheKey()) || "null"); }catch(e){}
+  if(cached && cached.rows){ apply(cached, true); }
+  else { showBrowse(); $("lst").innerHTML = skeleton(); $("count").textContent = "Loading..."; }
+  load();
+}
+function skeleton(){
+  var h = "<tbody>";
+  for(var i = 0; i < 8; i++) h += '<tr><td colspan="6"><div class="skel" style="width:' + (55 + (i * 37) % 40) + '%"></div></td></tr>';
+  return h + "</tbody>";
+}
+function load(){
+  var key = S.key;
+  $("reload").classList.add("busy");
+  post({ kind:"adr_list", surface:key }).then(function(r){
+    $("reload").classList.remove("busy");
+    if(key !== S.key) return;
+    if(!r || r.ok === false){ toast((r && r.error) || "Could not load the list.", "err"); $("count").textContent = "Could not load"; if(!S.rows.length) $("lst").innerHTML = ""; return; }
+    try{ sessionStorage.setItem(cacheKey(), JSON.stringify({ surface:r.surface, cols:r.cols, rows:r.rows, url:r.url, generated:r.generated })); }catch(e){}
+    apply(r, false);
+  }).catch(function(){ $("reload").classList.remove("busy"); toast("Could not reach the script. Try again.", "err"); });
+}
+function apply(r, fromCache){
+  S.meta = r.surface; S.cols = r.cols; S.rows = r.rows; S.url = r.url;
+  $("hhelp").textContent = S.meta.help || "";
+  $("sheetlink").href = r.url || "#";
+  $("addbtn").classList.toggle("hidden", !S.meta.add);
+  $("addbtn").textContent = "Add a " + (S.meta.one || "record");
+  if(!S.sortCol && S.meta.dateCol && r.cols.indexOf(S.meta.dateCol) >= 0){ S.sortCol = S.meta.dateCol; S.sortDir = -1; }
+  renderChips();
+  filter();
+  var showing = !$("record").classList.contains("hidden");
+  if(S.row && showing){ var j = indexOfRow(S.row); if(j >= 0){ $("pos").textContent = (j + 1) + " of " + S.view.length; $("prev").disabled = j <= 0; $("next").disabled = j >= S.view.length - 1; renderMini(); } }
+  else if(S.row){ var i = indexOfRow(S.row); if(i >= 0) showRecord(i); else { S.row = 0; showBrowse(); } }
+  else showBrowse();
+  $("count").textContent = (fromCache ? "Refreshing... " : "") + S.view.length + " of " + S.rows.length;
+}
+function indexOfRow(row){ for(var i = 0; i < S.view.length; i++) if(S.view[i]._row === row) return i; return -1; }
+
+/* ---------- browse ---------- */
+function showBrowse(){ $("browse").classList.remove("hidden"); $("record").classList.add("hidden"); renderList(); }
+function renderChips(){
+  var q = S.meta.quick || [], h = '<button class="chip' + (S.chip < 0 ? " on" : "") + '" data-i="-1" type="button">All</button>';
+  q.forEach(function(c, i){ h += '<button class="chip' + (S.chip === i ? " on" : "") + '" data-i="' + i + '" type="button">' + esc(c.label) + '</button>'; });
+  $("chips").innerHTML = h;
+}
+$("chips").addEventListener("click", function(e){ var b = e.target.closest(".chip"); if(!b) return; S.chip = Number(b.getAttribute("data-i")); renderChips(); filter(); renderList(); });
+$("q").addEventListener("input", function(){ S.q = $("q").value; filter(); renderList(); });
+function filter(){
+  var q = S.q.trim().toLowerCase(), chip = S.chip >= 0 ? (S.meta.quick || [])[S.chip] : null;
+  var keys = (S.meta.search || []).concat(S.cols);
+  S.view = S.rows.filter(function(r){
+    if(chip && String(r[chip.col] == null ? "" : r[chip.col]) !== chip.is) return false;
+    if(!q) return true;
+    for(var i = 0; i < keys.length; i++){ var v = r[keys[i]]; if(v != null && String(v).toLowerCase().indexOf(q) >= 0) return true; }
+    return false;
+  });
+  if(S.sortCol){
+    var c = S.sortCol, d = S.sortDir;
+    S.view.sort(function(a, b){
+      var x = a[c] == null ? "" : a[c], y = b[c] == null ? "" : b[c];
+      var nx = Number(String(x).replace(/[$,]/g, "")), ny = Number(String(y).replace(/[$,]/g, ""));
+      if(x !== "" && y !== "" && !isNaN(nx) && !isNaN(ny)) return (nx - ny) * d;
+      return String(x).localeCompare(String(y)) * d;
+    });
+  }
+  $("count").textContent = S.view.length + " of " + S.rows.length;
+}
+function label(col){ if(S.rec && S.fields) { for(var i = 0; i < S.fields.length; i++) if(S.fields[i].name === col) return S.fields[i].label; } return String(col).replace(/_/g, " ").replace(/^./, function(c){ return c.toUpperCase(); }); }
+function cell(col, v){
+  var s = v == null ? "" : String(v);
+  if(s === "TRUE" || s === "FALSE") return '<td class="b">' + (s === "TRUE" ? '<span class="y">Yes</span>' : '<span class="n">No</span>') + '</td>';
+  if(col === S.meta.titleCol) return '<td class="t">' + esc(s) + '</td>';
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return '<td>' + esc(niceDate(s)) + '</td>';
+  if(/amount|total|subtotal|price/i.test(col) && s !== "" && !isNaN(Number(s))) return '<td>' + money(s) + '</td>';
+  return '<td title="' + esc(s) + '">' + esc(s.length > 60 ? s.slice(0, 58) + "..." : s) + '</td>';
+}
+function money(s){ var n = Number(s); return isNaN(n) ? esc(s) : "$" + n.toLocaleString("en-US", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }); }
+function niceDate(s){
+  var m = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/.exec(s); if(!m) return s;
+  var out = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][Number(m[2]) - 1] + " " + Number(m[3]) + ", " + m[1];
+  if(m[4]){ var h = Number(m[4]), ap = h >= 12 ? "pm" : "am"; h = h % 12 || 12; out += " " + h + ":" + m[5] + " " + ap; }
+  return out;
+}
+function renderList(){
+  var t = $("lst");
+  if(!S.cols.length){ t.innerHTML = ""; return; }
+  var h = "<thead><tr>";
+  S.cols.forEach(function(c){ h += '<th data-c="' + esc(c) + '" class="' + (S.sortCol === c ? "sorted" : "") + '">' + esc(label(c)) + (S.sortCol === c ? (S.sortDir < 0 ? " &#9660;" : " &#9650;") : "") + '</th>'; });
+  h += "</tr></thead><tbody>";
+  var max = 400;
+  S.view.slice(0, max).forEach(function(r){
+    h += '<tr class="r' + (r._row === S.row ? " on" : "") + '" data-row="' + r._row + '">';
+    S.cols.forEach(function(c){ h += cell(c, r[c]); });
+    h += "</tr>";
+  });
+  h += "</tbody>";
+  t.innerHTML = h;
+  var e = $("empty");
+  if(!S.view.length){ e.textContent = S.rows.length ? "Nothing matches that search." : "No records yet."; e.classList.remove("hidden"); }
+  else if(S.view.length > max){ e.textContent = "Showing the first " + max + ". Search to narrow it down."; e.classList.remove("hidden"); }
+  else e.classList.add("hidden");
+}
+$("lst").addEventListener("click", function(e){
+  var th = e.target.closest("th[data-c]");
+  if(th){ var c = th.getAttribute("data-c"); if(S.sortCol === c) S.sortDir = -S.sortDir; else { S.sortCol = c; S.sortDir = 1; } filter(); renderList(); return; }
+  var tr = e.target.closest("tr.r"); if(!tr) return;
+  var i = indexOfRow(Number(tr.getAttribute("data-row"))); if(i >= 0) showRecord(i);
+});
+$("reload").addEventListener("click", load);
+
+/* ---------- record ---------- */
+function showRecord(i){
+  if(S.editing && !confirm("You have unsaved changes. Leave without saving?")) return;
+  var r = S.view[i]; if(!r) return;
+  S.row = r._row; S.editing = false; S.adding = false; S.rec = null; S.fields = [];
+  setUrl();
+  $("browse").classList.add("hidden"); $("record").classList.remove("hidden");
+  $("pos").textContent = (i + 1) + " of " + S.view.length;
+  $("prev").disabled = i <= 0; $("next").disabled = i >= S.view.length - 1;
+  renderMini();
+  setEditUI();
+  $("rbody").innerHTML = '<div class="rhead"><div class="id">' + esc(S.meta.one || "record") + '</div><h2>' + esc(r[S.meta.titleCol] || r[S.meta.idCol] || ("Row " + r._row)) + '</h2></div><div class="sec"><div class="skel" style="width:60%;margin:10px 0"></div><div class="skel" style="width:80%;margin:10px 0"></div><div class="skel" style="width:45%;margin:10px 0"></div></div>';
+  var row = S.row;
+  post({ kind:"adr_get", surface:S.key, row:row }).then(function(g){
+    if(row !== S.row) return;
+    if(!g || g.ok === false){ $("rbody").innerHTML = '<div class="banner red">' + esc((g && g.error) || "Could not load this record.") + '</div>'; return; }
+    S.rec = g.rec; S.fields = g.fields; S.id = g.id;
+    $("rowlink").href = g.url || S.url || "#";
+    setEditUI(); renderRecord();
+  }).catch(function(){ $("rbody").innerHTML = '<div class="banner red">Could not reach the script. Try again.</div>'; });
+}
+function renderMini(){
+  var i = indexOfRow(S.row);
+  $("minihead").textContent = S.view.length + " " + (S.meta.label || "");
+  var from = Math.max(0, i - 40), to = Math.min(S.view.length, i + 60), h = "";
+  for(var k = from; k < to; k++){
+    var r = S.view[k];
+    var sub = S.meta.dateCol && r[S.meta.dateCol] ? niceDate(String(r[S.meta.dateCol])) : (S.cols[1] && r[S.cols[1]]) || "";
+    h += '<button type="button" data-i="' + k + '" class="' + (r._row === S.row ? "on" : "") + '"><b>' + esc(r[S.meta.titleCol] || r[S.meta.idCol] || ("Row " + r._row)) + '</b><span>' + esc(sub) + '</span></button>';
+  }
+  $("minilist").innerHTML = h;
+  var on = $("minilist").querySelector("button.on"); if(on && on.scrollIntoView) on.scrollIntoView({ block:"center" });
+}
+$("minilist").addEventListener("click", function(e){ var b = e.target.closest("button[data-i]"); if(b) showRecord(Number(b.getAttribute("data-i"))); });
+$("miniback").addEventListener("click", function(e){ e.preventDefault(); back(); });
+$("back").addEventListener("click", back);
+function back(){ if(S.editing && !confirm("You have unsaved changes. Leave without saving?")) return; S.editing = false; S.adding = false; S.row = 0; setUrl(); showBrowse(); }
+$("prev").addEventListener("click", function(){ var i = indexOfRow(S.row); if(i > 0) showRecord(i - 1); });
+$("next").addEventListener("click", function(){ var i = indexOfRow(S.row); if(i >= 0 && i < S.view.length - 1) showRecord(i + 1); });
+
+function isPublicSurface(){ return S.key === "postings"; }
+function fieldHtml(f, v, editing){
+  var wide = f.type === "long" || f.type === "json" || (v && String(v).length > 70);
+  var cls = "f" + (wide ? " wide" : "") + (f.readonly ? " ro" : "");
+  var lab = '<label>' + esc(f.label) + (isPublicSurface() && !f.internal && !f.readonly ? '<span class="pub">Public</span>' : "") + (f.internal ? '<span class="intl">Internal</span>' : "") + '</label>';
+  if(!editing || f.readonly) return '<div class="' + cls + '" data-f="' + esc(f.name) + '">' + lab + '<div class="v">' + viewValue(f, v) + '</div></div>';
+  return '<div class="' + cls + '" data-f="' + esc(f.name) + '">' + lab + inputHtml(f, v) + '</div>';
+}
+function viewValue(f, v){
+  var s = v == null ? "" : String(v);
+  if(s === "") return '<span class="muted">none</span>';
+  if(f.type === "bool") return s === "TRUE" ? '<span class="yes">Yes</span>' : '<span class="no">No</span>';
+  if(f.type === "date" || f.type === "datetime") return esc(niceDate(s));
+  if(f.type === "email") return '<a href="mailto:' + esc(s) + '">' + esc(s) + '</a>';
+  if(f.type === "url") return '<a href="' + esc(s) + '" target="_blank" rel="noopener">Open</a> <span style="color:var(--grey);font-size:11px">' + esc(s.length > 60 ? s.slice(0, 58) + "..." : s) + '</span>';
+  if(f.type === "number" && /amount|total|subtotal|price|revenue/i.test(f.name)) return money(s);
+  if(f.type === "json" || (/^\s*[\[{]/.test(s) && /[\]}]\s*$/.test(s))){
+    try{ var j = JSON.parse(s); if(Array.isArray(j) && j.length && typeof j[0] === "object"){ var h = '<div class="items">'; j.forEach(function(it){ h += '<div><b>' + esc(it.name || it.item || it.sku || JSON.stringify(it)) + '</b>' + (it.qty != null ? '<span>x' + esc(it.qty) + '</span>' : "") + (it.price != null && it.price !== "" ? '<span>' + money(it.price) + '</span>' : "") + '</div>'; }); return h + "</div>"; } }catch(e){}
+  }
+  return esc(s);
+}
+function inputHtml(f, v){
+  var s = v == null ? "" : String(v), n = 'name="' + esc(f.name) + '"';
+  if(f.type === "bool") return '<label class="tog"><input type="checkbox" ' + n + (s === "TRUE" ? " checked" : "") + '> ' + (s === "TRUE" ? "Yes" : "No") + '</label>';
+  if(f.type === "select"){
+    var opts = (f.options || []).slice(); if(s !== "" && opts.indexOf(s) < 0) opts.unshift(s); if(opts.indexOf("") < 0) opts.unshift("");
+    return '<select ' + n + '>' + opts.map(function(o){ return '<option value="' + esc(o) + '"' + (o === s ? " selected" : "") + '>' + esc(o === "" ? "(blank)" : o) + '</option>'; }).join("") + '</select>';
+  }
+  if(f.type === "long" || f.type === "json") return '<textarea ' + n + '>' + esc(s) + '</textarea>';
+  if(f.type === "date") return '<input type="date" ' + n + ' value="' + esc(s.slice(0, 10)) + '">';
+  if(f.type === "datetime"){ var dv = s ? s.slice(0, 10) + "T" + (s.length > 10 ? s.slice(11, 16) : "00:00") : ""; return '<input type="datetime-local" ' + n + ' value="' + esc(dv) + '">'; }
+  if(f.type === "email") return '<input type="email" ' + n + ' value="' + esc(s) + '">';
+  if(f.type === "url") return '<input type="url" ' + n + ' value="' + esc(s) + '">';
+  if(f.type === "number") return '<input type="text" inputmode="decimal" ' + n + ' value="' + esc(s) + '">';
+  return '<input type="text" ' + n + ' value="' + esc(s) + '">';
+}
+function renderRecord(){
+  var rec = S.rec, f = S.fields, editing = S.editing;
+  var title = S.adding ? "New " + (S.meta.one || "record") : (rec[S.meta.titleCol] || rec[S.meta.idCol] || ("Row " + S.row));
+  var sub = [];
+  if(S.meta.idCol && rec[S.meta.idCol] && S.meta.idCol !== S.meta.titleCol) sub.push(label(S.meta.idCol) + " " + rec[S.meta.idCol]);
+  if(S.meta.dateCol && rec[S.meta.dateCol]) sub.push(niceDate(String(rec[S.meta.dateCol])));
+  if(!S.adding) sub.push("Sheet row " + S.row);
+  var h = '<div class="rhead"><div class="id">' + esc(S.meta.one || "record") + '</div><h2>' + esc(title) + '</h2><div class="sub">' + sub.map(esc).join('<span>&middot;</span>') + '</div></div>';
+  if(editing && isPublicSurface()) h += '<div class="banner">Fields marked Public are on the Vendor Hub wall within a minute of saving. Never put the customer name or anything that identifies the building in a public field.</div>';
+  if(editing && S.meta.positional && !S.adding) h += '<div class="banner">This roster is read by position. Set Active to No to retire someone; rows are never removed.</div>';
+  var secs = [], bySec = {};
+  f.forEach(function(x){ var sname = x.section || "Details"; if(!bySec[sname]){ bySec[sname] = []; secs.push(sname); } bySec[sname].push(x); });
+  secs.forEach(function(sname){
+    var list = bySec[sname];
+    if(sname === "More" && !editing && !list.some(function(x){ return rec[x.name] != null && String(rec[x.name]) !== ""; })) return;
+    var pub = /\(public\)/i.test(sname);
+    h += '<div class="sec' + (pub ? " pubsec" : "") + '"><h4><span class="bar-accent"></span>' + esc(sname) + '</h4><div class="fgrid">';
+    list.forEach(function(x){ h += fieldHtml(x, rec[x.name], editing); });
+    h += '</div></div>';
+  });
+  h += '<div class="rfoot">' + (editing ? '<span class="note">Only the fields you change are written. If someone changed a field on the Sheet since you opened this, that field is skipped and you are told.</span>' : '<span class="note">Read only until you press Edit.</span>') + '<span class="sp"></span>' + (editing ? '<button class="btn sm" type="button" data-act="cancel">Cancel</button> <button class="btn sm solid" type="button" data-act="save">' + (S.adding ? "Add" : "Save changes") + '</button>' : '<button class="btn sm dark" type="button" data-act="edit">Edit</button>') + '</div>';
+  $("rbody").innerHTML = h;
+  if(editing){
+    var first = $("rbody").querySelector("input:not([type=checkbox]),textarea,select"); if(first && !S.adding) first.focus();
+  }
+}
+$("rbody").addEventListener("input", markDirty);
+$("rbody").addEventListener("change", markDirty);
+function markDirty(e){
+  if(!S.editing) return;
+  var el = e.target, wrap = el.closest(".f"); if(!wrap) return;
+  var f = fieldByName(wrap.getAttribute("data-f")); if(!f) return;
+  var cur = readInput(el, f), was = S.rec[f.name] == null ? "" : String(S.rec[f.name]);
+  wrap.classList.toggle("dirty", cur !== was);
+  if(f.type === "bool"){ var lab = el.closest(".tog"); if(lab) lab.lastChild.textContent = " " + (el.checked ? "Yes" : "No"); }
+}
+function fieldByName(n){ for(var i = 0; i < S.fields.length; i++) if(S.fields[i].name === n) return S.fields[i]; return null; }
+function readInput(el, f){
+  if(f.type === "bool") return el.checked ? "TRUE" : "FALSE";
+  var v = el.value;
+  if(f.type === "datetime") return v ? v.replace("T", " ").slice(0, 16) : "";
+  if(f.type === "date") return v ? v.slice(0, 10) : "";
+  return v;
+}
+function collect(){
+  var changes = {}, n = 0;
+  S.fields.forEach(function(f){
+    if(f.readonly) return;
+    var el = $("rbody").querySelector('[name="' + f.name.replace(/"/g, '\\"') + '"]'); if(!el) return;
+    var v = readInput(el, f), was = S.rec[f.name] == null ? "" : String(S.rec[f.name]);
+    if(v !== was){ changes[f.name] = { old: was, "new": v }; n++; }
+  });
+  return { changes: changes, n: n };
+}
+$("rbody").addEventListener("click", function(e){
+  var b = e.target.closest("button[data-act]"); if(!b) return;
+  var act = b.getAttribute("data-act");
+  if(act === "edit") startEdit(); else if(act === "cancel") cancelEdit(); else if(act === "save") save();
+});
+$("edit").addEventListener("click", startEdit);
+$("cancel").addEventListener("click", cancelEdit);
+$("save").addEventListener("click", save);
+function setEditUI(){
+  $("edit").classList.toggle("hidden", S.editing || !S.rec);
+  $("cancel").classList.toggle("hidden", !S.editing);
+  $("save").classList.toggle("hidden", !S.editing);
+  $("save").textContent = S.adding ? "Add" : "Save changes";
+  $("prev").classList.toggle("hidden", S.adding); $("next").classList.toggle("hidden", S.adding); $("pos").classList.toggle("hidden", S.adding); $("rowlink").classList.toggle("hidden", S.adding);
+}
+function startEdit(){ if(!S.rec) return; if(!who() || who() === "unknown"){ toast("Type your name in Editing as first, so the change log knows who.", "err"); $("who").focus(); return; } S.editing = true; setEditUI(); renderRecord(); }
+function cancelEdit(){
+  if(S.adding){ S.adding = false; S.editing = false; S.rec = null; back(); return; }
+  S.editing = false; setEditUI(); renderRecord();
+}
+function save(){
+  if(S.busy) return;
+  var c = collect();
+  if(S.adding){ return add(c); }
+  if(!c.n){ toast("Nothing changed."); S.editing = false; setEditUI(); renderRecord(); return; }
+  S.busy = true; $("save").classList.add("busy");
+  post({ kind:"adr_save", surface:S.key, row:S.row, id:S.id, changes:c.changes }).then(function(r){
+    S.busy = false; $("save").classList.remove("busy");
+    if(!r || r.ok === false){ toast((r && r.error) || "Save failed.", "err"); if(r && r.stale) refreshRecord(); return; }
+    (r.written || []).forEach(function(col){ S.rec[col] = c.changes[col]["new"]; });
+    var lr = S.rows.filter(function(x){ return x._row === S.row; })[0];
+    if(lr) (r.written || []).forEach(function(col){ if(col in lr) lr[col] = c.changes[col]["new"]; });
+    try{ sessionStorage.setItem(cacheKey(), JSON.stringify({ surface:S.meta, cols:S.cols, rows:S.rows, url:S.url })); }catch(e){}
+    var msg = "Saved " + (r.written || []).length + " field" + ((r.written || []).length === 1 ? "" : "s") + ".";
+    if(r.stale && r.stale.length) msg += " Skipped (changed on the Sheet since you opened it): " + r.stale.join(", ") + ".";
+    if(r.skipped && r.skipped.length) msg += " Not written: " + r.skipped.join(", ") + ".";
+    toast(msg, r.stale && r.stale.length ? "err" : "");
+    S.editing = false; setEditUI();
+    if(r.stale && r.stale.length) refreshRecord(); else { renderRecord(); filter(); renderMini(); }
+  }).catch(function(){ S.busy = false; $("save").classList.remove("busy"); toast("Could not reach the script. Nothing was saved.", "err"); });
+}
+function refreshRecord(){ var i = indexOfRow(S.row); if(i >= 0) showRecord(i); }
+function startAdd(){
+  if(!S.meta || !S.meta.add) return;
+  if(!who() || who() === "unknown"){ toast("Type your name in Editing as first.", "err"); $("who").focus(); return; }
+  /* fields come from any loaded record's metadata; if none has been opened yet, fetch one for its shape */
+  var go = function(fields){
+    S.adding = true; S.editing = true; S.row = 0; S.id = "";
+    S.fields = fields.map(function(f){ var x = {}; for(var k in f) x[k] = f[k]; x.readonly = false; return x; });
+    S.rec = {}; S.fields.forEach(function(f){ S.rec[f.name] = f.type === "bool" ? "TRUE" : ""; });
+    $("browse").classList.add("hidden"); $("record").classList.remove("hidden"); renderMini(); setEditUI(); renderRecord();
+  };
+  if(S.fields.length) return go(S.fields);
+  var first = S.rows[0]; if(!first){ toast("Add the first row on the Sheet, then this page can add the rest.", "err"); return; }
+  post({ kind:"adr_get", surface:S.key, row:first._row }).then(function(g){ if(g && g.ok !== false) go(g.fields); else toast((g && g.error) || "Could not load the form.", "err"); });
+}
+$("addbtn").addEventListener("click", startAdd);
+function add(c){
+  var values = {}; S.fields.forEach(function(f){ var el = $("rbody").querySelector('[name="' + f.name.replace(/"/g, '\\"') + '"]'); if(el) values[f.name] = readInput(el, f); });
+  S.busy = true; $("save").classList.add("busy");
+  post({ kind:"adr_add", surface:S.key, values:values }).then(function(r){
+    S.busy = false; $("save").classList.remove("busy");
+    if(!r || r.ok === false){ toast((r && r.error) || "Could not add it.", "err"); return; }
+    toast("Added on row " + r.row + ".");
+    S.adding = false; S.editing = false; S.row = r.row; S.rec = null;
+    load();
+  }).catch(function(){ S.busy = false; $("save").classList.remove("busy"); toast("Could not reach the script. Nothing was added.", "err"); });
+}
+
+/* ---------- log ---------- */
+$("logload").addEventListener("click", loadLog);
+function loadLog(){
+  $("logload").classList.add("busy"); $("logsub").textContent = "loading";
+  post({ kind:"adr_log", surface:S.key, limit:60 }).then(function(r){
+    $("logload").classList.remove("busy"); $("logload").textContent = "Refresh";
+    if(!r || r.ok === false){ toast((r && r.error) || "Could not load the log.", "err"); $("logsub").textContent = ""; return; }
+    $("logsub").textContent = r.rows.length ? "newest first" : "no changes yet";
+    var h = "<thead><tr><th>When</th><th>Who</th><th>What</th><th>Row</th><th>Field</th><th>Before</th><th>After</th><th></th></tr></thead><tbody>";
+    r.rows.forEach(function(e){
+      h += '<tr><td>' + esc(e.when) + '</td><td>' + esc(e.who) + '</td><td>' + esc(e.action) + '</td><td>' + esc(e.row) + '</td><td>' + esc(label(e.field)) + '</td><td class="v">' + esc(e.old) + '</td><td class="v">' + esc(e["new"]) + '</td><td>' +
+        (e.undone ? '<span class="help">undone</span>' : (e.action === "edit" || e.action === "add" ? '<button class="btn sm" type="button" data-undo="' + esc(e.log_id) + '">Undo</button>' : "")) + '</td></tr>';
+    });
+    $("logtbl").innerHTML = h + "</tbody>";
+  }).catch(function(){ $("logload").classList.remove("busy"); toast("Could not reach the script.", "err"); });
+}
+$("logtbl").addEventListener("click", function(e){
+  var b = e.target.closest("button[data-undo]"); if(!b) return;
+  if(!confirm("Put the previous value back?")) return;
+  b.classList.add("busy");
+  post({ kind:"adr_undo", log_id:b.getAttribute("data-undo") }).then(function(r){
+    if(!r || r.ok === false){ b.classList.remove("busy"); toast((r && r.error) || "Could not undo.", "err"); return; }
+    toast("Undone."); loadLog(); load(); if(S.row && S.rec) refreshRecord();
+  });
+});
+
+/* ---------- boot ---------- */
+ADMIN.init({ page:"emails", onReady:function(){
+  $("who").value = ADMIN.who();
+  $("who").addEventListener("change", function(){ ADMIN.setWho($("who").value.trim()); });
+  var k = param("s"), row = Number(param("row")) || 0;
+  renderTabs();
+  if(k && SURFACES.some(function(s){ return s.key === k; })) open(k, row);
+  else { $("pick").classList.remove("hidden"); }
+}});
+window.addEventListener("beforeunload", function(e){ if(S.editing){ e.preventDefault(); e.returnValue = ""; } });
+})();
+</script>
+</body>
+</html>

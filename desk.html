@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Ops Admin Desk | CW Admin Hub</title>
+<!-- build 2026-09-19. The operations admin's front door. Every record type the admin touches,
+one click away, with the form submissions shown one per page (records.html) instead of rows
+on a Google Sheet. Pricing tabs stay in the Sheet and open framed (sheet.html). Nothing on
+this page fetches on load; it is links. -->
+<link rel="stylesheet" href="admin.css">
+<link rel="icon" href="https://citywidelv.github.io/cw-ops-desk/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="https://citywidelv.github.io/cw-ops-desk/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://citywidelv.github.io/cw-ops-desk/apple-touch-icon.png">
+<style>
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.tile{background:#fff;border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);padding:16px 18px;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden;transition:all .15s;min-height:132px}
+.tile::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--red)}
+.tile.grey::before{background:var(--grey)}
+.tile.gold::before{background:var(--gold)}
+.tile:hover{border-color:var(--red);box-shadow:var(--shadow-lift);transform:translateY(-2px)}
+.tile .ti{display:flex;align-items:center;gap:10px}
+.tile .ti svg{color:var(--red);flex:none}
+.tile h3{font-size:14px;line-height:1.3}
+.tile p{font-size:12px;color:var(--grey);line-height:1.5;flex:1}
+.tile .go{font-size:11px;font-weight:700;color:var(--red);letter-spacing:.06em;text-transform:uppercase}
+.tile .where{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--grey);border:1px solid var(--border);border-radius:8px;padding:1px 7px;margin-left:auto;white-space:nowrap}
+.why{background:var(--black);color:#fff;border-radius:14px;box-shadow:var(--shadow);padding:20px 22px;display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.why>div h3{font-size:13px;margin-bottom:6px}
+.why>div h3::after{content:"";display:block;width:30px;height:3px;background:var(--red);border-radius:2px;margin-top:7px}
+.why p{font-size:12px;color:#cfcdc9;line-height:1.55}
+.why b{color:var(--gold)}
+.last{font-size:12.5px}
+.last a{display:inline-flex;align-items:center;gap:6px;color:var(--black);text-decoration:none;font-weight:700;border:1px solid var(--border);border-radius:8px;padding:7px 11px;margin:0 6px 8px 0;background:#fff;font-size:12px}
+.last a:hover{border-color:var(--red);color:var(--red)}
+@media(max-width:820px){.why{grid-template-columns:1fr}}
+</style>
+<link rel="stylesheet" href="https://citywidelv.github.io/cw-base.css">
+</head>
+<body>
+<div id="gate" class="gate"></div>
+<div id="app" class="hidden">
+<header class="head" id="adminhead"></header>
+
+<section class="hero slim">
+<div class="bg" style="background-image:url('https://citywidelv.github.io/cw-ops-desk/images/fsm-team.jpg')"></div>
+<div class="wrap">
+<div class="htext">
+<div class="kick">Ops Admin Desk</div>
+<h1>Everything the operations admin reads and updates, one record at a time</h1>
+<p>Open a posting, a vendor response, a supplies report or a vendor as one full page. Read it, press Edit, save. The Google Sheet updates underneath, and every change is logged with an undo. Open the Sheet itself only when you need to.</p>
+</div>
+</div>
+</section>
+
+<div class="wrap quick">
+<div class="qcard">
+<div class="qhead"><span class="bar-accent"></span><h2>Open a record type</h2></div>
+<div class="qrow">
+<a class="qbtn primary" href="records.html?s=postings"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 14h8M8 17h5"/></svg>Opportunity postings</a>
+<a class="qbtn" href="records.html?s=responses">Vendor responses</a>
+<a class="qbtn" href="records.html?s=supplies">Supplies needed</a>
+<a class="qbtn" href="records.html?s=shop">Shop orders</a>
+<a class="qbtn" href="records.html?s=vendors_lv">Vendors LV</a>
+<a class="qbtn" href="records.html?s=vendors_nnv">Vendors NNV</a>
+<a class="qbtn dark" href="records.html?s=staff">Team roster</a>
+</div>
+</div>
+</div>
+
+<main class="wrap">
+
+<section class="section">
+<div class="shead"><span class="bar-accent"></span><h2>Submissions and records</h2><span class="sub">one page per record, editable</span></div>
+<div class="tiles">
+<a class="tile" href="records.html?s=postings"><div class="ti"><h3>Opportunity postings</h3><span class="where">Wall</span></div><p>Every opportunity on the Vendor Hub wall. Fix a detail, change the pay, or check Filled to take it down. Public and internal fields are labelled.</p><span class="go">Open &rarr;</span></a>
+<a class="tile" href="records.html?s=responses"><div class="ti"><h3>Vendor responses</h3><span class="where">Wall</span></div><p>What each vendor submitted for a posting, as one readable page instead of a 26-column row. Quotes, plans, answers and their PDF.</p><span class="go">Open &rarr;</span></a>
+<a class="tile" href="records.html?s=supplies"><div class="ti"><h3>Supplies needed reports</h3><span class="where">Supplies</span></div><p>A vendor or night manager reported that a building needs supplies. Who, which building, which items, in one view.</p><span class="go">Open &rarr;</span></a>
+<a class="tile" href="records.html?s=envirox"><div class="ti"><h3>EnvirOx orders</h3><span class="where">Supplies</span></div><p>Chemical orders placed through the Ops Hub order guide, with PO, pounds and totals.</p><span class="go">Open &rarr;</span></a>
+<a class="tile" href="records.html?s=shop"><div class="ti"><h3>Vendor shop orders</h3><span class="where">Supplies</span></div><p>Apparel orders from the vendor shop. Tick Order Placed and Picked Up here; the Ops Hub alerts read the same boxes.</p><span class="go">Open &rarr;</span></a>
+<a class="tile" href="records.html?s=vendors_lv"><div class="ti"><h3>Vendors, Las Vegas</h3><span class="where">Directory</span></div><p>One vendor per page, grouped into Vendor, Contact, Business, Compliance, References and Internal. Change status or contact details without the 61-column scroll.</p><span class="go">Open &rarr;</span></a>
+<a class="tile" href="records.html?s=vendors_nnv"><div class="ti"><h3>Vendors, Northern Nevada</h3><span class="where">Directory</span></div><p>The Reno, Sparks and Carson City directory, same view.</p><span class="go">Open &rarr;</span></a>
+<a class="tile gold" href="records.html?s=staff"><div class="ti"><h3>Team roster</h3><span class="where">Team</span></div><p>The staff list the hubs read for FSM pickers and issuers. Add a person, update a phone, retire someone by setting Active to No.</p><span class="go">Open &rarr;</span></a>
+</div>
+</section>
+
+<section class="section">
+<div class="shead"><span class="bar-accent"></span><h2>Pricing and catalogs</h2><span class="sub">the Sheet is the tool here</span></div>
+<div class="tiles">
+<a class="tile grey" href="sheet.html?b=shop"><div class="ti"><h3>Vendor shop catalog and prices</h3><span class="where">Sheet</span></div><p>Products, prices, sizes and colors for the vendor shop. The shop reads this tab directly, so the Sheet is the right place to change a price. Opens framed here with a link out.</p><span class="go">Open the tab &rarr;</span></a>
+<a class="tile grey" href="sheet.html?b=supply"><div class="ti"><h3>EnvirOx catalog and pricing</h3><span class="where">Sheet</span></div><p>Chemical SKUs, pack sizes and price tiers behind the Ops Hub order guide.</p><span class="go">Open the tab &rarr;</span></a>
+<a class="tile grey" href="https://citywidelv.github.io/cw-vendor-hub/building-supplies.html" target="_blank" rel="noopener"><div class="ti"><h3>Building supplies list</h3><span class="where">Page</span></div><p>The item list on the Supplies Needed form is built into that page, not a Sheet. To add or remove an item on it, tell TJ.</p><span class="go">See the form &rarr;</span></a>
+</div>
+</section>
+
+<section class="section">
+<div class="shead"><span class="bar-accent"></span><h2>Tools already on the hubs</h2><span class="sub">the same jobs, purpose-built pages</span></div>
+<div class="tiles">
+<a class="tile" href="https://citywidelv.github.io/cw-ops-desk/post.html"><div class="ti"><h3>Post a new opportunity</h3><span class="where">Ops Hub</span></div><p>New postings start here, because posting also notifies. Edit an existing one from Opportunity postings above.</p><span class="go">Open &rarr;</span></a>
+<a class="tile" href="background-checks.html"><div class="ti"><h3>Background checks</h3><span class="where">Admin Hub</span></div><p>Review, record results and add people. Already record-by-record.</p><span class="go">Open &rarr;</span></a>
+<a class="tile" href="accounts.html"><div class="ti"><h3>Account directory</h3><span class="where">Admin Hub</span></div><p>Customer accounts, FSM assignments and the ACT ledger.</p><span class="go">Open &rarr;</span></a>
+<a class="tile" href="coi-log.html"><div class="ti"><h3>COI requests</h3><span class="where">Admin Hub</span></div><p>Certificate requests and their status.</p><span class="go">Open &rarr;</span></a>
+<a class="tile" href="https://citywidelv.github.io/cw-ops-desk/vendor-dne.html?from=admin"><div class="ti"><h3>Do Not Email or remove a vendor</h3><span class="where">Ops Hub</span></div><p>Block marketing email to a vendor or hide one from the pickers. The vendor pages above do not do this on purpose.</p><span class="go">Open &rarr;</span></a>
+<a class="tile" href="https://citywidelv.github.io/cw-ops-desk/vendor-add.html"><div class="ti"><h3>Add a vendor</h3><span class="where">Ops Hub</span></div><p>New vendors are added there so the ID and market tab are set correctly. Edit them from the vendor pages above.</p><span class="go">Open &rarr;</span></a>
+<a class="tile" href="recognition.html"><div class="ti"><h3>Vendor of the Month</h3><span class="where">Admin Hub</span></div><p>Nominations and winners.</p><span class="go">Open &rarr;</span></a>
+<a class="tile" href="https://citywidelv.github.io/cw-ops-desk/inventory-onhand.html"><div class="ti"><h3>Office inventory</h3><span class="where">Ops Hub</span></div><p>On hand counts and movements for uniforms and stock.</p><span class="go">Open &rarr;</span></a>
+</div>
+</section>
+
+<section class="section">
+<div class="why">
+<div><h3>Why one page beats one row</h3><p>A row is 30 to 60 cells wide. You scroll sideways, lose the row you were on, and read headers like <b>pay_period</b>. A page shows the same record with plain labels, grouped the way you think about it, and nothing else in view.</p></div>
+<div><h3>Safer than the Sheet</h3><p>Only the fields you change are written. If someone edited a cell on the Sheet after you opened the record, that field is skipped and you are told. Every change is logged with who, when and the previous value, with <b>Undo</b>.</p></div>
+<div><h3>When to open the Sheet</h3><p>Bulk changes, pricing tabs, or a column this desk does not show. Every list has an <b>Open the Sheet</b> button and every record has a <b>This row in the Sheet</b> link that lands on the exact row.</p></div>
+</div>
+</section>
+
+<section class="section">
+<div class="shead"><span class="bar-accent"></span><h2>The Google Sheets themselves</h2><span class="sub">last resort</span></div>
+<div class="card"><div class="cbody last">
+<a href="https://docs.google.com/spreadsheets/d/1ymbqR7LMvA7sbgZe2Ro5o2dNiXhP08Tn9Hw1b-H5AeQ/edit" target="_blank" rel="noopener">CW Solicitations (postings, responses, COI requests, change log)</a>
+<a href="https://docs.google.com/spreadsheets/d/1kHRyeQzDsi-bnfE5YpD_KPV17GeD5aJ_5vrDQGU_s-0/edit" target="_blank" rel="noopener">CW Vendor Directory (vendors, service types, background checks, do not email)</a>
+<a href="https://docs.google.com/spreadsheets/d/1_T1hxLt7WLIRYqkVVESGwD94f-IpPYAHVPWVoddbS_0/edit" target="_blank" rel="noopener">CW Supply and Inventory (supplies reports, EnvirOx)</a>
+<a href="https://docs.google.com/spreadsheets/d/1p0CJVr6UJnYTBvAF3-VPBA_6uBHG9BLlByryXLwlOTw/edit" target="_blank" rel="noopener">CW Vendor Shop Catalog (shop products, orders)</a>
+<a href="https://docs.google.com/spreadsheets/d/1IqSFi5gNL1YyDYqFxr2m3KNpILzz27XIvs_hC86MOhI/edit" target="_blank" rel="noopener">CW Account Changes</a>
+<a href="https://docs.google.com/spreadsheets/d/16Hf_lY_N8n3hPq4WDpPmXtyEs4Gdn-KV54-OUQUa-NI/edit" target="_blank" rel="noopener">CW Violation Notices and Insurance</a>
+<a href="https://docs.google.com/spreadsheets/d/17awrIV6X-Ugaxkw0VLDIH8WVpJ51Ux_5ntNxHu2tzBg/edit" target="_blank" rel="noopener">CW Maintenance Work Tickets and Snow Reports</a>
+<p class="help" style="margin-top:6px;font-size:12px;color:var(--grey)">The team roster and recognition books have no fixed link; the Team roster page and Vendor of the Month page each carry an Open the Sheet button.</p>
+</div></div>
+</section>
+
+</main>
+<footer class="foot"><div class="fin">
+<b>City Wide Facility Solutions</b> &middot; Admin Hub &middot; Internal use only &middot; Something missing? Tell TJ. &middot; <a href="https://www.gocitywide.com" target="_blank" rel="noopener">GoCityWide.com</a>
+<span class="fr">Las Vegas<span>&bull;</span>Reno</span>
+</div></footer>
+</div><!-- /app -->
+
+<script src="https://citywidelv.github.io/cw-ops-desk/cw-auth.js"></script>
+<script src="nav.js"></script>
+<script src="https://citywidelv.github.io/cw-ops-desk/cw-nav.js"></script>
+<script src="admin-shared.js"></script>
+<script>ADMIN.init({ page:"emails" });</script>
+</body>
+</html>

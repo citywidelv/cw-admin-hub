@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>CW Admin Hub | Business Operations Management</title>
-<!-- build 2026-09-11b: retired the vendor packet, walkthrough email and Exhibit A request Asana forms; the Ops Hub does all three itself now (vendor-invite.html, postings.html, create-exhibit-a.html). 2026-09-11 (renamed Admin Hub, Vendor of the Month card). 2026-09-05b (Team Emails quick link; gate via cw-auth.js in admin-shared.js). 2026-09-05a (COI request card + quick link). The Business Operations Manager's front door, a sibling of the
+<!-- build 2026-09-19 (Ops Admin Desk feature card). 2026-09-11b: retired the vendor packet, walkthrough email and Exhibit A request Asana forms; the Ops Hub does all three itself now (vendor-invite.html, postings.html, create-exhibit-a.html). 2026-09-11 (renamed Admin Hub, Vendor of the Month card). 2026-09-05b (Team Emails quick link; gate via cw-auth.js in admin-shared.js). 2026-09-05a (COI request card + quick link). The Business Operations Manager's front door, a sibling of the
 Ops Hub (cw-ops-desk) on the Nevada Team Portal. Passcode gate checked server-side
 (kind vd_bom_auth in VendorDirectory.gs; the Ops Hub team passcode also unlocks it).
 Background check roster and Asana boards are read live; nothing on this page is
@@ -91,6 +91,19 @@ hardcoded data except the menu tree and the Asana project registry in admin-shar
 </div>
 
 <div class="wrap feature">
+<div class="fcard">
+<span class="ficon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg></span>
+<div class="ftext"><h3>Ops Admin Desk</h3>
+<p>Postings, vendor responses, supplies reports, shop orders, vendors and the team roster, each shown as one full page you can read and edit. The Google Sheet updates underneath; every change is logged with an undo.</p></div>
+<div class="fbtns">
+<a class="btn solid" href="desk.html">Open the Desk</a>
+<a class="btn" href="records.html?s=postings">Opportunity Postings</a>
+<a class="btn" href="records.html?s=vendors_lv">Vendors</a>
+</div>
+</div>
+</div>
+
+<div class="wrap feature" style="margin-top:12px">
 <div class="fcard">
 <span class="ficon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span>
 <div class="ftext"><h3>Background Checks</h3>

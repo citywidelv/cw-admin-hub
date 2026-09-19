@@ -234,6 +234,11 @@ window.CW_NAV = {
      "ghead": "Directory"
     },
     {
+     "label": "Edit a Vendor Record (Desk)",
+     "href": "records.html?s=vendors_lv",
+     "tag": "Hub"
+    },
+    {
      "label": "Add a Vendor",
      "href": "https://citywidelv.github.io/cw-ops-desk/vendor-add.html",
      "tag": "Ops Hub"
@@ -298,6 +303,73 @@ window.CW_NAV = {
    "icon": "home",
    "page": "emails",
    "items": [
+    {
+     "ghead": "Ops Admin Desk"
+    },
+    {
+     "label": "Desk home (records, one per page)",
+     "href": "desk.html",
+     "tag": "Hub"
+    },
+    {
+     "sub": "Edit records",
+     "items": [
+      {
+       "ghead": "Opportunity Wall"
+      },
+      {
+       "label": "Opportunity postings",
+       "href": "records.html?s=postings",
+       "tag": "Hub"
+      },
+      {
+       "label": "Vendor responses",
+       "href": "records.html?s=responses",
+       "tag": "Hub"
+      },
+      {
+       "ghead": "Supplies"
+      },
+      {
+       "label": "Supplies needed reports",
+       "href": "records.html?s=supplies",
+       "tag": "Hub"
+      },
+      {
+       "label": "EnvirOx orders",
+       "href": "records.html?s=envirox",
+       "tag": "Hub"
+      },
+      {
+       "label": "Vendor shop orders",
+       "href": "records.html?s=shop",
+       "tag": "Hub"
+      },
+      {
+       "label": "Shop catalog and prices (Sheet)",
+       "href": "sheet.html?b=shop",
+       "tag": "Sheet"
+      },
+      {
+       "ghead": "Vendors and team"
+      },
+      {
+       "label": "Vendors, Las Vegas",
+       "href": "records.html?s=vendors_lv",
+       "tag": "Hub"
+      },
+      {
+       "label": "Vendors, Northern Nevada",
+       "href": "records.html?s=vendors_nnv",
+       "tag": "Hub"
+      },
+      {
+       "label": "Team roster",
+       "href": "records.html?s=staff",
+       "tag": "Hub"
+      }
+     ]
+    },
     {
      "ghead": "Site"
     },

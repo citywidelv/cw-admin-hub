@@ -1,4 +1,4 @@
-/* CW Admin Hub shared script. Build 2026-09-13 (Site Admin: MENU below is the fallback, nav.js is live; cascade submenus; Vendor of the Month).
+/* CW Admin Hub shared script. Build 2026-09-19 (Ops Admin Desk: desk.html, records.html, sheet.html under Team & Admin). 2026-09-13 (Site Admin: MENU below is the fallback, nav.js is live; cascade submenus; Vendor of the Month).
    Gate, header, cascading nav, webhook helper, Asana project registry.
    Every page: <link admin.css> ... <div id="gate"> + <div id="app" class="hidden">, then
    this file, then ADMIN.init({page:'...'}). Data lives in Google Sheets through the
@@ -122,6 +122,7 @@ var MENU = [
       {label:"The Wall (Vendor Hub)", href:VS + "#recognition", tag:"Vendor Hub"}
     ]},
     {ghead:"Directory"},
+    {label:"Edit a Vendor Record (Desk)", href:"records.html?s=vendors_lv", tag:"Hub"},
     {label:"Add a Vendor", href:OPS + "vendor-add.html", tag:"Ops Hub"},
     {label:"Do Not Email or Remove a Vendor", href:OPS + "vendor-dne.html?from=admin", tag:"Ops Hub"},
     {label:"Active Vendors (Las Vegas)", href:OPS + "vendors.html#/lv/janitorial", tag:"Ops Hub"},
@@ -137,6 +138,22 @@ var MENU = [
     {label:"Office Management board", href:asanaUrl("1211522761691094"), tag:"Asana"}
   ]},
   { label:"Team & Admin", icon:"home", page:"emails", items:[
+    {ghead:"Ops Admin Desk"},
+    {label:"Desk home (records, one per page)", href:"desk.html", tag:"Hub"},
+    {sub:"Edit records", items:[
+      {ghead:"Opportunity Wall"},
+      {label:"Opportunity postings", href:"records.html?s=postings", tag:"Hub"},
+      {label:"Vendor responses", href:"records.html?s=responses", tag:"Hub"},
+      {ghead:"Supplies"},
+      {label:"Supplies needed reports", href:"records.html?s=supplies", tag:"Hub"},
+      {label:"EnvirOx orders", href:"records.html?s=envirox", tag:"Hub"},
+      {label:"Vendor shop orders", href:"records.html?s=shop", tag:"Hub"},
+      {label:"Shop catalog and prices (Sheet)", href:"sheet.html?b=shop", tag:"Sheet"},
+      {ghead:"Vendors and team"},
+      {label:"Vendors, Las Vegas", href:"records.html?s=vendors_lv", tag:"Hub"},
+      {label:"Vendors, Northern Nevada", href:"records.html?s=vendors_nnv", tag:"Hub"},
+      {label:"Team roster", href:"records.html?s=staff", tag:"Hub"}
+    ]},
     {ghead:"Site"},
     {label:"Site Admin (menus, lists, switches)", href:"site-admin.html", tag:"Hub"},
     {ghead:"Power BI"},
