@@ -258,6 +258,7 @@ results write through vd_bc_upsert, the same path as background-checks.html. -->
 <div class="mhead"><span class="bar-accent"></span><h3>Import from Asana</h3><button class="x" id="im_x" title="Close">&#10005;</button></div>
 <div class="mbody imp" style="padding:16px 18px">
 <p class="help" style="font-size:12.5px;color:var(--grey)">Reads the four onboarding boards and the IC Background Checks board with the Asana token on the script. Each Asana task becomes a record here, checked-off subtasks become Verified items, open task comments become notes, and each background check request becomes a request plus a Pending person on the roster. Safe to run more than once: records are keyed on the Asana task, and nothing edited here is overwritten by Asana. Asana itself is never changed.</p>
+<label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;margin-top:12px"><input type="checkbox" id="im_add" checked style="margin-top:3px"><span><b>Add missing vendors to the directory.</b> An Asana vendor the directory does not know gets a directory row (set up = Waiting for Account, in process = In Progress, not approved = Prospect, source "Asana import") so every list agrees. Uncheck to leave them unmatched instead.</span></label>
 <div class="row"><button class="btn" id="im_dry" type="button">Dry run (count only)</button><button class="btn solid" id="im_go" type="button">Import now</button><span class="mini" id="im_note"></span></div>
 <pre id="im_out" style="margin-top:12px">Nothing run yet.</pre>
 </div>
@@ -779,11 +780,11 @@ function runImport(dry){
   var out = document.getElementById("im_out"), note = document.getElementById("im_note");
   document.getElementById("im_dry").disabled = true; document.getElementById("im_go").disabled = true;
   out.textContent = (dry ? "Counting" : "Importing") + "... this reads every task and subtask in Asana, give it a minute or two.";
-  api({ kind:"ob_import_asana", which:"all", dry:dry, who:me() }).then(function(r){
+  api({ kind:"ob_import_asana", which:"all", dry:dry, add_missing:!dry && document.getElementById("im_add").checked, who:me() }).then(function(r){
     if(!r.ok) throw new Error(r.error);
     var lines = [(dry ? "DRY RUN, nothing written." : "Imported.") + " " + (r.started || "") + " to " + (r.finished || "")];
     (r.boards || []).forEach(function(b){
-      lines.push("", b.board + ": " + b.tasks + " tasks, " + b.created + " new, " + b.updated + " already here" + (b.skipped ? ", " + b.skipped + " blank skipped" : "") + (b.error ? " ERROR " + b.error : ""));
+      lines.push("", b.board + ": " + b.tasks + " tasks, " + b.created + " new, " + b.updated + " already here" + (b.added_to_directory ? ", " + b.added_to_directory + " vendors added to the directory" : "") + (b.skipped ? ", " + b.skipped + " blank skipped" : "") + (b.error ? " ERROR " + b.error : ""));
       if(b.unmatched && b.unmatched.length) lines.push("  Not on the directory (" + b.unmatched.length + "): " + b.unmatched.map(function(u){ return u.name + " [" + u.section + "]"; }).join("; "));
     });
     if(r.bc){ lines.push("", "IC Background Checks: " + r.bc.tasks + " requests, " + r.bc.created + " new, " + r.bc.updated + " already here, " + r.bc.dupes + " repeat submissions" + (dry ? "" : ", " + (r.bc.people_added || 0) + " people added to the roster" + (r.bc.people_skipped_existing ? ", " + r.bc.people_skipped_existing + " already on it" : "")) + (r.bc.error ? " ERROR " + r.bc.error : ""));
