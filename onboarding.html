@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Vendor Onboarding | CW Admin Hub</title>
-<!-- build 2026-09-19. The vendor onboarding desk. Replaces the four Asana onboarding boards
+<!-- build 2026-09-19b (sessionStorage paint, background refresh). The vendor onboarding desk. Replaces the four Asana onboarding boards
 (LV/NNV x JS/OS) and the IC Background Checks board. Backend: Onboarding.gs on the CW
 Solicitations script (kinds ob_*), data on the CW Vendor Directory book. The page paints
 its shell first; one ob_list call after the gate clears. Every checklist item is Not in /
@@ -285,12 +285,25 @@ function today(){ return new Date().toISOString().slice(0,10); }
 function days(from){ if(!from) return ""; var d = Math.round((Date.now() - new Date(from.slice(0,10)).getTime())/86400000); return d < 1 ? "today" : d + "d"; }
 
 /* ---------- load ---------- */
+/* The last payload is kept in sessionStorage so coming back paints at once; a fresh
+   read follows in the background and repaints. Same pattern as records.html. */
+var CACHE_KEY = "cwObDesk";
+function paintCached(){
+  try {
+    var c = JSON.parse(sessionStorage.getItem(CACHE_KEY) || "null");
+    if(c && c.ok && c.onboarding){ D = c; index(); render(); document.getElementById("showing").innerHTML += ' <span class="mini">&middot; refreshing&hellip;</span>'; return true; }
+  } catch(e){}
+  return false;
+}
 function load(quiet){
   return api({ kind:"ob_list" }).then(function(r){
     if(!r.ok) throw new Error(r.error || "load failed");
-    D = r; index(); render();
+    D = r; try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(r)); } catch(e){}
+    index(); render();
+    if(OPEN && OBBYID[OPEN]) reopen();
     if(!quiet && location.hash) openHash();
   }).catch(function(e){
+    if(D) { toast("Could not refresh: " + e.message, "err"); return; }
     document.getElementById("list").className = "";
     document.getElementById("list").innerHTML = '<div class="empty"><b>Could not load the desk.</b>' + esc(e.message) + (/Unknown|kind/i.test(e.message) ? '<br><span class="mini">The Onboarding script is not deployed yet.</span>' : '') + '</div>';
   });
@@ -802,7 +815,9 @@ document.getElementById("im_go").addEventListener("click", function(){ if(confir
 window.addEventListener("hashchange", function(){ if(D) openHash(); });
 ADMIN.init({ page:"vendors", onReady:function(){
   document.getElementById("me").value = ADMIN.who();
-  load();
+  var cached = paintCached();
+  if(cached && location.hash) openHash();
+  load(cached);
 }});
 })();
 </script>
