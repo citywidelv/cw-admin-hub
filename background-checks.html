@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Background Checks | CW Admin Hub</title>
-<!-- build 2026-09-04d. The Business Operations Manager's review desk for IC background
+<!-- build 2026-09-19 (request form moved to the Vendor Hub, requests tracked on onboarding.html). 2026-09-04d. The Business Operations Manager's review desk for IC background
 checks. Reads and writes the "Background checks Las Vegas" / "Background checks Northern
 Nevada" tabs of the CW Vendor Directory sheet through VendorDirectory.gs
 (kinds vd_list, vd_bc_rows, vd_bc_upsert). Result Pass/Fail/Pending is the BOM's call;
@@ -135,7 +135,7 @@ directory only ever shows people who are cleared and not failed. -->
 <span class="mk">Market: <b id="a_market">from the vendor</b> <select id="a_mk" class="hidden" style="font-size:11.5px;border:1px solid var(--border);border-radius:6px;padding:3px 6px"><option value="lv">Las Vegas</option><option value="nnv">Northern Nevada</option></select></span>
 <span class="who">Reviewed by <input id="a_who" placeholder="Your name"></span>
 <span>Vendor not on the list? <a href="https://citywidelv.github.io/cw-ops-desk/vendor-add.html" target="_blank" rel="noopener">Add the vendor first</a>, then come back.</span>
-<button class="btn sm" id="openform" type="button" style="margin-left:auto">Request or upload a check (vendor form)</button>
+<a class="btn sm" href="onboarding.html#bc" style="margin-left:auto">Requests and onboarding desk</a> <a class="btn sm" href="https://citywidelv.github.io/cw-vendor-hub/background-check.html" target="_blank" rel="noopener">Vendor request page</a>
 </div>
 </div>
 </div>
@@ -183,6 +183,7 @@ directory only ever shows people who are cleared and not failed. -->
 <li><span class="pill fail">Fail</span> name is taken off the directory the moment you click</li>
 <li><span class="pill grey">Sheet</span> every click writes the <a href="https://docs.google.com/spreadsheets/d/1kHRyeQzDsi-bnfE5YpD_KPV17GeD5aJ_5vrDQGU_s-0/edit" target="_blank" rel="noopener">Background checks tabs</a></li>
 </ul>
+<a class="btn sm" href="onboarding.html#bc">Requests and onboarding desk</a>
 <a class="btn sm" href="https://citywidelv.github.io/cw-ops-desk/bc-notices.html">Send vendor notices (Ops Hub)</a>
 </div></div>
 <div class="card"><div class="chead"><span class="bar-accent"></span><h3>Not matched to a vendor</h3><span class="sub" id="unm_n"></span></div>
@@ -200,10 +201,6 @@ directory only ever shows people who are cleared and not failed. -->
 </div></footer>
 </div>
 
-<div class="modal" id="formmodal"><div class="mbox">
-<div class="mhead"><span class="bar-accent"></span><h3>Request or upload a background check</h3><button class="x" id="formx" title="Close">&#10005;</button></div>
-<div class="mbody"><iframe id="formframe" title="Background Check and Name Badge form" loading="lazy"></iframe></div>
-</div></div>
 
 <script src="https://citywidelv.github.io/cw-ops-desk/cw-auth.js"></script>
 <script src="nav.js"></script>
@@ -502,14 +499,7 @@ document.getElementById("a_go").addEventListener("click", function(){
 });
 ["a_first","a_last"].forEach(function(id){ document.getElementById(id).addEventListener("keydown", function(e){ if(e.key === "Enter") document.getElementById("a_go").click(); }); });
 
-/* ---------- form modal ---------- */
-document.getElementById("openform").addEventListener("click", function(){
-  var f = document.getElementById("formframe");
-  if(!f.src) f.src = ADMIN.FORMS.bgcheck + "&embed=true";
-  document.getElementById("formmodal").classList.add("show");
-});
-document.getElementById("formx").addEventListener("click", function(){ document.getElementById("formmodal").classList.remove("show"); });
-document.getElementById("formmodal").addEventListener("click", function(e){ if(e.target === this) this.classList.remove("show"); });
+/* Sep 19 2026: the Asana form modal is gone. Requests come in on the Vendor Hub page and show on onboarding.html. */
 
 /* ---------- go ---------- */
 ADMIN.init({ page:"bc", onReady:function(){

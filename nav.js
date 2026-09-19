@@ -24,14 +24,14 @@ window.CW_NAV = {
      "ghead": "Requests"
     },
     {
-     "label": "Request or Upload a Check (form)",
-     "href": "https://form.asana.com/?k=FRCnQmbTGjAVPieFt4bnWQ&d=13140959242873",
-     "tag": "Asana"
+     "label": "Requests and crew status (Onboarding desk)",
+     "href": "onboarding.html#bc",
+     "tag": "Hub"
     },
     {
-     "label": "IC Background Checks project",
-     "href": "https://app.asana.com/1/13140959242873/project/1211554681536533",
-     "tag": "Asana"
+     "label": "Vendor request page (Vendor Hub)",
+     "href": "https://citywidelv.github.io/cw-vendor-hub/background-check.html",
+     "tag": "Vendor Hub"
     },
     {
      "label": "Send Vendor Notices",
@@ -148,7 +148,22 @@ window.CW_NAV = {
      "sub": "Onboarding",
      "items": [
       {
-       "ghead": "Las Vegas"
+       "label": "Vendor Onboarding desk",
+       "href": "onboarding.html",
+       "tag": "Hub"
+      },
+      {
+       "label": "Start onboarding for a vendor",
+       "href": "onboarding.html#start",
+       "tag": "Hub"
+      },
+      {
+       "label": "Background check requests",
+       "href": "onboarding.html#bc",
+       "tag": "Hub"
+      },
+      {
+       "ghead": "Old boards, read only"
       },
       {
        "label": "LV Onboarding - Janitorial ICs",
@@ -161,9 +176,6 @@ window.CW_NAV = {
        "tag": "Asana"
       },
       {
-       "ghead": "Northern Nevada"
-      },
-      {
        "label": "NNV Onboarding - Janitorial ICs",
        "href": "https://app.asana.com/1/13140959242873/project/1211502025994509",
        "tag": "Asana"
@@ -171,6 +183,11 @@ window.CW_NAV = {
       {
        "label": "NNV Onboarding - Other Services ICs",
        "href": "https://app.asana.com/1/13140959242873/project/1211502025994512",
+       "tag": "Asana"
+      },
+      {
+       "label": "IC Background Checks",
+       "href": "https://app.asana.com/1/13140959242873/project/1211554681536533",
        "tag": "Asana"
       },
       {
@@ -200,8 +217,8 @@ window.CW_NAV = {
       },
       {
        "label": "Background Check and Name Badge",
-       "href": "https://form.asana.com/?k=FRCnQmbTGjAVPieFt4bnWQ&d=13140959242873",
-       "tag": "Form"
+       "href": "https://citywidelv.github.io/cw-vendor-hub/background-check.html",
+       "tag": "Vendor Hub"
       }
      ]
     },

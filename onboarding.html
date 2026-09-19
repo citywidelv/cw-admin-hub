@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Vendor Onboarding | CW Admin Hub</title>
+<!-- build 2026-09-19. The vendor onboarding desk. Replaces the four Asana onboarding boards
+(LV/NNV x JS/OS) and the IC Background Checks board. Backend: Onboarding.gs on the CW
+Solicitations script (kinds ob_*), data on the CW Vendor Directory book. The page paints
+its shell first; one ob_list call after the gate clears. Every checklist item is Not in /
+Received / Verified / Needs a fix, with a note. Vendor Hub feeds (evaluation, uploads,
+background check requests) mark items Received on their own. Crew background check
+results write through vd_bc_upsert, the same path as background-checks.html. -->
+<link rel="stylesheet" href="admin.css">
+<link rel="icon" href="https://citywidelv.github.io/cw-ops-desk/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="https://citywidelv.github.io/cw-ops-desk/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://citywidelv.github.io/cw-ops-desk/apple-touch-icon.png">
+<style>
+.topbar{position:relative;z-index:5;margin-top:-46px}
+.topbar .qcard{padding:14px 18px 12px}
+.trow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.trow+.trow{margin-top:10px}
+.srch{position:relative;flex:1;min-width:240px}
+.srch svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--grey)}
+.srch input{width:100%;font-size:14px;border:1.5px solid var(--border);border-radius:12px;padding:11px 14px 11px 38px;background:var(--light);outline:none}
+.srch input:focus{border-color:var(--red);background:#fff}
+.seg{display:inline-flex;border:1.5px solid var(--border);border-radius:9px;overflow:hidden;background:#fff}
+.seg button{border:none;background:none;font-size:11.5px;font-weight:700;padding:7px 11px;cursor:pointer;color:var(--grey);white-space:nowrap}
+.seg button.on{background:var(--black);color:#fff}
+.seg button:hover:not(.on){background:var(--light);color:var(--black)}
+.trow select{font-size:12px;border:1.5px solid var(--border);border-radius:9px;padding:7px 9px;background:#fff;max-width:220px}
+.who{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--grey)}
+.who input{font-size:11.5px;border:1px solid var(--border);border-radius:6px;padding:5px 8px;width:140px}
+.sp{flex:1}
+.stats{margin-top:16px}
+.stat.on{border-color:var(--black);background:#fff;box-shadow:var(--shadow)}
+.stat .n small{font-size:12px;color:var(--grey);font-weight:400;margin-left:4px}
+.stat.inv .n{color:var(--grey)}.stat.new .n{color:var(--blue)}.stat.proc .n{color:var(--black)}.stat.bg .n{color:var(--amber)}.stat.done .n{color:var(--green)}.stat.na .n{color:var(--red)}.stat.sup .n{color:var(--grey)}.stat.req .n{color:var(--amber)}
+.grid2{grid-template-columns:minmax(0,1fr) 360px}
+@media(max-width:1100px){.grid2{grid-template-columns:1fr}}
+.showing{font-size:11.5px;color:var(--grey);padding:10px 18px;border-bottom:1px solid var(--light)}
+.showing b{color:var(--black)}
+.showing a{color:var(--red);font-weight:700;text-decoration:none}
+/* stage groups */
+.stg{border-bottom:1px solid var(--border)}
+.stg:last-child{border-bottom:none}
+.stg .sh{display:flex;align-items:center;gap:10px;padding:11px 18px;background:var(--light);cursor:pointer;user-select:none}
+.stg .sh h4{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--black)}
+.stg .sh .cnt{font-size:11px;font-weight:700;color:var(--grey)}
+.stg .sh .desc{font-size:11.5px;color:var(--grey);margin-left:4px}
+.stg .sh .chev{margin-left:auto;color:var(--grey);font-size:11px;transition:transform .15s}
+.stg.closed .sh .chev{transform:rotate(-90deg)}
+.stg.closed .vl{display:none}
+.vl{list-style:none}
+.vrow{display:grid;grid-template-columns:minmax(0,1fr) 190px 150px;gap:14px;align-items:center;padding:11px 18px;border-top:1px solid var(--light);cursor:pointer}
+.vrow:hover{background:#fffbf2}
+.vrow.sel{background:#fff6f6;box-shadow:inset 4px 0 0 var(--red)}
+.vrow .nm{font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.vrow .nm .pill{font-size:9px}
+.vrow .meta{font-size:11.5px;color:var(--grey);margin-top:3px;display:flex;gap:10px;flex-wrap:wrap}
+.vrow .meta b{color:var(--black);font-weight:700}
+.left{display:flex;flex-wrap:wrap;gap:4px}
+.chip{display:inline-block;font-size:10.5px;border-radius:8px;padding:2px 8px;background:var(--light);border:1px solid var(--border);color:var(--black);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.chip.rec{background:var(--blue-bg);border-color:#c9d9f5;color:var(--blue)}
+.chip.fix{background:var(--red-bg);border-color:#f2c2c5;color:var(--red)}
+.chip.more{color:var(--grey);background:#fff}
+.chip.ok{background:var(--green-bg);border-color:#bfe6cf;color:var(--green)}
+.prog{display:flex;align-items:center;gap:8px}
+.prog .bar{flex:1;height:7px;border-radius:4px;background:var(--light);border:1px solid var(--border);overflow:hidden}
+.prog .bar i{display:block;height:100%;background:var(--green);border-radius:4px}
+.prog .bar i.mid{background:var(--gold)}
+.prog .bar i.low{background:var(--blue)}
+.prog small{font-size:11px;color:var(--grey);white-space:nowrap;font-weight:700}
+.empty{text-align:center;color:var(--grey);padding:36px 20px;font-size:13px}
+.empty b{display:block;color:var(--black);font-size:15px;margin-bottom:6px}
+.loading{padding:40px;text-align:center;color:var(--grey);font-size:13px}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:sp .8s linear infinite;vertical-align:middle;margin-right:8px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media(max-width:760px){.vrow{grid-template-columns:1fr}.vrow .prog{max-width:260px}}
+/* side cards */
+.side .card{margin-bottom:14px}
+.side p{font-size:12.5px;color:var(--grey)}
+.rq{padding:9px 0;border-bottom:1px solid var(--light);font-size:12.5px;display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+.rq:last-child{border-bottom:none}
+.rq:hover .co{color:var(--red)}
+.rq .co{font-weight:700}
+.rq small{display:block;color:var(--grey);font-size:11px;margin-top:2px}
+.rq .pill{flex:none;margin-top:2px}
+.rq .n{flex:1;min-width:0}
+.mini{font-size:11px;color:var(--grey)}
+.act{padding:7px 0;border-bottom:1px solid var(--light);font-size:12px}
+.act:last-child{border-bottom:none}
+.act b{color:var(--black)}
+.act .t{color:var(--grey);font-size:10.5px}
+.side .btn{width:100%;justify-content:center;margin-top:8px}
+/* vendor detail modal */
+.mbox.wide{width:min(1080px,100%)}
+.det{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:0}
+@media(max-width:900px){.det{grid-template-columns:1fr}}
+.det .main{padding:16px 18px 22px;border-right:1px solid var(--border)}
+.det .aside{padding:16px 18px;background:#fafafa}
+.dhead{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+.dhead h2{font-size:18px;line-height:1.2}
+.dhead .sub{font-size:12px;color:var(--grey);margin-top:4px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.dhead .links{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.ctrls{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:10px 0 14px}
+.ctrls .field select,.ctrls .field input{padding:8px 10px;font-size:12.5px}
+.grp{margin-top:14px;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.grp .gh{display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--light);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--black)}
+.grp .gh .gc{font-weight:700;color:var(--grey);letter-spacing:0;text-transform:none;font-size:11px}
+.grp .gh .bulk{margin-left:auto;font-size:11px;letter-spacing:0;text-transform:none;font-weight:700;color:var(--red);background:none;border:none;cursor:pointer;text-decoration:underline dotted}
+.item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 14px;border-top:1px solid var(--light)}
+.item .lb{font-size:13px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.item .lb .req{font-size:9.5px;font-weight:700;color:var(--grey);letter-spacing:.06em;text-transform:uppercase}
+.item .lb .auto{font-size:9.5px;font-weight:700;color:var(--blue);letter-spacing:.06em;text-transform:uppercase}
+.item .st{font-size:11px;color:var(--grey);margin-top:2px}
+.item .st b{color:var(--black)}
+.item .st .nt{color:var(--red);font-weight:700}
+.item .st button{border:none;background:none;color:var(--grey);cursor:pointer;font-size:11px;text-decoration:underline dotted;padding:0 0 0 6px}
+.item .st button:hover{color:var(--red)}
+.res{display:inline-flex;border:1.5px solid var(--border);border-radius:9px;overflow:hidden;background:#fff}
+.res button{border:none;background:none;font-size:10.5px;font-weight:700;padding:6px 9px;cursor:pointer;color:var(--grey);letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.res button+button{border-left:1px solid var(--border)}
+.res button:hover{background:var(--light);color:var(--black)}
+.res button.rec.on{background:var(--blue);color:#fff}
+.res button.ver.on{background:var(--green);color:#fff}
+.res button.fix.on{background:var(--red);color:#fff}
+.res button.pass.on{background:var(--green);color:#fff}
+.res button.fail.on{background:var(--red);color:#fff}
+.res button.pend.on{background:var(--gold);color:var(--black)}
+.item.done .lb{color:var(--grey)}
+.item.busy{opacity:.5}
+.crew .item .lb small{display:block;font-size:11px;color:var(--grey);font-weight:400}
+.notes{margin-top:14px}
+.notes textarea{width:100%;font-size:12.5px;border:1.5px solid var(--border);border-radius:8px;padding:9px 11px;min-height:60px;resize:vertical}
+.notes .nlist{margin-top:8px;max-height:220px;overflow:auto;font-size:12px;line-height:1.5;color:var(--black);white-space:pre-wrap;background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.aside h5{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);margin:0 0 6px}
+.aside .kv{font-size:12.5px;margin-bottom:12px}
+.aside .kv div{padding:3px 0;border-bottom:1px solid var(--border);display:flex;gap:8px}
+.aside .kv div span:first-child{color:var(--grey);min-width:90px;flex:none}
+.aside .kv div span:last-child{word-break:break-word}
+.aside .hist{font-size:11.5px;max-height:260px;overflow:auto}
+.aside .hist div{padding:5px 0;border-bottom:1px solid var(--border)}
+.aside .hist .t{color:var(--grey);font-size:10.5px}
+.reqrow{padding:8px 0;border-bottom:1px solid var(--border);font-size:12px}
+.reqrow .top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.reqrow .top b{flex:1}
+.reqrow .top select{font-size:11px;border:1px solid var(--border);border-radius:6px;padding:3px 5px;background:#fff}
+.reqrow small{display:block;color:var(--grey);font-size:11px;margin-top:2px}
+.imp pre{font-size:11.5px;background:var(--light);border:1px solid var(--border);border-radius:8px;padding:10px 12px;white-space:pre-wrap;max-height:50vh;overflow:auto}
+.imp .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.pill.inv{background:var(--light);color:var(--grey);border:1px solid var(--border)}
+.pill.js{background:var(--black);color:#fff}
+.pill.os{background:#fff;color:var(--black);border:1px solid var(--border)}
+.noob{padding:12px 18px;font-size:12.5px;color:var(--grey);border-top:1px solid var(--light);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.noob b{color:var(--black)}
+.noob button{font-size:11.5px}
+.kbd{font-size:10.5px;color:var(--grey)}
+</style>
+<link rel="stylesheet" href="https://citywidelv.github.io/cw-base.css">
+</head>
+<body>
+<div id="gate" class="gate"></div>
+<div id="app" class="hidden">
+<header class="head" id="adminhead"></header>
+
+<section class="hero slim">
+<div class="bg" style="background-image:url('https://citywidelv.github.io/cw-ops-desk/images/fsm-team.jpg')"></div>
+<div class="wrap">
+<div class="htext">
+<div class="kick">Business Operations Management</div>
+<h1>Vendor Onboarding</h1>
+<p>Every vendor in the door, what is on file, what is left before they can be activated, and where each crew background check stands. Evaluations, uploads and background check requests from the Vendor Hub land here on their own.</p>
+</div>
+</div>
+</section>
+
+<div class="wrap topbar">
+<div class="qcard">
+<div class="trow">
+<div class="srch"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="q" type="search" placeholder="Search any vendor: name, id, contact, person on a background check" autocomplete="off"></div>
+<div class="seg" id="f_mk"><button data-v="" class="on">Both markets</button><button data-v="lv">Las Vegas</button><button data-v="nnv">Northern Nevada</button></div>
+<div class="seg" id="f_tr"><button data-v="" class="on">JS + OS</button><button data-v="JS">Janitorial</button><button data-v="OS">Other services</button></div>
+</div>
+<div class="trow">
+<div class="seg" id="f_wait"><button data-v="" class="on">Waiting on anything</button><button data-v="paper">Paperwork</button><button data-v="bg">Background</button><button data-v="crm">CRM / accounting</button><button data-v="fix">Needs a fix</button><button data-v="none">Nothing left</button></div>
+<select id="f_who"><option value="">Anyone assigned</option></select>
+<span class="sp"></span>
+<span class="who">Your name <input id="me" placeholder="for the log"></span>
+<button class="btn sm" id="addv" type="button">+ Start onboarding for a vendor</button>
+<button class="btn sm dark" id="importbtn" type="button">Import from Asana</button>
+<button class="btn sm" id="refresh" type="button" title="Reload from the sheet">&#8635;</button>
+</div>
+</div>
+</div>
+
+<div class="wrap"><div class="stats" id="stats"></div></div>
+
+<div class="wrap section">
+<div class="grid2">
+<div class="card" id="listcard">
+<div class="showing" id="showing">Loading...</div>
+<div id="list" class="loading"><span class="spin"></span>Loading the desk...</div>
+</div>
+
+<aside class="side">
+<div class="card" id="bc"><div class="chead"><span class="bar-accent"></span><h3>Background check requests</h3><span class="sub" id="bc_sub"></span></div>
+<div class="cbody">
+<div class="seg" id="f_req" style="margin-bottom:8px"><button data-v="New" class="on">To send</button><button data-v="Sent">Sent</button><button data-v="review">To review</button><button data-v="badge">Badges</button></div>
+<div id="reqlist"><div class="mini">Loading...</div></div>
+<a class="btn sm" href="background-checks.html">Review results (full roster)</a>
+<a class="btn sm" href="https://citywidelv.github.io/cw-vendor-hub/background-check.html" target="_blank" rel="noopener">The vendor request page</a>
+</div></div>
+<div class="card"><div class="chead"><span class="bar-accent"></span><h3>Not matched to a vendor</h3><span class="sub" id="unm_sub"></span></div>
+<div class="cbody"><p>Records that came in under a company name the directory does not know. Open one and pick the right vendor, or add the vendor first.</p><div id="unm"></div></div></div>
+<div class="card"><div class="chead"><span class="bar-accent"></span><h3>Recent activity</h3></div>
+<div class="cbody" id="activity"><div class="mini">Loading...</div></div></div>
+<div class="card"><div class="chead"><span class="bar-accent"></span><h3>How it flows</h3></div>
+<div class="cbody">
+<p><b style="color:var(--black)">Received</b> came in (an upload, a form, a PandaDoc you saw). <b style="color:var(--black)">Verified</b> someone checked it and it is right. <b style="color:var(--black)">Needs a fix</b> it came in wrong, with a note saying what. A vendor is ready to activate when every required item is Verified and the crew has cleared.</p>
+<p style="margin-top:8px">Feeds that fill items on their own: the Vendor Evaluation, uploads of COIs, the notarized waiver and the bank letter, and background check requests. PandaDoc packets and CRM steps are by hand.</p>
+<a class="btn sm" href="https://docs.google.com/spreadsheets/d/1kHRyeQzDsi-bnfE5YpD_KPV17GeD5aJ_5vrDQGU_s-0/edit" target="_blank" rel="noopener">The sheet behind this page</a>
+</div></div>
+</aside>
+</div>
+</div>
+
+<footer class="foot"><div class="fin">
+<b>City Wide Facility Solutions</b> &middot; Admin Hub &middot; Internal use only &middot; Something missing? Tell TJ. &middot; <a href="https://www.gocitywide.com" target="_blank" rel="noopener">GoCityWide.com</a>
+<span class="fr">Las Vegas<span>&bull;</span>Reno</span>
+</div></footer>
+</div>
+
+<!-- vendor detail -->
+<div class="modal" id="vm"><div class="mbox wide">
+<div class="mhead"><span class="bar-accent"></span><h3 id="vm_title">Vendor</h3><span class="kbd" style="margin-left:10px">Esc closes</span><button class="x" id="vm_x" title="Close">&#10005;</button></div>
+<div class="mbody" id="vm_body"></div>
+</div></div>
+
+<!-- start onboarding -->
+<div class="modal" id="am"><div class="mbox">
+<div class="mhead"><span class="bar-accent"></span><h3>Start onboarding for a vendor</h3><button class="x" id="am_x" title="Close">&#10005;</button></div>
+<div class="mbody" style="padding:16px 18px">
+<div class="field"><label>Vendor (from the directory)</label><input id="am_v" list="vlist" placeholder="Start typing the company name..." autocomplete="off"><datalist id="vlist"></datalist><div class="mini" id="am_hit" style="margin-top:4px;min-height:14px"></div></div>
+<div class="ctrls">
+<div class="field"><label>Track</label><select id="am_track"><option value="JS">Janitorial (JS)</option><option value="OS">Other services (OS)</option></select></div>
+<div class="field"><label>Stage</label><select id="am_stage"></select></div>
+<div class="field"><label>Assigned to</label><input id="am_who" placeholder="Name"></div>
+</div>
+<p class="mini">Not on the directory? <a href="https://citywidelv.github.io/cw-ops-desk/vendor-add.html" target="_blank" rel="noopener">Add the vendor first</a>, then come back. Vendors who fill out the Vendor Evaluation start here on their own.</p>
+<div style="margin-top:12px"><button class="btn solid" id="am_go" type="button">Start onboarding</button></div>
+</div>
+</div></div>
+
+<!-- import -->
+<div class="modal" id="im"><div class="mbox">
+<div class="mhead"><span class="bar-accent"></span><h3>Import from Asana</h3><button class="x" id="im_x" title="Close">&#10005;</button></div>
+<div class="mbody imp" style="padding:16px 18px">
+<p class="help" style="font-size:12.5px;color:var(--grey)">Reads the four onboarding boards and the IC Background Checks board with the Asana token on the script. Each Asana task becomes a record here, checked-off subtasks become Verified items, open task comments become notes, and each background check request becomes a request plus a Pending person on the roster. Safe to run more than once: records are keyed on the Asana task, and nothing edited here is overwritten by Asana. Asana itself is never changed.</p>
+<div class="row"><button class="btn" id="im_dry" type="button">Dry run (count only)</button><button class="btn solid" id="im_go" type="button">Import now</button><span class="mini" id="im_note"></span></div>
+<pre id="im_out" style="margin-top:12px">Nothing run yet.</pre>
+</div>
+</div></div>
+
+<script src="https://citywidelv.github.io/cw-ops-desk/cw-auth.js"></script>
+<script src="nav.js"></script>
+<script src="https://citywidelv.github.io/cw-ops-desk/cw-nav.js"></script>
+<script src="admin-shared.js"></script>
+<script>
+(function(){
+var esc = ADMIN.esc, api = ADMIN.api, toast = ADMIN.toast, fmtDate = ADMIN.fmtDate;
+var D = null;                 // the ob_list payload
+var VBYID = {}, OBBYID = {}, OBBYV = {}, CREWBYV = {}, CREWBYNAME = {}, REQBYV = {}, REQBYNAME = {}, ITEMS = {};
+var F = { q:"", mk:"", tr:"", wait:"", who:"", stat:"", req:"New" };
+var OPEN = null;              // ob_id or "v:<vendor_id>" in the modal
+var STG_ORDER = ["New","In Process","Waiting on background","Complete","Not Approved","Ops Support","Invited"];
+var STG_DESC = { "New":"just in, nothing verified yet", "In Process":"paperwork under way", "Waiting on background":"paperwork done, crew not cleared",
+                 "Complete":"set up and activated. Crew checks still tracked here", "Not Approved":"declined or went quiet", "Ops Support":"needs help from ops", "Invited":"invited from the hub, evaluation not in yet" };
+
+function norm(s){ return String(s||"").toLowerCase().replace(/[‘’'`]/g,"").replace(/&/g," and ").replace(/[^a-z0-9 ]+/g," ").replace(/\b(llc|inc|incorporated|corp|corporation|co|company|ltd|dba|the)\b/g," ").replace(/\s+/g," ").trim(); }
+function me(){ var w = document.getElementById("me").value.trim(); if(w) ADMIN.setWho(w); return w || "Admin Hub"; }
+function today(){ return new Date().toISOString().slice(0,10); }
+function days(from){ if(!from) return ""; var d = Math.round((Date.now() - new Date(from.slice(0,10)).getTime())/86400000); return d < 1 ? "today" : d + "d"; }
+
+/* ---------- load ---------- */
+function load(quiet){
+  return api({ kind:"ob_list" }).then(function(r){
+    if(!r.ok) throw new Error(r.error || "load failed");
+    D = r; index(); render();
+    if(!quiet && location.hash) openHash();
+  }).catch(function(e){
+    document.getElementById("list").className = "";
+    document.getElementById("list").innerHTML = '<div class="empty"><b>Could not load the desk.</b>' + esc(e.message) + (/Unknown|kind/i.test(e.message) ? '<br><span class="mini">The Onboarding script is not deployed yet.</span>' : '') + '</div>';
+  });
+}
+function index(){
+  VBYID = {}; OBBYID = {}; OBBYV = {}; CREWBYV = {}; CREWBYNAME = {}; REQBYV = {}; REQBYNAME = {}; ITEMS = {};
+  D.vendors.forEach(function(v){ VBYID[v.vendor_id] = v; });
+  D.onboarding.forEach(function(o){
+    if(typeof o.docs !== "object" || !o.docs){ try { o.docs = JSON.parse(o.docs || "{}"); } catch(e){ o.docs = {}; } }
+    OBBYID[o.ob_id] = o;
+    if(o.vendor_id){ OBBYV[o.vendor_id] = OBBYV[o.vendor_id] || []; OBBYV[o.vendor_id].push(o); }
+    o.items = D.checklist.filter(function(c){ return c.track === "Both" || c.track === o.track; });
+    o.v = o.vendor_id ? VBYID[o.vendor_id] : null;
+    if(!o.v && o.vendor_id) { /* vendor hidden or prospect: still show */ }
+  });
+  D.crew.forEach(function(c){ var k = c.vendor_id || ("n:" + norm(c.vendor)); (CREWBYV[k] = CREWBYV[k] || []).push(c); if(!c.vendor_id) (CREWBYNAME[norm(c.vendor)] = CREWBYNAME[norm(c.vendor)] || []).push(c); });
+  D.requests.forEach(function(r){ var k = r.vendor_id || ("n:" + norm(r.company)); (REQBYV[k] = REQBYV[k] || []).push(r); });
+  D.onboarding.forEach(function(o){ o.calc = calc(o); });
+  var who = {};
+  D.onboarding.forEach(function(o){ if(o.assignee) who[o.assignee] = 1; });
+  var sel = document.getElementById("f_who"), keep = sel.value;
+  sel.innerHTML = '<option value="">Anyone assigned</option>' + Object.keys(who).sort().map(function(w){ return '<option value="' + esc(w) + '">' + esc(w) + '</option>'; }).join("") + '<option value="__none">Nobody assigned</option>';
+  sel.value = keep;
+  var dl = document.getElementById("vlist");
+  dl.innerHTML = D.vendors.slice().sort(function(a,b){ return a.dba_name.toLowerCase() < b.dba_name.toLowerCase() ? -1 : 1; }).map(function(v){ return '<option value="' + esc(v.dba_name + "  (" + v.vendor_id + ")") + '">'; }).join("");
+  document.getElementById("am_stage").innerHTML = D.stages.filter(function(s){ return s !== "Invited"; }).map(function(s){ return '<option>' + esc(s) + '</option>'; }).join("");
+}
+function crewFor(o){ var k = o.vendor_id || ("n:" + norm(o.vendor)); var a = (CREWBYV[k] || []).slice(); if(o.vendor_id){ var byn = CREWBYNAME[norm(o.vendor)] || []; byn.forEach(function(c){ if(a.indexOf(c) < 0) a.push(c); }); } return a; }
+function reqsFor(o){ var k = o.vendor_id || ("n:" + norm(o.vendor)); var a = (REQBYV[k] || []).slice(); if(o.vendor_id){ (REQBYV["n:" + norm(o.vendor)] || []).forEach(function(r){ if(a.indexOf(r) < 0) a.push(r); }); } return a; }
+function calc(o){
+  var req = o.items.filter(function(c){ return c.required; });
+  var left = [], fix = [], rec = [], ver = 0;
+  req.forEach(function(c){
+    var d = o.docs[c.key] || {};
+    if(d.s === "verified") ver++;
+    else { left.push(c); if(d.s === "fix") fix.push(c); if(d.s === "received") rec.push(c); }
+  });
+  var crew = crewFor(o), pend = crew.filter(function(c){ return c.result !== "Pass" && c.result !== "Fail"; }).length;
+  var failed = crew.filter(function(c){ return c.result === "Fail"; }).length;
+  var bgOpen = o.track === "JS" && (left.some(function(c){ return c.key === "bc_request"; }) || pend > 0);
+  var paperLeft = left.filter(function(c){ return /packet|Documents|Getting/i.test(c.group) && c.key !== "bc_request"; });
+  var crmLeft = left.filter(function(c){ return /CRM/i.test(c.group); });
+  var group = o.stage;
+  if(o.stage === "In Process" && paperLeft.length === 0 && crmLeft.length === 0 && bgOpen) group = "Waiting on background";
+  return { req:req.length, ver:ver, left:left, fix:fix, rec:rec, crew:crew, pend:pend, failed:failed, bgOpen:bgOpen, paperLeft:paperLeft, crmLeft:crmLeft, group:group, pct: req.length ? Math.round(ver / req.length * 100) : 0 };
+}
+
+/* ---------- filters + list ---------- */
+function visible(){
+  var q = F.q;
+  return D.onboarding.filter(function(o){
+    var c = o.calc;
+    if(F.mk && o.market !== F.mk && !(o.v && o.v.both)) return false;
+    if(F.tr && o.track !== F.tr) return false;
+    if(F.who === "__none" ? !!o.assignee : (F.who && o.assignee !== F.who)) return false;
+    if(F.wait === "paper" && !c.paperLeft.length) return false;
+    if(F.wait === "bg" && !c.bgOpen) return false;
+    if(F.wait === "crm" && !c.crmLeft.length) return false;
+    if(F.wait === "fix" && !c.fix.length) return false;
+    if(F.wait === "none" && c.left.length) return false;
+    if(F.stat && c.group !== F.stat) return false;
+    if(q){
+      var hay = [o.vendor, o.vendor_id, o.assignee, o.contact_name, o.email, o.v ? o.v.legal_name : "", o.v ? o.v.contact_name : ""].join(" ").toLowerCase();
+      c.crew.forEach(function(p){ hay += " " + p.first_name + " " + p.last_name; });
+      hay = hay.toLowerCase();
+      if(q.split(/\s+/).some(function(w){ return hay.indexOf(w) < 0; })) return false;
+    }
+    return true;
+  });
+}
+function invitedVendors(){
+  return D.vendors.filter(function(v){ return v.invited && !OBBYV[v.vendor_id]; }).filter(function(v){
+    if(F.mk && v.market !== F.mk && !v.both) return false;
+    if(F.tr && (F.tr === "JS") !== v.janitorial) return false;
+    if(F.q){ var hay = (v.dba_name + " " + v.vendor_id + " " + v.contact_name + " " + v.email).toLowerCase(); if(F.q.split(/\s+/).some(function(w){ return hay.indexOf(w) < 0; })) return false; }
+    if(F.wait && F.wait !== "paper") return false;
+    return true;
+  });
+}
+function noRecordVendors(){
+  return D.vendors.filter(function(v){ return v.live && !OBBYV[v.vendor_id]; }).filter(function(v){
+    if(F.mk && v.market !== F.mk && !v.both) return false;
+    if(F.tr && (F.tr === "JS") !== v.janitorial) return false;
+    if(F.q){ var hay = (v.dba_name + " " + v.vendor_id + " " + v.contact_name + " " + v.email + " " + (v.legal_name||"")).toLowerCase(); if(F.q.split(/\s+/).some(function(w){ return hay.indexOf(w) < 0; })) return false; }
+    return true;
+  });
+}
+function render(){
+  var n = {};
+  STG_ORDER.forEach(function(s){ n[s] = 0; });
+  D.onboarding.forEach(function(o){ n[o.calc.group] = (n[o.calc.group] || 0) + 1; });
+  n.Invited = D.vendors.filter(function(v){ return v.invited && !OBBYV[v.vendor_id]; }).length;
+  var toSend = D.requests.filter(function(r){ return r.status === "New"; }).length;
+  var toReview = D.crew.filter(function(c){ return c.result !== "Pass" && c.result !== "Fail"; }).length;
+  function tile(cls, num, label, stat){ return '<a class="stat ' + cls + (F.stat === stat ? " on" : "") + '" href="#" data-stat="' + esc(stat) + '"><div class="n">' + num + '</div><div class="l">' + label + '</div></a>'; }
+  document.getElementById("stats").innerHTML =
+    tile("inv", n.Invited, "Invited", "Invited") + tile("new", n["New"], "New", "New") + tile("proc", n["In Process"], "In process", "In Process") +
+    tile("bg", n["Waiting on background"], "Waiting on background", "Waiting on background") + tile("done", n["Complete"], "Complete", "Complete") +
+    tile("na", n["Not Approved"], "Not approved", "Not Approved") + tile("sup", n["Ops Support"], "Ops support", "Ops Support") +
+    '<a class="stat req" href="#bc"><div class="n">' + toSend + '<small>to send</small></div><div class="l">Background requests</div></a>' +
+    '<a class="stat req" href="background-checks.html"><div class="n">' + toReview + '<small>to review</small></div><div class="l">Crew results</div></a>';
+  renderList(); renderReqs(); renderUnmatched(); renderActivity();
+}
+function rowHtml(o){
+  var c = o.calc, v = o.v;
+  var chips = "";
+  var show = c.fix.concat(c.left.filter(function(x){ return c.fix.indexOf(x) < 0; })).slice(0, 3);
+  show.forEach(function(x){ var d = o.docs[x.key] || {}; chips += '<span class="chip ' + (d.s === "fix" ? "fix" : d.s === "received" ? "rec" : "") + '" title="' + esc(x.label) + '">' + esc(x.label) + '</span>'; });
+  if(c.left.length > 3) chips += '<span class="chip more">+' + (c.left.length - 3) + ' more</span>';
+  if(!c.left.length) chips = '<span class="chip ok">Everything verified</span>';
+  if(o.track === "JS" && c.pend) chips += '<span class="chip rec">' + c.pend + ' crew pending</span>';
+  if(c.failed) chips += '<span class="chip fix">' + c.failed + ' crew failed</span>';
+  var cls = c.pct >= 100 ? "" : c.pct >= 50 ? "mid" : "low";
+  return '<li class="vrow' + (OPEN === o.ob_id ? " sel" : "") + '" data-ob="' + esc(o.ob_id) + '">' +
+    '<div><div class="nm">' + esc(o.vendor) + ' <span class="pill ' + (o.market === "nnv" ? "nnv" : "lv") + '">' + (o.market === "nnv" ? "NNV" : "LV") + '</span><span class="pill ' + (o.track === "JS" ? "js" : "os") + '">' + esc(o.track) + '</span>' +
+      (o.matched === "FALSE" || !o.vendor_id ? '<span class="pill fail">not on directory</span>' : (v && v.status ? '<span class="pill grey">' + esc(v.status) + '</span>' : "")) + '</div>' +
+      '<div class="meta">' + (o.assignee ? '<span><b>' + esc(o.assignee) + '</b></span>' : '<span>nobody assigned</span>') + '<span>' + (o.started ? "started " + esc(fmtDate(o.started)) : "") + '</span>' + (o.updated ? '<span>updated ' + esc(days(o.updated)) + ' ago</span>' : "") + '</div></div>' +
+    '<div class="left">' + chips + '</div>' +
+    '<div class="prog"><div class="bar"><i class="' + cls + '" style="width:' + c.pct + '%"></i></div><small>' + c.ver + ' of ' + c.req + '</small></div></li>';
+}
+function renderList(){
+  var rows = visible(), inv = invitedVendors(), noob = noRecordVendors();
+  var host = document.getElementById("list");
+  var active = F.mk || F.tr || F.wait || F.who || F.stat || F.q;
+  document.getElementById("showing").innerHTML = "Showing <b>" + rows.length + "</b> of " + D.onboarding.length + " onboarding records" + (inv.length ? " and <b>" + inv.length + "</b> invited" : "") +
+    (active ? ' &middot; <a href="#" id="clearf">clear filters</a>' : "") + ' <span class="mini">&middot; last read ' + esc(ADMIN.ago(D.fetched)) + '</span>';
+  var cf = document.getElementById("clearf"); if(cf) cf.addEventListener("click", function(e){ e.preventDefault(); clearFilters(); });
+  var html = "";
+  STG_ORDER.forEach(function(s){
+    if(s === "Invited"){
+      if(!inv.length) return;
+      html += '<div class="stg' + (closed[s] ? " closed" : "") + '" data-stg="' + esc(s) + '"><div class="sh"><h4>' + esc(s) + '</h4><span class="cnt">' + inv.length + '</span><span class="desc">' + esc(STG_DESC[s]) + '</span><span class="chev">&#9660;</span></div><ul class="vl">';
+      inv.forEach(function(v){
+        html += '<li class="vrow" data-v="' + esc(v.vendor_id) + '"><div><div class="nm">' + esc(v.dba_name) + ' <span class="pill ' + (v.market === "nnv" ? "nnv" : "lv") + '">' + (v.market === "nnv" ? "NNV" : "LV") + '</span><span class="pill inv">Invited</span></div><div class="meta"><span>' + esc(v.contact_name || "") + '</span><span>' + esc(v.email || "") + '</span></div></div>' +
+          '<div class="left"><span class="chip">Waiting on their evaluation</span></div><div class="prog"><small>' + esc(v.vendor_id) + '</small></div></li>';
+      });
+      html += '</ul></div>'; return;
+    }
+    var mine = rows.filter(function(o){ return o.calc.group === s; });
+    if(!mine.length) return;
+    mine.sort(function(a,b){ return (b.updated || "") < (a.updated || "") ? -1 : 1; });
+    html += '<div class="stg' + (closed[s] ? " closed" : "") + '" data-stg="' + esc(s) + '"><div class="sh"><h4>' + esc(s) + '</h4><span class="cnt">' + mine.length + '</span><span class="desc">' + esc(STG_DESC[s] || "") + '</span><span class="chev">&#9660;</span></div><ul class="vl">' + mine.map(rowHtml).join("") + '</ul></div>';
+  });
+  if(!html) html = '<div class="empty"><b>Nobody matches.</b>' + (D.onboarding.length ? "Change a filter or clear the search." : "Nothing imported yet. Use Import from Asana, or start onboarding for a vendor.") + '</div>';
+  if(noob.length && (F.q || F.stat === "Complete")) {
+    html += '<div class="noob"><b>' + noob.length + '</b> active vendor' + (noob.length === 1 ? "" : "s") + ' with no onboarding record' + (F.q ? " match your search" : "") + ': ' +
+      noob.slice(0, 12).map(function(v){ return '<button class="btn sm" data-start="' + esc(v.vendor_id) + '">' + esc(v.dba_name) + ' <span class="pill ' + (v.market === "nnv" ? "nnv" : "lv") + '">' + (v.market === "nnv" ? "NNV" : "LV") + '</span></button>'; }).join(" ") + (noob.length > 12 ? ' <span class="mini">and ' + (noob.length - 12) + ' more, narrow the search</span>' : "") + '</div>';
+  } else if(!F.q && !F.stat && noob.length){
+    html += '<div class="noob"><b>' + noob.length + '</b> active vendors have no onboarding record (they predate this desk). Search a name to start one, or <a href="#" id="showall">list them</a>.</div>';
+  }
+  host.className = ""; host.innerHTML = html;
+  var sa = document.getElementById("showall"); if(sa) sa.addEventListener("click", function(e){ e.preventDefault(); F.stat = "Complete"; render(); });
+}
+var closed = {};
+document.getElementById("list").addEventListener("click", function(e){
+  var sh = e.target.closest(".sh");
+  if(sh){ var s = sh.parentElement.getAttribute("data-stg"); closed[s] = !closed[s]; sh.parentElement.classList.toggle("closed", !!closed[s]); return; }
+  var st = e.target.closest("button[data-start]");
+  if(st){ startFor(st.getAttribute("data-start")); return; }
+  var row = e.target.closest(".vrow");
+  if(!row) return;
+  if(row.dataset.ob) openOb(row.dataset.ob);
+  else if(row.dataset.v) openVendor(row.dataset.v);
+});
+document.getElementById("stats").addEventListener("click", function(e){
+  var a = e.target.closest("a.stat"); if(!a || a.dataset.stat === undefined) return; e.preventDefault();
+  F.stat = F.stat === a.dataset.stat ? "" : a.dataset.stat; render();
+  document.getElementById("listcard").scrollIntoView({ behavior:"smooth", block:"start" });
+});
+function syncSeg(id, val){ document.querySelectorAll("#" + id + " button").forEach(function(b){ b.classList.toggle("on", b.dataset.v === val); }); }
+["f_mk","f_tr","f_wait"].forEach(function(id){
+  document.getElementById(id).addEventListener("click", function(e){
+    var b = e.target.closest("button"); if(!b) return;
+    var key = id === "f_mk" ? "mk" : id === "f_tr" ? "tr" : "wait";
+    F[key] = b.dataset.v; syncSeg(id, F[key]); renderList();
+  });
+});
+document.getElementById("f_who").addEventListener("change", function(){ F.who = this.value; renderList(); });
+var qt; document.getElementById("q").addEventListener("input", function(){ var v = this.value.trim().toLowerCase(); clearTimeout(qt); qt = setTimeout(function(){ F.q = v; renderList(); }, 120); });
+function clearFilters(){ F = { q:"", mk:"", tr:"", wait:"", who:"", stat:"", req:F.req }; syncSeg("f_mk",""); syncSeg("f_tr",""); syncSeg("f_wait",""); document.getElementById("f_who").value = ""; document.getElementById("q").value = ""; render(); }
+document.getElementById("refresh").addEventListener("click", function(){ var b = this; b.disabled = true; load(true).then(function(){ b.disabled = false; toast("Reloaded", "ok"); if(OPEN) reopen(); }); });
+
+/* ---------- side: requests ---------- */
+document.getElementById("f_req").addEventListener("click", function(e){ var b = e.target.closest("button"); if(!b) return; F.req = b.dataset.v; syncSeg("f_req", F.req); renderReqs(); });
+function reqPerson(r){ return D.crew.filter(function(c){ return c.market === r.market && c.first_name.toLowerCase() === (r.first_name||"").toLowerCase() && c.last_name.toLowerCase() === (r.last_name||"").toLowerCase() && (c.vendor_id && r.vendor_id ? c.vendor_id === r.vendor_id : norm(c.vendor) === norm(r.company)); })[0] || null; }
+function reqState(r){
+  var p = reqPerson(r);
+  if(p && p.result === "Pass") return { k:"pass", t:"Passed" };
+  if(p && p.result === "Fail") return { k:"fail", t:"Failed" };
+  if(r.status === "Badge only") return { k:"todo", t:"Badge only" };
+  if(r.status === "Sent") return { k:"pend", t:"Sent" };
+  if(r.status === "Closed") return { k:"grey", t:"Closed in Asana" };
+  return { k:"todo", t:"To send" };
+}
+function renderReqs(){
+  var all = D.requests.filter(function(r){ return !r.dupe_of; });
+  var list = all.filter(function(r){
+    var s = reqState(r);
+    if(F.req === "New") return s.t === "To send";
+    if(F.req === "Sent") return s.t === "Sent" || s.t === "Closed in Asana";
+    if(F.req === "review") return (s.t === "Sent" || s.t === "Closed in Asana") && r.request_type === D.req_types[0];
+    if(F.req === "badge") return r.badge === "Needed" || r.badge === "Ordered";
+    return true;
+  });
+  list.sort(function(a,b){ return (a.received || "") < (b.received || "") ? 1 : -1; });
+  document.getElementById("bc_sub").textContent = all.length + " total";
+  var host = document.getElementById("reqlist");
+  if(!list.length){ host.innerHTML = '<div class="mini">' + (F.req === "New" ? "Nothing waiting to be sent to Verified First." : "Nothing here.") + '</div>'; return; }
+  host.innerHTML = list.slice(0, 40).map(function(r){
+    var s = reqState(r);
+    return '<div class="rq" data-req="' + esc(r.req_id) + '"><span class="pill ' + s.k + '">' + esc(s.t) + '</span><div class="n"><div class="co">' + esc(r.legal_name || (r.first_name + " " + r.last_name)) + '</div><small>' + esc(r.company) + (r.vendor_id ? "" : " (not matched)") + ' &middot; ' + (r.market === "nnv" ? "NNV" : "LV") + ' &middot; ' + esc(fmtDate(r.received)) + (r.client_account ? " &middot; for " + esc(r.client_account) : "") + '</small></div></div>';
+  }).join("") + (list.length > 40 ? '<div class="mini">and ' + (list.length - 40) + ' more. Search a vendor to see theirs.</div>' : "");
+}
+document.getElementById("reqlist").addEventListener("click", function(e){
+  var el = e.target.closest(".rq"); if(!el) return;
+  var r = D.requests.filter(function(x){ return x.req_id === el.dataset.req; })[0]; if(!r) return;
+  var ob = r.vendor_id && OBBYV[r.vendor_id] ? OBBYV[r.vendor_id][0] : D.onboarding.filter(function(o){ return norm(o.vendor) === norm(r.company); })[0];
+  if(ob) openOb(ob.ob_id, "bc"); else if(r.vendor_id && VBYID[r.vendor_id]) openVendor(r.vendor_id); else openRequest(r);
+});
+function renderUnmatched(){
+  var obs = D.onboarding.filter(function(o){ return !o.vendor_id; });
+  var reqs = D.requests.filter(function(r){ return !r.vendor_id && !r.dupe_of; });
+  var ups = D.log.filter(function(l){ return l.action === "upload unmatched"; }).slice(0, 10);
+  document.getElementById("unm_sub").textContent = (obs.length + reqs.length + ups.length) + " items";
+  var h = "";
+  obs.forEach(function(o){ h += '<div class="rq" data-ob="' + esc(o.ob_id) + '"><span class="pill grey">Onboarding</span><div class="n"><div class="co">' + esc(o.vendor) + '</div><small>' + esc(o.stage) + ' &middot; ' + esc(o.track) + ' &middot; from ' + esc(o.source || "") + '</small></div></div>'; });
+  reqs.forEach(function(r){ h += '<div class="rq" data-req="' + esc(r.req_id) + '"><span class="pill grey">BC request</span><div class="n"><div class="co">' + esc(r.company) + '</div><small>' + esc(r.legal_name) + ' &middot; ' + esc(fmtDate(r.received)) + '</small></div></div>'; });
+  ups.forEach(function(l){ h += '<div class="rq"><span class="pill grey">Upload</span><div class="n"><div class="co">' + esc(l.vendor) + '</div><small>' + esc(l.item) + ' &middot; ' + esc(l.when) + '</small></div></div>'; });
+  document.getElementById("unm").innerHTML = h || '<div class="mini">Everything is matched.</div>';
+}
+document.getElementById("unm").addEventListener("click", function(e){
+  var el = e.target.closest(".rq"); if(!el) return;
+  if(el.dataset.ob) openOb(el.dataset.ob);
+  else if(el.dataset.req){ var r = D.requests.filter(function(x){ return x.req_id === el.dataset.req; })[0]; if(r) openRequest(r); }
+});
+function renderActivity(){
+  var h = D.log.filter(function(l){ return l.action !== "upload unmatched"; }).slice(0, 14).map(function(l){
+    var what = l.action === "doc" ? esc(l.item) + " &rarr; " + (l.to ? esc(l.to) : "cleared") : l.action === "note" ? "note: " + esc(String(l.note).slice(0, 80)) : l.action === "create" ? "started (" + esc(l.to) + ")" : l.action === "asana import" ? "Asana import" : esc(l.action) + (l.item ? " " + esc(l.item) : "") + (l.to ? " &rarr; " + esc(l.to) : "");
+    return '<div class="act"><b>' + esc(l.vendor || "") + '</b> ' + what + '<div class="t">' + esc(l.who || "") + ' &middot; ' + esc(l.when || "") + '</div></div>';
+  }).join("");
+  document.getElementById("activity").innerHTML = h || '<div class="mini">No activity yet.</div>';
+}
+
+/* ---------- vendor detail ---------- */
+function openHash(){
+  var h = decodeURIComponent(location.hash.slice(1));
+  if(!h || h === "bc" || h === "start") { if(h === "bc") document.getElementById("bc").scrollIntoView({ behavior:"smooth" }); if(h === "start") document.getElementById("addv").click(); return; }
+  if(OBBYID[h]) openOb(h); else if(OBBYV[h]) openOb(OBBYV[h][0].ob_id); else if(VBYID[h]) openVendor(h);
+}
+function closeModal(id){ document.getElementById(id).classList.remove("show"); if(id === "vm"){ OPEN = null; renderList(); } }
+["vm","am","im"].forEach(function(id){ document.getElementById(id + "_x").addEventListener("click", function(){ closeModal(id); }); document.getElementById(id).addEventListener("click", function(e){ if(e.target === this) closeModal(id); }); });
+document.addEventListener("keydown", function(e){ if(e.key === "Escape") ["vm","am","im"].forEach(closeModal); });
+function reopen(){ if(OPEN && OBBYID[OPEN]) openOb(OPEN); }
+
+function openVendor(vid){
+  var v = VBYID[vid]; if(!v) return;
+  if(OBBYV[vid]) return openOb(OBBYV[vid][0].ob_id);
+  OPEN = "v:" + vid; CUR = null;
+  document.getElementById("vm_title").textContent = v.dba_name;
+  document.getElementById("vm_body").innerHTML = '<div class="det"><div class="main"><div class="dhead"><div><h2>' + esc(v.dba_name) + '</h2><div class="sub"><span class="pill ' + (v.market === "nnv" ? "nnv" : "lv") + '">' + esc(v.region) + '</span><span class="pill grey">' + esc(v.status) + '</span><span>' + esc(v.vendor_id) + '</span></div></div></div>' +
+    '<p style="font-size:13px;color:var(--grey)">' + (v.invited ? "Invited from the hub. Their onboarding record starts on its own the moment they submit the Vendor Evaluation, or you can start it now." : "This vendor has no onboarding record yet. Start one to track what is on file.") + '</p>' +
+    '<div class="ctrls"><div class="field"><label>Track</label><select id="sv_track"><option value="JS"' + (v.janitorial ? " selected" : "") + '>Janitorial (JS)</option><option value="OS"' + (!v.janitorial ? " selected" : "") + '>Other services (OS)</option></select></div>' +
+    '<div class="field"><label>Stage</label><select id="sv_stage">' + D.stages.filter(function(s){ return s !== "Invited"; }).map(function(s){ return '<option' + (s === (v.status === "Active" ? "Complete" : v.invited ? "New" : "In Process") ? " selected" : "") + '>' + esc(s) + '</option>'; }).join("") + '</select></div></div>' +
+    '<button class="btn solid" id="sv_go" type="button">Start onboarding</button></div>' + asideHtml(v, null) + '</div>';
+  document.getElementById("sv_go").addEventListener("click", function(){
+    var b = this; b.disabled = true;
+    api({ kind:"ob_save", vendor_id: vid, track: document.getElementById("sv_track").value, stage: document.getElementById("sv_stage").value, who: me() }).then(function(r){
+      if(!r.ok) throw new Error(r.error); toast("Onboarding started for " + v.dba_name, "ok");
+      return load(true).then(function(){ openOb(r.ob_id); });
+    }).catch(function(e){ b.disabled = false; toast("Not started: " + e.message, "err"); });
+  });
+  document.getElementById("vm").classList.add("show");
+}
+function startFor(vid){ openVendor(vid); }
+function asideHtml(v, o){
+  var h = '<div class="aside">';
+  if(v){
+    h += '<h5>Directory record</h5><div class="kv">' +
+      '<div><span>Contact</span><span>' + esc(v.contact_name || "") + '</span></div><div><span>Email</span><span>' + esc(v.email || "") + '</span></div><div><span>Phone</span><span>' + esc(v.phone || "") + '</span></div>' +
+      '<div><span>Services</span><span>' + esc(v.service_types || "") + '</span></div><div><span>Source</span><span>' + esc(v.source || "") + (v.eval_date ? ", eval " + esc(fmtDate(v.eval_date)) : "") + '</span></div>' +
+      (v.gl_exp || v.wc_exp ? '<div><span>COI exp</span><span>GL ' + esc(v.gl_exp || "?") + ' &middot; WC ' + esc(v.wc_exp || "?") + '</span></div>' : "") + '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px"><a class="btn sm" href="records.html?s=' + (v.market === "nnv" ? "vendors_nnv" : "vendors_lv") + '" target="_blank" rel="noopener">Edit record</a>' +
+      '<a class="btn sm" href="' + ADMIN.OPS + 'vendors.html#/' + v.market + '/' + (v.janitorial ? "janitorial" : "unclassified") + '" target="_blank" rel="noopener">Ops Hub</a>' +
+      '<a class="btn sm" href="background-checks.html" target="_blank" rel="noopener">Roster</a></div>';
+  } else if(o){
+    h += '<h5>Not on the directory</h5><p style="margin-bottom:10px">This record came in under a name the directory does not know. Attach it to the right vendor:</p>' +
+      '<div class="field"><input id="att_v" list="vlist" placeholder="Type the vendor name..." autocomplete="off"></div><button class="btn sm solid" id="att_go" type="button" style="margin:8px 0 14px">Attach</button>' +
+      '<p class="mini" style="margin-bottom:12px">Or <a href="' + ADMIN.OPS + 'vendor-add.html" target="_blank" rel="noopener">add the vendor</a> first.</p>';
+  }
+  if(o){
+    var hist = D.log.filter(function(l){ return l.ob_id === o.ob_id; }).slice(0, 40);
+    h += '<h5>History</h5><div class="hist">' + (hist.length ? hist.map(function(l){
+      var what = l.action === "doc" ? esc(l.item) + " &rarr; " + (l.to ? esc(l.to) : "cleared") + (l.note ? " (" + esc(String(l.note).slice(0, 60)) + ")" : "") : l.action === "note" ? "note" : esc(l.action) + (l.item ? " " + esc(l.item) : "") + (l.to ? " &rarr; " + esc(l.to) : "");
+      return '<div>' + what + '<div class="t">' + esc(l.who || "") + ' &middot; ' + esc(l.when || "") + '</div></div>';
+    }).join("") : '<div class="mini">Nothing logged yet.</div>') + '</div>';
+    if(o.asana_gid) h += '<p class="mini" style="margin-top:10px">Imported from Asana' + (o.asana_section ? " (" + esc(o.asana_section) + ")" : "") + '. <a href="https://app.asana.com/0/0/' + esc(o.asana_gid) + '" target="_blank" rel="noopener">Open the old task</a></p>';
+  }
+  return h + '</div>';
+}
+function stateBtns(key, d){
+  var s = d.s || "";
+  return '<div class="res" data-key="' + esc(key) + '"><button class="rec' + (s === "received" ? " on" : "") + '" data-s="received" title="It came in">Received</button><button class="ver' + (s === "verified" ? " on" : "") + '" data-s="verified" title="Checked and correct">Verified</button><button class="fix' + (s === "fix" ? " on" : "") + '" data-s="fix" title="Came in wrong, needs a correction">Fix</button></div>';
+}
+function openOb(obId, focus){
+  var o = OBBYID[obId]; if(!o) return;
+  OPEN = obId; renderList();
+  var v = o.v, c = o.calc;
+  document.getElementById("vm_title").textContent = o.vendor;
+  var groups = [];
+  o.items.forEach(function(it){ var g = groups.filter(function(x){ return x.name === it.group; })[0]; if(!g){ g = { name: it.group, items: [] }; groups.push(g); } g.items.push(it); });
+  var h = '<div class="det"><div class="main">';
+  h += '<div class="dhead"><div><h2>' + esc(o.vendor) + '</h2><div class="sub"><span class="pill ' + (o.market === "nnv" ? "nnv" : "lv") + '">' + (o.market === "nnv" ? "Northern Nevada" : "Las Vegas") + '</span><span class="pill ' + (o.track === "JS" ? "js" : "os") + '">' + (o.track === "JS" ? "Janitorial" : "Other services") + '</span>' +
+    (v ? '<span class="pill grey">' + esc(v.status) + '</span><span>' + esc(o.vendor_id) + '</span>' : '<span class="pill fail">Not on the directory</span>') + '<span>' + c.ver + ' of ' + c.req + ' verified</span>' + (o.completed ? '<span>completed ' + esc(fmtDate(o.completed)) + '</span>' : "") + '</div></div>' +
+    '<div class="links">' + (c.left.length ? '<span class="chip">' + c.left.length + ' left to activate</span>' : '<span class="chip ok">Ready: everything verified</span>') + '</div></div>';
+  h += '<div class="ctrls">' +
+    '<div class="field"><label>Stage</label><select id="d_stage">' + D.stages.filter(function(s){ return s !== "Invited"; }).map(function(s){ return '<option' + (s === o.stage ? " selected" : "") + '>' + esc(s) + '</option>'; }).join("") + '</select></div>' +
+    '<div class="field"><label>Track</label><select id="d_track"><option value="JS"' + (o.track === "JS" ? " selected" : "") + '>Janitorial (JS)</option><option value="OS"' + (o.track === "OS" ? " selected" : "") + '>Other services (OS)</option></select></div>' +
+    '<div class="field"><label>Assigned to</label><input id="d_who" value="' + esc(o.assignee) + '" placeholder="Name"></div>' +
+    '<div class="field"><label>Priority</label><select id="d_pri"><option value="">None</option>' + ["High","Medium","Low"].map(function(p){ return '<option' + (p === o.priority ? " selected" : "") + '>' + p + '</option>'; }).join("") + '</select></div></div>';
+  groups.forEach(function(g){
+    var done = g.items.filter(function(it){ return (o.docs[it.key] || {}).s === "verified"; }).length;
+    var isPacket = /packet/i.test(g.name);
+    h += '<div class="grp"><div class="gh"><span>' + esc(g.name) + '</span><span class="gc">' + done + ' of ' + g.items.length + '</span>' + (isPacket ? '<button class="bulk" data-bulk="received">Mark the whole packet received</button><button class="bulk" data-bulk="verified" style="margin-left:10px">Verify all</button>' : "") + '</div>';
+    g.items.forEach(function(it){
+      var d = o.docs[it.key] || {};
+      h += '<div class="item' + (d.s === "verified" ? " done" : "") + '" data-key="' + esc(it.key) + '"><div><div class="lb">' + esc(it.label) + (it.required ? "" : ' <span class="req">optional</span>') + (it.auto ? ' <span class="auto" title="Fills itself from the Vendor Hub">auto</span>' : "") + '</div>' +
+        '<div class="st">' + (d.s ? '<b>' + esc(d.s === "fix" ? "Needs a fix" : d.s === "received" ? "Received" : "Verified") + '</b> ' + esc(d.d || "") + (d.by ? " by " + esc(d.by) : "") : '<span>Not in yet</span>') + (d.n ? ' <span class="nt">' + esc(d.n) + '</span>' : "") + (it.hint && !d.s ? ' <span>' + esc(it.hint) + '</span>' : "") + '<button data-note="' + esc(it.key) + '">' + (d.n ? "edit note" : "note") + '</button></div></div>' + stateBtns(it.key, d) + '</div>';
+    });
+    h += '</div>';
+  });
+  // crew background checks
+  var crew = c.crew, reqs = reqsFor(o).filter(function(r){ return !r.dupe_of; });
+  if(o.track === "JS" || crew.length || reqs.length){
+    h += '<div class="grp crew" id="crewgrp"><div class="gh"><span>Crew background checks</span><span class="gc">' + (crew.length - c.pend) + ' of ' + crew.length + ' with a result' + (c.pend ? ", " + c.pend + " pending" : "") + '</span><a class="bulk" href="background-checks.html#add" target="_blank" rel="noopener">Add a person</a></div>';
+    if(!crew.length && !reqs.length) h += '<div class="item"><div class="lb" style="color:var(--grey)">No one on the roster yet. The vendor requests checks on the <a href="https://citywidelv.github.io/cw-vendor-hub/background-check.html" target="_blank" rel="noopener">Vendor Hub page</a>, or add a person on the roster.</div></div>';
+    crew.forEach(function(p){
+      var rq = reqs.filter(function(r){ return r.first_name.toLowerCase() === p.first_name.toLowerCase() && r.last_name.toLowerCase() === p.last_name.toLowerCase(); })[0];
+      var rk = p.result || "";
+      h += '<div class="item" data-crew="' + esc(p.market + ":" + p.row) + '"><div><div class="lb">' + esc(p.first_name) + ' ' + esc(p.last_name) + (/10-Year/.test(p.check_type) ? ' <span class="pill ten">10-Yr</span>' : "") + (p.source === "Vendor submitted" ? ' <span class="pill grey">vendor ran it</span>' : "") +
+        '<small>' + (rq ? 'Requested ' + esc(fmtDate(rq.received)) + (rq.status === "Sent" ? ', sent to Verified First ' + esc(fmtDate(rq.sent || "")) : rq.status === "New" ? ', <b style="color:var(--amber)">not sent yet</b>' : "") + (rq.email ? " &middot; " + esc(rq.email) : "") + (rq.mobile ? " &middot; " + esc(rq.mobile) : "") : (p.most_recent_check ? "checked " + esc(fmtDate(p.most_recent_check)) : "on the roster")) + (p.notes ? " &middot; " + esc(p.notes.slice(0, 90)) : "") + '</small></div></div>' +
+        '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">' + (rq && rq.status === "New" && rq.request_type === D.req_types[0] ? '<button class="btn sm" data-sent="' + esc(rq.req_id) + '">Mark sent to Verified First</button>' : "") +
+        '<div class="res crewres"><button class="pass' + (rk === "Pass" ? " on" : "") + '" data-r="Pass">Pass</button><button class="fail' + (rk === "Fail" ? " on" : "") + '" data-r="Fail">Fail</button><button class="pend' + (rk === "Pending" ? " on" : "") + '" data-r="Pending">Pend</button></div></div></div>';
+    });
+    // requests with no roster person (badge only, or unmatched name)
+    reqs.filter(function(r){ return !crew.some(function(p){ return p.first_name.toLowerCase() === r.first_name.toLowerCase() && p.last_name.toLowerCase() === r.last_name.toLowerCase(); }); }).forEach(function(r){
+      h += '<div class="item"><div><div class="lb">' + esc(r.legal_name) + ' <span class="pill grey">' + esc(r.request_type) + '</span><small>Requested ' + esc(fmtDate(r.received)) + (r.email ? " &middot; " + esc(r.email) : "") + '</small></div></div><div class="mini">badge: ' + esc(r.badge || "") + '</div></div>';
+    });
+    h += '</div>';
+  }
+  h += '<div class="notes"><h5 style="font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);margin:0 0 6px">Notes</h5><textarea id="d_note" placeholder="Add a note: W-9 needs the legal name corrected, COI names the wrong entity, called and left a message..."></textarea><div style="display:flex;gap:8px;align-items:center;margin-top:6px"><button class="btn sm solid" id="d_noteadd" type="button">Add note</button><span class="mini">Newest first. Notes also live on the sheet.</span></div>' +
+    '<div class="nlist" id="d_notes">' + (o.notes ? esc(o.notes) : '<span class="mini">No notes yet.</span>') + '</div></div>';
+  h += '</div>' + asideHtml(v, o) + '</div>';
+  document.getElementById("vm_body").innerHTML = h;
+  document.getElementById("vm").classList.add("show");
+  if(focus === "bc"){ var cg = document.getElementById("crewgrp"); if(cg) setTimeout(function(){ cg.scrollIntoView({ behavior:"smooth", block:"start" }); }, 150); }
+  wireDetail(o);
+}
+var CUR = null;
+function wireDetail(o){
+  CUR = o;
+  var body = document.getElementById("vm_body");
+  function saveField(field, value, label){
+    api({ kind:"ob_save", ob_id:o.ob_id, who:me(), [field]: value }).then(function(r){
+      if(!r.ok) throw new Error(r.error);
+      o[field] = value; if(field === "stage" && value === "Complete" && !o.completed) o.completed = today();
+      if(field === "track"){ o.items = D.checklist.filter(function(c){ return c.track === "Both" || c.track === o.track; }); }
+      o.calc = calc(o); toast(label || "Saved", "ok"); render(); if(field === "track") openOb(o.ob_id);
+    }).catch(function(e){ toast("Not saved: " + e.message, "err"); });
+  }
+  document.getElementById("d_stage").addEventListener("change", function(){ saveField("stage", this.value, "Stage: " + this.value); });
+  document.getElementById("d_track").addEventListener("change", function(){ saveField("track", this.value, "Track changed"); });
+  document.getElementById("d_pri").addEventListener("change", function(){ saveField("priority", this.value, "Priority saved"); });
+  document.getElementById("d_who").addEventListener("change", function(){ saveField("assignee", this.value.trim(), "Assigned"); });
+  function setDoc(items, label){
+    var keys = items.map(function(i){ return i.key; });
+    keys.forEach(function(k){ var el = body.querySelector('.item[data-key="' + k + '"]'); if(el) el.classList.add("busy"); });
+    var payload = items.length === 1 ? { kind:"ob_doc", ob_id:o.ob_id, key:items[0].key, state:items[0].state, note:items[0].note, who:me() } : { kind:"ob_docs", ob_id:o.ob_id, items:items, who:me() };
+    return api(payload).then(function(r){
+      if(!r.ok) throw new Error(r.error);
+      o.docs = r.docs; o.calc = calc(o); toast(label || "Saved", "ok"); render(); openOb(o.ob_id);
+    }).catch(function(e){ toast("Not saved: " + e.message, "err"); keys.forEach(function(k){ var el = body.querySelector('.item[data-key="' + k + '"]'); if(el) el.classList.remove("busy"); }); });
+  }
+  if(!body._wired){ body._wired = true; body.addEventListener("click", function(e){ if(CUR && CUR._click) CUR._click(e); }); }
+  o._click = function(e){
+    var b = e.target.closest("button"); if(!b) return;
+    if(b.dataset.s){
+      var key = b.closest(".res").dataset.key, cur = (o.docs[key] || {}).s || "";
+      var next = cur === b.dataset.s ? "" : b.dataset.s;
+      var note;
+      if(next === "fix"){ note = prompt("What needs fixing?", (o.docs[key] || {}).n || ""); if(note === null) return; }
+      setDoc([{ key:key, state:next, note:note }], next ? (next === "fix" ? "Marked: needs a fix" : next === "verified" ? "Verified" : "Received") : "Cleared");
+      return;
+    }
+    if(b.dataset.note !== undefined){
+      var k2 = b.dataset.note, n = prompt("Note for this item:", (o.docs[k2] || {}).n || ""); if(n === null) return;
+      setDoc([{ key:k2, state:(o.docs[k2] || {}).s || "", note:n }], "Note saved"); return;
+    }
+    if(b.dataset.bulk){
+      var st = b.dataset.bulk;
+      var items = o.items.filter(function(it){ return /packet/i.test(it.group) && it.key !== "packet_sent" && (o.docs[it.key] || {}).s !== "verified"; }).map(function(it){ return { key:it.key, state:st }; });
+      if(st === "received") items.push({ key:"packet_sent", state:"verified" });
+      if(!items.length){ toast("The packet is already verified", "ok"); return; }
+      if(st === "verified" && !confirm("Mark every packet item Verified? Only do this after you have read the signed packet in PandaDoc.")) return;
+      setDoc(items, st === "received" ? "Packet marked received" : "Packet verified"); return;
+    }
+    if(b.dataset.sent){
+      var rid = b.dataset.sent; b.disabled = true;
+      api({ kind:"ob_bc_update", req_id:rid, status:"Sent", who:me() }).then(function(r){ if(!r.ok) throw new Error(r.error); var rq = D.requests.filter(function(x){ return x.req_id === rid; })[0]; if(rq){ rq.status = "Sent"; rq.sent = today(); } toast("Marked sent to Verified First", "ok"); renderReqs(); openOb(o.ob_id, "bc"); })
+        .catch(function(err){ b.disabled = false; toast("Not saved: " + err.message, "err"); });
+      return;
+    }
+    if(b.dataset.r){
+      var item = b.closest(".item"), key3 = item.dataset.crew, mk = key3.split(":")[0], row = Number(key3.split(":")[1]);
+      var p = D.crew.filter(function(x){ return x.market === mk && x.row === row; })[0]; if(!p) return;
+      var v = b.dataset.r; if(p.result === v) v = "";
+      if(v === "Fail" && !confirm("Mark " + p.first_name + " " + p.last_name + " as FAILED? They come off the Ops Hub directory for " + o.vendor + " right away.")) return;
+      item.classList.add("busy");
+      api({ kind:"vd_bc_upsert", reviewed_by:me(), rows:[{ market:mk, row:row, result:v }] }).then(function(r){
+        if(!r.ok || (r.errors && r.errors.length)) throw new Error((r.errors && r.errors[0]) || r.error || "Save failed");
+        p.result = v; p.result_date = v ? today() : ""; p.status = v === "Pass" ? "Cleared" : v === "Fail" ? "Removed" : v === "Pending" ? "Pending" : "Cleared";
+        o.calc = calc(o); toast(p.first_name + " " + p.last_name + ": " + (v || "result cleared"), "ok"); render(); openOb(o.ob_id, "bc");
+      }).catch(function(err){ item.classList.remove("busy"); toast("Not saved: " + err.message, "err"); });
+      return;
+    }
+    if(b.id === "d_noteadd"){
+      var t = document.getElementById("d_note").value.trim(); if(!t){ toast("Type the note first", "err"); return; }
+      b.disabled = true;
+      api({ kind:"ob_note", ob_id:o.ob_id, note:t, who:me() }).then(function(r){ if(!r.ok) throw new Error(r.error); o.notes = r.notes; toast("Note added", "ok"); return load(true); }).then(function(){ openOb(o.ob_id); })
+        .catch(function(err){ b.disabled = false; toast("Not saved: " + err.message, "err"); });
+      return;
+    }
+    if(b.id === "att_go"){
+      var txt = document.getElementById("att_v").value, m = /\((V-\d+)\)\s*$/.exec(txt), vid = m ? m[1] : "";
+      if(!vid || !VBYID[vid]){ var hit = D.vendors.filter(function(x){ return x.dba_name.toLowerCase() === txt.trim().toLowerCase(); })[0]; if(hit) vid = hit.vendor_id; }
+      if(!vid){ toast("Pick a vendor from the list", "err"); return; }
+      b.disabled = true;
+      api({ kind:"ob_save", ob_id:o.ob_id, vendor_id:vid, who:me() }).then(function(r){ if(!r.ok) throw new Error(r.error); toast("Attached to " + VBYID[vid].dba_name, "ok"); return load(true); }).then(function(){ openOb(o.ob_id); })
+        .catch(function(err){ b.disabled = false; toast("Not attached: " + err.message, "err"); });
+    }
+  };
+}
+function openRequest(r){
+  OPEN = "r:" + r.req_id; CUR = null;
+  document.getElementById("vm_title").textContent = r.company;
+  var st = reqState(r);
+  document.getElementById("vm_body").innerHTML = '<div class="det"><div class="main"><div class="dhead"><div><h2>' + esc(r.company) + '</h2><div class="sub"><span class="pill ' + (r.market === "nnv" ? "nnv" : "lv") + '">' + (r.market === "nnv" ? "Northern Nevada" : "Las Vegas") + '</span><span class="pill ' + st.k + '">' + esc(st.t) + '</span><span>' + esc(r.req_id) + '</span></div></div></div>' +
+    '<div class="kv" style="font-size:13px"><div style="padding:4px 0"><b>' + esc(r.legal_name) + '</b>' + (r.preferred_name ? " (goes by " + esc(r.preferred_name) + ")" : "") + '</div><div style="padding:4px 0">' + esc(r.request_type) + '</div><div style="padding:4px 0">' + esc(r.email || "") + ' &middot; ' + esc(r.mobile || "") + '</div>' + (r.client_account ? '<div style="padding:4px 0">For: ' + esc(r.client_account) + '</div>' : "") + '<div style="padding:4px 0" class="mini">Received ' + esc(r.received) + ' via ' + esc(r.source) + (r.submitted_by ? " from " + esc(r.submitted_by) + " " + esc(r.submitter_email) : "") + '</div></div>' +
+    '<p style="font-size:13px;color:var(--grey);margin-top:12px">This company is not on the vendor directory' + (r.vendor_id ? "" : ", so the request is not attached to an onboarding record") + '. Attach it, or <a href="' + ADMIN.OPS + 'vendor-add.html" target="_blank" rel="noopener">add the vendor</a> first.</p>' +
+    '<div class="field" style="margin-top:10px"><label>Attach to vendor</label><input id="ratt_v" list="vlist" placeholder="Type the vendor name..." autocomplete="off"></div><button class="btn sm solid" id="ratt_go" type="button" style="margin-top:8px">Attach</button></div><div class="aside"><h5>Notes on the request</h5><p style="font-size:12.5px">' + esc(r.notes || "none") + '</p></div></div>';
+  document.getElementById("ratt_go").addEventListener("click", function(){
+    var txt = document.getElementById("ratt_v").value, m = /\((V-\d+)\)\s*$/.exec(txt), vid = m ? m[1] : "";
+    if(!vid){ var hit = D.vendors.filter(function(x){ return x.dba_name.toLowerCase() === txt.trim().toLowerCase(); })[0]; if(hit) vid = hit.vendor_id; }
+    if(!vid){ toast("Pick a vendor from the list", "err"); return; }
+    var b = this; b.disabled = true;
+    api({ kind:"ob_bc_update", req_id:r.req_id, vendor_id:vid, who:me() }).then(function(x){ if(!x.ok) throw new Error(x.error);
+      // also attach the roster person if it is unmatched
+      var p = reqPerson(r);
+      if(p && !p.vendor_id) return api({ kind:"vd_bc_upsert", reviewed_by:me(), rows:[{ market:p.market, row:p.row, vendor_id:vid, vendor:VBYID[vid].dba_name }] });
+    }).then(function(){ toast("Attached", "ok"); closeModal("vm"); return load(true); }).catch(function(err){ b.disabled = false; toast("Not attached: " + err.message, "err"); });
+  });
+  document.getElementById("vm").classList.add("show");
+}
+
+/* ---------- start onboarding modal ---------- */
+document.getElementById("addv").addEventListener("click", function(){ document.getElementById("am_who").value = me() === "Admin Hub" ? "" : me(); document.getElementById("am").classList.add("show"); setTimeout(function(){ document.getElementById("am_v").focus(); }, 100); });
+function amVendor(){ var txt = document.getElementById("am_v").value, m = /\((V-\d+)\)\s*$/.exec(txt); if(m && VBYID[m[1]]) return VBYID[m[1]]; return D.vendors.filter(function(x){ return x.dba_name.toLowerCase() === txt.trim().toLowerCase(); })[0] || null; }
+document.getElementById("am_v").addEventListener("input", function(){
+  var v = amVendor(), hit = document.getElementById("am_hit");
+  if(!v){ hit.textContent = this.value ? "Pick a vendor from the list." : ""; return; }
+  hit.textContent = v.dba_name + " is " + v.status + " in " + v.region + (OBBYV[v.vendor_id] ? ". Already has an onboarding record, it will open instead." : ".");
+  document.getElementById("am_track").value = v.janitorial ? "JS" : "OS";
+  document.getElementById("am_stage").value = v.status === "Active" ? "Complete" : "In Process";
+});
+document.getElementById("am_go").addEventListener("click", function(){
+  var v = amVendor(); if(!v){ toast("Pick a vendor from the list", "err"); return; }
+  if(OBBYV[v.vendor_id]){ closeModal("am"); openOb(OBBYV[v.vendor_id][0].ob_id); return; }
+  var b = this; b.disabled = true;
+  api({ kind:"ob_save", vendor_id:v.vendor_id, track:document.getElementById("am_track").value, stage:document.getElementById("am_stage").value, assignee:document.getElementById("am_who").value.trim(), who:me() }).then(function(r){
+    if(!r.ok) throw new Error(r.error); toast("Onboarding started for " + v.dba_name, "ok"); closeModal("am"); document.getElementById("am_v").value = "";
+    return load(true).then(function(){ openOb(r.ob_id); });
+  }).catch(function(e){ toast("Not started: " + e.message, "err"); }).then(function(){ b.disabled = false; });
+});
+
+/* ---------- import ---------- */
+document.getElementById("importbtn").addEventListener("click", function(){ document.getElementById("im").classList.add("show"); });
+function runImport(dry){
+  var out = document.getElementById("im_out"), note = document.getElementById("im_note");
+  document.getElementById("im_dry").disabled = true; document.getElementById("im_go").disabled = true;
+  out.textContent = (dry ? "Counting" : "Importing") + "... this reads every task and subtask in Asana, give it a minute or two.";
+  api({ kind:"ob_import_asana", which:"all", dry:dry, who:me() }).then(function(r){
+    if(!r.ok) throw new Error(r.error);
+    var lines = [(dry ? "DRY RUN, nothing written." : "Imported.") + " " + (r.started || "") + " to " + (r.finished || "")];
+    (r.boards || []).forEach(function(b){
+      lines.push("", b.board + ": " + b.tasks + " tasks, " + b.created + " new, " + b.updated + " already here" + (b.skipped ? ", " + b.skipped + " blank skipped" : "") + (b.error ? " ERROR " + b.error : ""));
+      if(b.unmatched && b.unmatched.length) lines.push("  Not on the directory (" + b.unmatched.length + "): " + b.unmatched.map(function(u){ return u.name + " [" + u.section + "]"; }).join("; "));
+    });
+    if(r.bc){ lines.push("", "IC Background Checks: " + r.bc.tasks + " requests, " + r.bc.created + " new, " + r.bc.updated + " already here, " + r.bc.dupes + " repeat submissions" + (dry ? "" : ", " + (r.bc.people_added || 0) + " people added to the roster" + (r.bc.people_skipped_existing ? ", " + r.bc.people_skipped_existing + " already on it" : "")) + (r.bc.error ? " ERROR " + r.bc.error : ""));
+      if(r.bc.unmatched && r.bc.unmatched.length) lines.push("  Companies not on the directory (" + r.bc.unmatched.length + "): " + r.bc.unmatched.map(function(u){ return u.company; }).filter(function(x, i, a){ return a.indexOf(x) === i; }).join("; ")); }
+    out.textContent = lines.join("\n");
+    note.textContent = dry ? "Looks right? Import now." : "Done. The desk reloads.";
+    if(!dry) return load(true);
+  }).catch(function(e){ out.textContent = "Failed: " + e.message + (/timed out|exceeded/i.test(e.message) ? "\nAsana is slow today. Run it again; it picks up where it left off (records already here are skipped)." : ""); })
+    .then(function(){ document.getElementById("im_dry").disabled = false; document.getElementById("im_go").disabled = false; });
+}
+document.getElementById("im_dry").addEventListener("click", function(){ runImport(true); });
+document.getElementById("im_go").addEventListener("click", function(){ if(confirm("Import every Asana onboarding task and background check request into this desk now?")) runImport(false); });
+
+/* ---------- go ---------- */
+window.addEventListener("hashchange", function(){ if(D) openHash(); });
+ADMIN.init({ page:"vendors", onReady:function(){
+  document.getElementById("me").value = ADMIN.who();
+  load();
+}});
+})();
+</script>
+</body>
+</html>

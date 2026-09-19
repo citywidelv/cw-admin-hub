@@ -1,4 +1,4 @@
-/* CW Admin Hub shared script. Build 2026-09-19 (Ops Admin Desk: desk.html, records.html, sheet.html under Team & Admin). 2026-09-13 (Site Admin: MENU below is the fallback, nav.js is live; cascade submenus; Vendor of the Month).
+/* CW Admin Hub shared script. Build 2026-09-19b (Vendor Onboarding desk: onboarding.html; Asana onboarding boards and the Asana background check form retired from the menus). 2026-09-19 (Ops Admin Desk: desk.html, records.html, sheet.html under Team & Admin). 2026-09-13 (Site Admin: MENU below is the fallback, nav.js is live; cascade submenus; Vendor of the Month).
    Gate, header, cascading nav, webhook helper, Asana project registry.
    Every page: <link admin.css> ... <div id="gate"> + <div id="app" class="hidden">, then
    this file, then ADMIN.init({page:'...'}). Data lives in Google Sheets through the
@@ -38,7 +38,9 @@ function asanaUrl(gid){ return "https://app.asana.com/1/" + ASANA_WS + "/project
    (vendor-invite.html, postings.html, create-exhibit-a.html). The background
    check form is still live and is also linked from the Vendor Hub. */
 var FORMS = {
-  bgcheck: "https://form.asana.com/?k=FRCnQmbTGjAVPieFt4bnWQ&d=" + ASANA_WS
+  /* Sep 19 2026: the Asana background check form is retired. The Vendor Hub page posts to
+     Onboarding.gs and lands on onboarding.html. Kept as a key so old callers still resolve. */
+  bgcheck: VS + "background-check.html"
 };
 
 var ICONS = {
@@ -72,8 +74,8 @@ var MENU = [
     {label:"Review & Record Results", href:"background-checks.html", tag:"Hub"},
     {label:"Add a Person", href:"background-checks.html#add", tag:"Hub"},
     {ghead:"Requests"},
-    {label:"Request or Upload a Check (form)", href:FORMS.bgcheck, tag:"Asana"},
-    {label:"IC Background Checks project", href:asanaUrl("1211554681536533"), tag:"Asana"},
+    {label:"Requests and crew status (Onboarding desk)", href:"onboarding.html#bc", tag:"Hub"},
+    {label:"Vendor request page (Vendor Hub)", href:VS + "background-check.html", tag:"Vendor Hub"},
     {label:"Send Vendor Notices", href:OPS + "bc-notices.html", tag:"Ops Hub"},
     {ghead:"Records"},
     {label:"Background Checks on File (Sheet)", href:SHEET, tag:"Sheet"},
@@ -101,19 +103,22 @@ var MENU = [
   ]},
   { label:"Vendors", icon:"clip", page:"vendors", items:[
     {sub:"Onboarding", items:[
-      {ghead:"Las Vegas"},
+      {label:"Vendor Onboarding desk", href:"onboarding.html", tag:"Hub"},
+      {label:"Start onboarding for a vendor", href:"onboarding.html#start", tag:"Hub"},
+      {label:"Background check requests", href:"onboarding.html#bc", tag:"Hub"},
+      {ghead:"Old boards, read only"},
       {label:"LV Onboarding - Janitorial ICs", href:asanaUrl("1211434492126262"), tag:"Asana"},
       {label:"LV Onboarding - Other Services ICs", href:asanaUrl("1211502025994506"), tag:"Asana"},
-      {ghead:"Northern Nevada"},
       {label:"NNV Onboarding - Janitorial ICs", href:asanaUrl("1211502025994509"), tag:"Asana"},
       {label:"NNV Onboarding - Other Services ICs", href:asanaUrl("1211502025994512"), tag:"Asana"},
+      {label:"IC Background Checks", href:asanaUrl("1211554681536533"), tag:"Asana"},
       {label:"NNV IC Transfers", href:asanaUrl("1212873397063867"), tag:"Asana"}
     ]},
     {sub:"New Vendors", items:[
       {label:"Invite for Las Vegas", href:OPS + "vendor-invite.html?region=lv", tag:"Ops Hub"},
       {label:"Invite for Northern Nevada", href:OPS + "vendor-invite.html?region=nnv", tag:"Ops Hub"},
       {label:"New Vendor Steps (Vendor Hub)", href:VS + "new-vendors.html", tag:"Vendor Hub"},
-      {label:"Background Check and Name Badge", href:FORMS.bgcheck, tag:"Form"}
+      {label:"Background Check and Name Badge", href:VS + "background-check.html", tag:"Vendor Hub"}
     ]},
     {sub:"Vendor of the Month", items:[
       {label:"Add a Vendor of the Month", href:"recognition.html#add", tag:"Hub"},
