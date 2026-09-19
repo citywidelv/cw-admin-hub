@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Records | CW Admin Hub</title>
-<!-- build 2026-09-19. Ops Admin Desk record editor. One form submission per page instead of
+<!-- build 2026-09-19b (free-text dates edit as text). Ops Admin Desk record editor. One form submission per page instead of
 one row on a Google Sheet. Backend: AdminRecords.gs on the CW Solicitations script (kinds
 adr_*). The page paints its shell first and fetches the list after; the last list is kept in
 sessionStorage so coming back is instant. Every save carries the value the editor last saw,
@@ -469,6 +469,7 @@ $("rbody").addEventListener("change", markDirty);
 function markDirty(e){
   if(!S.editing) return;
   var el = e.target, wrap = el.closest(".f"); if(!wrap) return;
+  if(el.value === "") el.dataset.cleared = "1"; else delete el.dataset.cleared;
   var f = fieldByName(wrap.getAttribute("data-f")); if(!f) return;
   var cur = readInput(el, f), was = S.rec[f.name] == null ? "" : String(S.rec[f.name]);
   wrap.classList.toggle("dirty", cur !== was);
@@ -488,6 +489,8 @@ function collect(){
     if(f.readonly) return;
     var el = $("rbody").querySelector('[name="' + f.name.replace(/"/g, '\\"') + '"]'); if(!el) return;
     var v = readInput(el, f), was = S.rec[f.name] == null ? "" : String(S.rec[f.name]);
+    /* a date or number box that cannot show the stored value reads back empty; that is not a change */
+    if(v === "" && was !== "" && /^(date|datetime|number)$/.test(f.type) && !el.dataset.cleared) return;
     if(v !== was){ changes[f.name] = { old: was, "new": v }; n++; }
   });
   return { changes: changes, n: n };
