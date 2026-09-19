@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>CW Admin Hub | Business Operations Management</title>
-<!-- build 2026-09-19 (Ops Admin Desk feature card). 2026-09-11b: retired the vendor packet, walkthrough email and Exhibit A request Asana forms; the Ops Hub does all three itself now (vendor-invite.html, postings.html, create-exhibit-a.html). 2026-09-11 (renamed Admin Hub, Vendor of the Month card). 2026-09-05b (Team Emails quick link; gate via cw-auth.js in admin-shared.js). 2026-09-05a (COI request card + quick link). The Business Operations Manager's front door, a sibling of the
+<!-- build 2026-09-19b (Vendor Onboarding desk replaces the Asana boards on this page; old boards demoted to a footer link, no Asana calls on load). 2026-09-19 (Ops Admin Desk feature card). 2026-09-11b: retired the vendor packet, walkthrough email and Exhibit A request Asana forms; the Ops Hub does all three itself now (vendor-invite.html, postings.html, create-exhibit-a.html). 2026-09-11 (renamed Admin Hub, Vendor of the Month card). 2026-09-05b (Team Emails quick link; gate via cw-auth.js in admin-shared.js). 2026-09-05a (COI request card + quick link). The Business Operations Manager's front door, a sibling of the
 Ops Hub (cw-ops-desk) on the Nevada Team Portal. Passcode gate checked server-side
 (kind vd_bom_auth in VendorDirectory.gs; the Ops Hub team passcode also unlocks it).
 Background check roster and Asana boards are read live; nothing on this page is
@@ -73,7 +73,7 @@ hardcoded data except the menu tree and the Asana project registry in admin-shar
 <div class="htext">
 <div class="kick">Business Operations Management</div>
 <h1>City Wide Admin Hub</h1>
-<p>Background checks, IC onboarding, COI requests, Vendor of the Month, office management. The Business Operations Manager's desk, one page, with the Asana boards live beside it.</p>
+<p>Background checks, IC onboarding, COI requests, Vendor of the Month, office management. The Business Operations Manager's desk, one page. Vendor onboarding and crew background checks run from here, not from Asana.</p>
 <div class="cities"><b>Las Vegas</b><span class="dot">&bull;</span><b>Northern Nevada</b>&nbsp;&nbsp;Proudly serving the Silver State</div>
 </div>
 <div class="hphoto">
@@ -99,6 +99,19 @@ hardcoded data except the menu tree and the Asana project registry in admin-shar
 <a class="btn solid" href="desk.html">Open the Desk</a>
 <a class="btn" href="records.html?s=postings">Opportunity Postings</a>
 <a class="btn" href="records.html?s=vendors_lv">Vendors</a>
+</div>
+</div>
+</div>
+
+<div class="wrap feature" style="margin-top:12px">
+<div class="fcard">
+<span class="ficon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 12l2 2 4-4"/></svg></span>
+<div class="ftext"><h3>Vendor Onboarding</h3>
+<p>Every vendor in the door, what is on file, what is left before activation, and every crew background check request. Evaluations, uploads and requests from the Vendor Hub land here on their own. <span id="obsum" style="color:var(--black);font-weight:700"></span></p></div>
+<div class="fbtns">
+<a class="btn solid" href="onboarding.html">Open the Desk</a>
+<a class="btn" href="onboarding.html#bc">Background Check Requests</a>
+<a class="btn" href="onboarding.html#start">Start Onboarding</a>
 </div>
 </div>
 </div>
@@ -147,8 +160,8 @@ hardcoded data except the menu tree and the Asana project registry in admin-shar
 <div class="cbody" id="bcbody"><span class="loading"><span class="spin"></span>Reading the roster...</span></div>
 </div>
 <div class="card">
-<div class="chead"><span class="bar-accent"></span><h3>Asana boards</h3><span class="sub"><a href="asana.html">All boards, live &rarr;</a></span></div>
-<div class="cbody"><div class="pcards" id="pcards"><span class="loading"><span class="spin"></span>Loading the Business Ops team...</span></div></div>
+<div class="chead"><span class="bar-accent"></span><h3>Vendor onboarding at a glance</h3><span class="sub"><a href="onboarding.html">Open the desk &rarr;</a></span></div>
+<div class="cbody" id="obbody"></div>
 </div>
 </div>
 <aside>
@@ -158,8 +171,8 @@ hardcoded data except the menu tree and the Asana project registry in admin-shar
 <ul>
 <li><span>Background Checks</span> &nbsp;record, request, notify</li>
 <li><span>COI Requests</span> &nbsp;customer certificates, broker checklist, status</li>
-<li><span>Vendors</span> &nbsp;onboarding boards, new vendor invites, Vendor of the Month</li>
-<li><span>Asana Boards</span> &nbsp;every project, live</li>
+<li><span>Vendors</span> &nbsp;onboarding desk, new vendor invites, Vendor of the Month</li>
+<li><span>Asana Boards</span> &nbsp;Exhibit A requests and office management only</li>
 <li><span>Team &amp; Admin</span> &nbsp;portal, hubs, ADP, CRM</li>
 </ul>
 </div>
@@ -180,7 +193,7 @@ hardcoded data except the menu tree and the Asana project registry in admin-shar
 </div>
 
 <footer class="foot"><div class="fin">
-<b>City Wide Facility Solutions</b> &middot; Admin Hub &middot; Internal use only &middot; Something missing? Tell TJ. &middot; <a href="https://www.gocitywide.com" target="_blank" rel="noopener">GoCityWide.com</a>
+<b>City Wide Facility Solutions</b> &middot; Admin Hub &middot; Internal use only &middot; Something missing? Tell TJ. &middot; <a href="https://www.gocitywide.com" target="_blank" rel="noopener">GoCityWide.com</a> &middot; <a href="asana.html" title="The retired onboarding and background check boards, read only">Old Asana boards</a>
 <span class="fr">Las Vegas<span>&bull;</span>Reno</span>
 </div></footer>
 </div>
@@ -195,10 +208,9 @@ var esc = ADMIN.esc, api = ADMIN.api, icon = ADMIN.icon;
 var QUICK = [
   { label:"Record a Result", href:"background-checks.html", icon:"shield", primary:true },
   { label:"Add a Person", href:"background-checks.html#add", icon:"plus" },
-  { label:"IC Background Checks (Asana)", href:ADMIN.asanaUrl("1211554681536533"), icon:"asana" },
-  { label:"Request / Upload a Check", href:ADMIN.FORMS.bgcheck, icon:"mail" },
-  { label:"LV Onboarding", href:ADMIN.asanaUrl("1211434492126262"), icon:"clip" },
-  { label:"NNV Onboarding", href:ADMIN.asanaUrl("1211502025994509"), icon:"clip" },
+  { label:"Vendor Onboarding", href:"onboarding.html", icon:"clip" },
+  { label:"Background Check Requests", href:"onboarding.html#bc", icon:"shield" },
+  { label:"Vendor Request Page", href:ADMIN.FORMS.bgcheck, icon:"mail" },
   { label:"Exhibit A Requests", href:ADMIN.asanaUrl("1211502025570262"), icon:"sheet" },
   { label:"COI Requests", href:"coi-log.html", icon:"sheet" },
   { label:"Team Emails by Position", href:"team-emails.html", icon:"mail" },
@@ -212,7 +224,7 @@ document.getElementById("quickrow").innerHTML = QUICK.map(function(q){
 }).join("");
 
 var FL = [
-  ["Background Check and Name Badge", ADMIN.FORMS.bgcheck, "Asana form"],
+  ["Background Check and Name Badge", ADMIN.FORMS.bgcheck, "Vendor Hub"],
   ["Invite a New Vendor", ADMIN.OPS + "vendor-invite.html", "Ops Hub"],
   ["Create an Exhibit A", ADMIN.OPS + "create-exhibit-a.html", "Ops Hub"]
 ];
@@ -247,35 +259,27 @@ function loadBc(){
   }).catch(function(){ document.getElementById("bcbody").innerHTML = '<span class="loading">Could not reach the server.</span>'; });
 }
 
-var COLORS = { "indigo":"#7a6ff0","purple":"#aa62e3","red":"#d9463d","orange":"#f4a11d","yellow":"#f8df72","green":"#62d26f","teal":"#37c5ab","blue":"#4186e0","pink":"#e8384f","dark-pink":"#e8384f","dark-red":"#d9463d","dark-orange":"#f4a11d","dark-teal":"#37c5ab","dark-green":"#62d26f","dark-blue":"#4186e0","dark-purple":"#7a6ff0","light-green":"#a4cf30","light-blue":"#5cc4f2","light-purple":"#aa62e3","light-teal":"#5df1ce","light-orange":"#fdae5f","light-pink":"#f9aaef","light-red":"#fc979a","light-yellow":"#f8df72" };
-var GROUP = {};
-ADMIN.ASANA_PROJECTS.forEach(function(p){ GROUP[p.gid] = p.group; });
-function loadAsana(){
-  api({ kind:"vd_bom_asana", team: ADMIN.ASANA_TEAM }).then(function(r){
-    var host = document.getElementById("pcards");
-    var projects = r.ok ? r.projects : ADMIN.ASANA_PROJECTS.map(function(p){ return { gid:p.gid, name:p.name, url:ADMIN.asanaUrl(p.gid), color:"" }; });
-    projects.sort(function(a,b){ return (GROUP[a.gid] || "zz") + a.name < (GROUP[b.gid] || "zz") + b.name ? -1 : 1; });
-    host.innerHTML = projects.map(function(p){
-      return '<div class="pcard" id="pc-' + esc(p.gid) + '" style="--pc:' + (COLORS[p.color] || "#9aa0a6") + '">' +
-        '<div class="pn">' + esc(p.name) + '<span class="grp">' + esc(GROUP[p.gid] || "") + '</span></div>' +
-        '<div class="pm" id="pm-' + esc(p.gid) + '">' + (r.ok ? '<span class="loading"><span class="spin"></span>counting</span>' : '<span>Connect Asana on the boards page for live counts</span>') + '</div>' +
-        '<div class="pt" id="pt-' + esc(p.gid) + '"></div>' +
-        '<div class="links"><a href="asana.html#' + esc(p.gid) + '">Live list</a><a href="' + esc(p.url) + '" target="_blank" rel="noopener">Open in Asana</a></div></div>';
-    }).join("");
-    if(!r.ok) return;
-    projects.forEach(function(p){
-      api({ kind:"vd_bom_asana", project:p.gid }).then(function(t){
-        var pm = document.getElementById("pm-" + p.gid), pt = document.getElementById("pt-" + p.gid);
-        if(!t.ok){ pm.innerHTML = '<span>' + esc(t.error || "no answer") + '</span>'; return; }
-        var open = t.tasks.filter(function(x){ return !x.completed; });
-        var late = open.filter(function(x){ return x.due && new Date(x.due + "T00:00:00") < new Date(); }).length;
-        var un = open.filter(function(x){ return !x.assignee; }).length;
-        pm.innerHTML = '<span><b>' + open.length + '</b> open</span>' + (late ? '<span class="late"><b class="late">' + late + '</b> overdue</span>' : '') + (un ? '<span><b>' + un + '</b> unassigned</span>' : '');
-        var newest = open.slice().sort(function(a,b){ return a.modified < b.modified ? 1 : -1; })[0];
-        pt.innerHTML = newest ? 'Latest: <b>' + esc(newest.name) + '</b>' + (newest.assignee ? ' &middot; ' + esc(newest.assignee) : '') : 'Nothing open';
-      }).catch(function(){});
-    });
-  }).catch(function(){ document.getElementById("pcards").innerHTML = '<span class="loading">Could not reach the server.</span>'; });
+function loadOb(){
+  var host = document.getElementById("obbody"), sum = document.getElementById("obsum");
+  var c = null; try { c = JSON.parse(sessionStorage.getItem("cwObDesk") || "null"); } catch(e){}
+  if(!c || !c.onboarding){
+    host.innerHTML = '<div class="bclist"><div class="row">' + icon("clip", 13) + '<b><a href="onboarding.html" style="text-decoration:none;color:inherit">Open the desk</a></b><span class="m">counts show here after the first open in this browser</span></div>' +
+      '<div class="row">' + icon("mail", 13) + '<b><a href="onboarding.html#bc" style="text-decoration:none;color:inherit">Background check requests</a></b><span class="m">to send, sent, to review</span></div>' +
+      '<div class="row">' + icon("plus", 13) + '<b><a href="onboarding.html#start" style="text-decoration:none;color:inherit">Start onboarding for a vendor</a></b><span class="m">vendors who fill out the evaluation start on their own</span></div></div>';
+    return;
+  }
+  var n = { "New":0, "In Process":0, "Complete":0, "Not Approved":0, "Ops Support":0 };
+  c.onboarding.forEach(function(o){ n[o.stage] = (n[o.stage] || 0) + 1; });
+  var toSend = (c.requests || []).filter(function(r){ return r.status === "New" && !r.dupe_of; }).length;
+  var pend = (c.crew || []).filter(function(x){ return x.result !== "Pass" && x.result !== "Fail"; }).length;
+  host.innerHTML = '<div class="bcstats">' +
+    '<a class="stat todo" href="onboarding.html"><div class="n">' + (n["New"] + n["In Process"]) + '</div><div class="l">In process</div></a>' +
+    '<a class="stat pass" href="onboarding.html"><div class="n">' + n["Complete"] + '</div><div class="l">Complete</div></a>' +
+    '<a class="stat fail" href="onboarding.html"><div class="n">' + n["Not Approved"] + '</div><div class="l">Not approved</div></a>' +
+    '<a class="stat pend" href="onboarding.html#bc"><div class="n">' + toSend + '</div><div class="l">Checks to send</div></a>' +
+    '<a class="stat pend" href="background-checks.html"><div class="n">' + pend + '</div><div class="l">Crew pending</div></a></div>' +
+    '<div style="font-size:11.5px;color:var(--grey)">As of ' + esc(ADMIN.ago(c.fetched)) + ' in this browser. <a href="onboarding.html" style="color:var(--red);font-weight:700;text-decoration:none">Open the desk</a> for the live list.</div>';
+  if(sum) sum.textContent = (n["New"] + n["In Process"]) + " in process, " + toSend + " checks to send.";
 }
 
 function loadCoi(){
@@ -294,7 +298,7 @@ function loadRec(){
     el.textContent = open ? open + (open === 1 ? " nomination waiting." : " nominations waiting.") : "";
   }).catch(function(){});
 }
-ADMIN.init({ page:"home", onReady:function(){ loadBc(); loadAsana(); loadCoi(); loadRec(); } });
+ADMIN.init({ page:"home", onReady:function(){ loadBc(); loadOb(); loadCoi(); loadRec(); } });
 })();
 </script>
 </body>
