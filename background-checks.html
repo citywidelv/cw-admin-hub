@@ -8,9 +8,9 @@
 <!-- build 2026-09-19 (request form moved to the Vendor Hub, requests tracked on onboarding.html). 2026-09-04d. The Business Operations Manager's review desk for IC background
 checks. Reads and writes the "Background checks Las Vegas" / "Background checks Northern
 Nevada" tabs of the CW Vendor Directory sheet through VendorDirectory.gs
-(kinds vd_list, vd_bc_rows, vd_bc_upsert). Result Pass/Fail/Pending is the BOM's call;
+(kinds vd_list, vd_bc_rows, vd_bc_upsert). Result Clear / Not clear / Pending is the BOM's call (Sep 19 2026 wording review: never pass or fail, never a reason);
 the script maps it onto status (Cleared/Removed/Pending) so the Ops Hub vendor
-directory only ever shows people who are cleared and not failed. -->
+directory only ever shows people who are cleared. -->
 <link rel="stylesheet" href="admin.css">
 <link rel="icon" href="https://citywidelv.github.io/cw-ops-desk/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="https://citywidelv.github.io/cw-ops-desk/favicon-32x32.png">
@@ -114,7 +114,7 @@ directory only ever shows people who are cleared and not failed. -->
 <div class="htext">
 <div class="kick">Business Operations Management</div>
 <h1>Background Checks</h1>
-<p>Record a pass or fail for every person a vendor puts in a City Wide building. Cleared people show on the Ops Hub vendor directory; failed people never do.</p>
+<p>Record whether each person a vendor puts in a City Wide building is cleared for access. Cleared people show on the Ops Hub vendor directory; people who are not cleared never do. Record the decision only, never the reason.</p>
 </div>
 </div>
 </section>
@@ -128,7 +128,7 @@ directory only ever shows people who are cleared and not failed. -->
 <div class="field"><label>Last name</label><input id="a_last" placeholder="Last"></div>
 <div class="field"><label>Check type</label><select id="a_type"><option value="Standard">Standard</option><option value="10-Year">10-Year (Arroweye)</option><option value="Standard + 10-Year">Standard + 10-Year</option></select></div>
 <div class="field"><label>Who ran it</label><select id="a_source"><option value="City Wide">City Wide (Verified First)</option><option value="Vendor submitted">Vendor submitted</option></select></div>
-<div class="field"><label>Result</label><select id="a_result"><option value="">Not reviewed yet</option><option value="Pass">Passed</option><option value="Fail">Failed</option><option value="Pending">Pending</option></select></div>
+<div class="field"><label>Result</label><select id="a_result"><option value="">Not reviewed yet</option><option value="Clear">Clear</option><option value="Not clear">Not clear</option><option value="Pending">Pending</option></select></div>
 <div class="field"><label>&nbsp;</label><button class="btn solid" id="a_go">Add person</button></div>
 </div>
 <div class="addhint">
@@ -152,7 +152,7 @@ directory only ever shows people who are cleared and not failed. -->
 <div class="filters">
 <div class="seg" id="f_view"><button data-v="review" class="on">To review</button><button data-v="done">Reviewed</button><button data-v="all">Everyone</button></div>
 <div class="seg" id="f_mk"><button data-v="" class="on">All markets</button><button data-v="lv">Las Vegas</button><button data-v="nnv">Northern Nevada</button></div>
-<div class="seg" id="f_res"><button data-v="" class="on">All results</button><button data-v="Pass">Pass</button><button data-v="Fail">Fail</button><button data-v="Pending">Pending</button><button data-v="none">Not reviewed</button></div>
+<div class="seg" id="f_res"><button data-v="" class="on">All results</button><button data-v="Clear">Cleared</button><button data-v="Not clear">Not cleared</button><button data-v="Pending">Pending</button><button data-v="none">Not reviewed</button></div>
 <div class="seg" id="f_type"><button data-v="" class="on">All checks</button><button data-v="std">Standard</button><button data-v="ten">10-Year</button></div>
 <div class="seg" id="f_src"><button data-v="" class="on">Any source</button><button data-v="City Wide">City Wide</button><button data-v="Vendor submitted">Vendor submitted</button></div>
 <select id="f_vendor"><option value="">Every vendor</option></select>
@@ -161,12 +161,12 @@ directory only ever shows people who are cleared and not failed. -->
 <div class="showing" id="showing"></div>
 <div class="tblwrap"><div id="list" class="loading"><span class="spin"></span>Loading the roster...</div></div>
 <div class="legend">
-<span class="pill pass">Passed</span> cleared and shown on the Ops Hub &nbsp;
-<span class="pill fail">Failed</span> removed from the Ops Hub, kept here as history &nbsp;
+<span class="pill pass">Cleared</span> cleared for access and shown on the Ops Hub &nbsp;
+<span class="pill fail">Not cleared</span> not cleared for access, off the Ops Hub, kept here as history &nbsp;
 <span class="pill pend">Pending</span> check ordered or waiting on a decision &nbsp;
 <span class="pill todo">Not reviewed</span> a Verified First order is on file, no result recorded yet &nbsp;
 <span class="pill ten">10-Year</span> the package Arroweye requires &nbsp;
-<span class="srcpill" style="margin-left:0">Vendor submitted</span> the vendor uploaded a passing check they ran themselves
+<span class="srcpill" style="margin-left:0">Vendor submitted</span> the vendor uploaded a clear check they ran themselves
 </div>
 </div>
 
@@ -179,8 +179,9 @@ directory only ever shows people who are cleared and not failed. -->
 <div class="card"><div class="chead"><span class="bar-accent"></span><h3>Where this goes</h3></div>
 <div class="cbody">
 <ul>
-<li><span class="pill pass">Pass</span> name appears under the vendor on the <a href="https://citywidelv.github.io/cw-ops-desk/vendors.html#/lv/janitorial">Ops Hub directory</a></li>
-<li><span class="pill fail">Fail</span> name is taken off the directory the moment you click</li>
+<li><span class="pill pass">Clear</span> name appears under the vendor on the <a href="https://citywidelv.github.io/cw-ops-desk/vendors.html#/lv/janitorial">Ops Hub directory</a></li>
+<li><span class="pill fail">Not clear</span> name is taken off the directory the moment you click</li>
+<li><span class="pill grey">Wording</span> "Not clear" is City Wide's access decision, the same term Verified First uses. It is not a verdict on the person. Never type the reason into a note; the report stays in the vendor file.</li>
 <li><span class="pill grey">Sheet</span> every click writes the <a href="https://docs.google.com/spreadsheets/d/1kHRyeQzDsi-bnfE5YpD_KPV17GeD5aJ_5vrDQGU_s-0/edit" target="_blank" rel="noopener">Background checks tabs</a></li>
 </ul>
 <a class="btn sm" href="onboarding.html#bc">Requests and onboarding desk</a>
@@ -257,18 +258,18 @@ function resKey(r){ return r.result || "none"; }
 function render(){
   var n = { total:ROWS.length, pass:0, fail:0, pend:0, none:0, unm:0, ten:0, sub:0 };
   ROWS.forEach(function(r){
-    if(r.result === "Pass") n.pass++; else if(r.result === "Fail") n.fail++; else if(r.result === "Pending") n.pend++; else n.none++;
+    if(r.result === "Clear") n.pass++; else if(r.result === "Not clear") n.fail++; else if(r.result === "Pending") n.pend++; else n.none++;
     if(!r.matched) n.unm++;
     if(/10-Year/.test(r.check_type)) n.ten++;
     if(r.source === "Vendor submitted") n.sub++;
   });
   document.getElementById("queuewrap").innerHTML = n.none ? '<div class="queue"><div class="qn">' + n.none + '</div><div class="qt"><b>Verified First checks with no result recorded</b>' +
-    'These came over from the Verified First roster as "on file". Each one needs a call: Passed, Failed, or Pending. Vendors see the result in their next background check notice, so work through the list.</div>' +
+    'These came over from the Verified First roster as "on file". Each one needs a call: Clear, Not clear, or Pending. Vendors see the result in their next background check notice, so work through the list.</div>' +
     '<button class="btn solid" id="startq" type="button">Review the queue</button></div>' : '';
   var sq = document.getElementById("startq");
   if(sq) sq.addEventListener("click", function(){ F.view = "review"; F.res = ""; F.type = ""; F.vendor = ""; F.src = ""; syncSeg("f_view","review"); syncSeg("f_res",""); syncSeg("f_type",""); syncSeg("f_src",""); document.getElementById("f_vendor").value = ""; renderList(); document.getElementById("listcard").scrollIntoView({ behavior:"smooth" }); });
   document.getElementById("stats").innerHTML =
-    tile("", n.total, "On file", "") + tile("pass", n.pass, "Passed", "Pass") + tile("fail", n.fail, "Failed", "Fail") +
+    tile("", n.total, "On file", "") + tile("pass", n.pass, "Cleared", "Clear") + tile("fail", n.fail, "Not cleared", "Not clear") +
     tile("pend", n.pend, "Pending", "Pending") + tile("todo", n.none, "Not reviewed", "none") +
     '<a class="stat" href="#" data-type="ten"><div class="n">' + n.ten + '</div><div class="l">10-Year on file</div></a>' +
     '<a class="stat" href="#" data-src="Vendor submitted"><div class="n" style="color:var(--blue)">' + n.sub + '</div><div class="l">Vendor submitted</div></a>' +
@@ -309,9 +310,9 @@ document.getElementById("showunm").addEventListener("click", function(){
 
 function visible(){
   return ROWS.filter(function(r){
-    // To review = no result yet, or Pending. Passed and Failed drop off the queue.
-    if(F.view === "review" && (r.result === "Pass" || r.result === "Fail")) return false;
-    if(F.view === "done" && !(r.result === "Pass" || r.result === "Fail")) return false;
+    // To review = no result yet, or Pending. Clear and Not clear drop off the queue.
+    if(F.view === "review" && (r.result === "Clear" || r.result === "Not clear")) return false;
+    if(F.view === "done" && !(r.result === "Clear" || r.result === "Not clear")) return false;
     if(F.mk && r.market !== F.mk) return false;
     if(F.res && resKey(r) !== F.res) return false;
     if(F.type === "ten" && !/10-Year/.test(r.check_type)) return false;
@@ -332,7 +333,7 @@ function renderList(){
   var rows = visible();
   var host = document.getElementById("list");
   document.getElementById("showing").innerHTML = "Showing <b>" + rows.length + "</b> of " + ROWS.length + " people" +
-    (F.view === "review" ? " &middot; to review, newest check first. Passed and failed people drop off this view; find them under Reviewed." : F.view === "done" ? " &middot; reviewed, grouped by vendor" : " &middot; everyone, grouped by vendor") +
+    (F.view === "review" ? " &middot; to review, newest check first. Cleared and not cleared people drop off this view; find them under Reviewed." : F.view === "done" ? " &middot; reviewed, grouped by vendor" : " &middot; everyone, grouped by vendor") +
     (F.mk || F.res || F.type || F.src || F.vendor || F.q ? ' &middot; <a href="#" id="clearf">clear filters</a>' : "");
   var cf = document.getElementById("clearf");
   if(cf) cf.addEventListener("click", function(e){ e.preventDefault(); F = { view:F.view, mk:"", res:"", type:"", src:"", vendor:"", q:"" };
@@ -384,12 +385,12 @@ function rowHtml(r, flat){
     return '<option value="' + esc(t) + '"' + (t === r.check_type ? " selected" : "") + '>' + esc(t === "10-Year" ? "10-Year (Arroweye)" : t) + '</option>';
   }).join("") + '</select>';
   var res = '<div class="res" data-key="' + esc(r._key) + '">' +
-    '<button class="pass' + (rk === "Pass" ? " on" : "") + '" data-act="res" data-v="Pass" title="Pass">Pass</button>' +
-    '<button class="fail' + (rk === "Fail" ? " on" : "") + '" data-act="res" data-v="Fail" title="Fail">Fail</button>' +
+    '<button class="pass' + (rk === "Clear" ? " on" : "") + '" data-act="res" data-v="Clear" title="Cleared for access">Clear</button>' +
+    '<button class="fail' + (rk === "Not clear" ? " on" : "") + '" data-act="res" data-v="Not clear" title="Not cleared for access">Not clear</button>' +
     '<button class="pend' + (rk === "Pending" ? " on" : "") + '" data-act="res" data-v="Pending" title="Pending">Pend</button></div>' +
     (rk === "none" ? ' <span class="pill todo" style="margin-left:6px">Not reviewed</span>' :
-     rk === "Pass" ? ' <span class="pill pass" style="margin-left:6px">Passed' + (r.source === "Vendor submitted" ? ", vendor submitted" : "") + '</span>' :
-     rk === "Fail" ? ' <span class="pill fail" style="margin-left:6px">Failed</span>' : ' <span class="pill pend" style="margin-left:6px">Pending</span>');
+     rk === "Clear" ? ' <span class="pill pass" style="margin-left:6px">Cleared' + (r.source === "Vendor submitted" ? ", vendor submitted" : "") + '</span>' :
+     rk === "Not clear" ? ' <span class="pill fail" style="margin-left:6px">Not cleared</span>' : ' <span class="pill pend" style="margin-left:6px">Pending</span>');
   var srcSel = '<select class="inl" data-act="src" data-key="' + esc(r._key) + '">' + SOURCES.map(function(t){
     return '<option value="' + esc(t) + '"' + (t === (r.source || "City Wide") ? " selected" : "") + '>' + esc(t === "City Wide" ? "City Wide (VF)" : "Vendor submitted") + '</option>';
   }).join("") + '</select>';
@@ -432,13 +433,13 @@ document.getElementById("list").addEventListener("click", function(e){
   if(b.dataset.act === "res"){
     var key = b.closest(".res").dataset.key, r = findRow(key); if(!r) return;
     var v = b.dataset.v;
-    if(v === "Fail" && r.result !== "Fail" && !confirm("Mark " + r.first_name + " " + r.last_name + " as FAILED? They come off the Ops Hub directory for " + r.vendor + " right away.")) return;
+    if(v === "Not clear" && r.result !== "Not clear" && !confirm("Mark " + r.first_name + " " + r.last_name + " as NOT CLEARED for access? They come off the Ops Hub directory for " + r.vendor + " right away. Do not record the reason anywhere on the hub.")) return;
     if(r.result === v) v = "";   // click the lit button again to clear the result
-    patch(r, { result: v }, v ? (r.first_name + " " + r.last_name + ": " + (v === "Pass" ? "Passed" : v === "Fail" ? "Failed" : "Pending")) : "Result cleared");
+    patch(r, { result: v }, v ? (r.first_name + " " + r.last_name + ": " + (v === "Clear" ? "Cleared" : v === "Not clear" ? "Not cleared" : "Pending")) : "Result removed");
   }
   if(b.dataset.act === "note"){
     var r2 = findRow(b.dataset.key); if(!r2) return;
-    var n = prompt("Note for " + r2.first_name + " " + r2.last_name + ":", r2.notes || "");
+    var n = prompt("Note for " + r2.first_name + " " + r2.last_name + " (dates, file numbers, follow-ups; never the reason for a result):", r2.notes || "");
     if(n === null) return;
     patch(r2, { notes: n }, "Note saved");
   }

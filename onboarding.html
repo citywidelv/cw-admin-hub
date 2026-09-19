@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Vendor Onboarding | CW Admin Hub</title>
-<!-- build 2026-09-19c (vendor-run reports: Review report status, report links on crew rows). 2026-09-19b (sessionStorage paint, background refresh). The vendor onboarding desk. Replaces the four Asana onboarding boards
+<!-- build 2026-09-19d (wording review: crew results are Clear / Not clear / Pending, request statuses Cleared / Not cleared; never pass or fail, never a reason). 2026-09-19c (vendor-run reports: Review report status, report links on crew rows). 2026-09-19b (sessionStorage paint, background refresh). The vendor onboarding desk. Replaces the four Asana onboarding boards
 (LV/NNV x JS/OS) and the IC Background Checks board. Backend: Onboarding.gs on the CW
 Solicitations script (kinds ob_*), data on the CW Vendor Directory book. The page paints
 its shell first; one ob_list call after the gate clears. Every checklist item is Not in /
@@ -341,8 +341,8 @@ function calc(o){
     if(d.s === "verified") ver++;
     else { left.push(c); if(d.s === "fix") fix.push(c); if(d.s === "received") rec.push(c); }
   });
-  var crew = crewFor(o), pend = crew.filter(function(c){ return c.result !== "Pass" && c.result !== "Fail"; }).length;
-  var failed = crew.filter(function(c){ return c.result === "Fail"; }).length;
+  var crew = crewFor(o), pend = crew.filter(function(c){ return c.result !== "Clear" && c.result !== "Not clear"; }).length;
+  var failed = crew.filter(function(c){ return c.result === "Not clear"; }).length;
   var bgOpen = o.track === "JS" && (left.some(function(c){ return c.key === "bc_request"; }) || pend > 0);
   var paperLeft = left.filter(function(c){ return /packet|Documents|Getting/i.test(c.group) && c.key !== "bc_request"; });
   var crmLeft = left.filter(function(c){ return /CRM/i.test(c.group); });
@@ -397,7 +397,7 @@ function render(){
   D.onboarding.forEach(function(o){ n[o.calc.group] = (n[o.calc.group] || 0) + 1; });
   n.Invited = D.vendors.filter(function(v){ return v.invited && !OBBYV[v.vendor_id]; }).length;
   var toSend = D.requests.filter(function(r){ return r.status === "New"; }).length;
-  var toReview = D.crew.filter(function(c){ return c.result !== "Pass" && c.result !== "Fail"; }).length;
+  var toReview = D.crew.filter(function(c){ return c.result !== "Clear" && c.result !== "Not clear"; }).length;
   function tile(cls, num, label, stat){ return '<a class="stat ' + cls + (F.stat === stat ? " on" : "") + '" href="#" data-stat="' + esc(stat) + '"><div class="n">' + num + '</div><div class="l">' + label + '</div></a>'; }
   document.getElementById("stats").innerHTML =
     tile("inv", n.Invited, "Invited", "Invited") + tile("new", n["New"], "New", "New") + tile("proc", n["In Process"], "In process", "In Process") +
@@ -415,7 +415,7 @@ function rowHtml(o){
   if(c.left.length > 3) chips += '<span class="chip more">+' + (c.left.length - 3) + ' more</span>';
   if(!c.left.length) chips = '<span class="chip ok">Everything verified</span>';
   if(o.track === "JS" && c.pend) chips += '<span class="chip rec">' + c.pend + ' crew pending</span>';
-  if(c.failed) chips += '<span class="chip fix">' + c.failed + ' crew failed</span>';
+  if(c.failed) chips += '<span class="chip fix">' + c.failed + ' crew not cleared</span>';
   var cls = c.pct >= 100 ? "" : c.pct >= 50 ? "mid" : "low";
   return '<li class="vrow' + (OPEN === o.ob_id ? " sel" : "") + '" data-ob="' + esc(o.ob_id) + '">' +
     '<div><div class="nm">' + esc(o.vendor) + ' <span class="pill ' + (o.market === "nnv" ? "nnv" : "lv") + '">' + (o.market === "nnv" ? "NNV" : "LV") + '</span><span class="pill ' + (o.track === "JS" ? "js" : "os") + '">' + esc(o.track) + '</span>' +
@@ -491,8 +491,8 @@ document.getElementById("f_req").addEventListener("click", function(e){ var b = 
 function reqPerson(r){ return D.crew.filter(function(c){ return c.market === r.market && c.first_name.toLowerCase() === (r.first_name||"").toLowerCase() && c.last_name.toLowerCase() === (r.last_name||"").toLowerCase() && (c.vendor_id && r.vendor_id ? c.vendor_id === r.vendor_id : norm(c.vendor) === norm(r.company)); })[0] || null; }
 function reqState(r){
   var p = reqPerson(r);
-  if(p && p.result === "Pass") return { k:"pass", t:"Passed" };
-  if(p && p.result === "Fail") return { k:"fail", t:"Failed" };
+  if(p && p.result === "Clear") return { k:"pass", t:"Cleared" };
+  if(p && p.result === "Not clear") return { k:"fail", t:"Not cleared" };
   if(r.status === "Review report" || r.report_link) return { k:"pend", t:"Review report" };
   if(r.status === "Badge only") return { k:"todo", t:"Badge only" };
   if(r.status === "Sent") return { k:"pend", t:"Sent" };
@@ -644,9 +644,9 @@ function openOb(obId, focus){
       var rq = reqs.filter(function(r){ return r.first_name.toLowerCase() === p.first_name.toLowerCase() && r.last_name.toLowerCase() === p.last_name.toLowerCase(); })[0];
       var rk = p.result || "";
       h += '<div class="item" data-crew="' + esc(p.market + ":" + p.row) + '"><div><div class="lb">' + esc(p.first_name) + ' ' + esc(p.last_name) + (/10-Year/.test(p.check_type) ? ' <span class="pill ten">10-Yr</span>' : "") + (p.source === "Vendor submitted" ? ' <span class="pill pend">vendor ran it</span>' : "") + (rq && rq.report_link ? ' <a href="' + esc(rq.report_link) + '" target="_blank" rel="noopener" style="font-size:11px;font-weight:700;color:var(--red)">Open the report</a>' : "") +
-        '<small>' + (rq ? 'Requested ' + esc(fmtDate(rq.received)) + (rq.report_link ? ', <b style="color:var(--amber)">report attached, review it, save it to the vendor folder, then Pass or Fail</b>' : rq.status === "Sent" ? ', sent to Verified First ' + esc(fmtDate(rq.sent || "")) : rq.status === "New" ? ', <b style="color:var(--amber)">not sent yet</b>' : "") + (rq.email ? " &middot; " + esc(rq.email) : "") + (rq.mobile ? " &middot; " + esc(rq.mobile) : "") : (p.most_recent_check ? "checked " + esc(fmtDate(p.most_recent_check)) : "on the roster")) + (p.notes ? " &middot; " + esc(p.notes.slice(0, 90)) : "") + '</small></div></div>' +
+        '<small>' + (rq ? 'Requested ' + esc(fmtDate(rq.received)) + (rq.report_link ? ', <b style="color:var(--amber)">report attached, review it, save it to the vendor folder, then mark Clear or Not clear</b>' : rq.status === "Sent" ? ', sent to Verified First ' + esc(fmtDate(rq.sent || "")) : rq.status === "New" ? ', <b style="color:var(--amber)">not sent yet</b>' : "") + (rq.email ? " &middot; " + esc(rq.email) : "") + (rq.mobile ? " &middot; " + esc(rq.mobile) : "") : (p.most_recent_check ? "checked " + esc(fmtDate(p.most_recent_check)) : "on the roster")) + (p.notes ? " &middot; " + esc(p.notes.slice(0, 90)) : "") + '</small></div></div>' +
         '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">' + (rq && rq.status === "New" && rq.request_type === D.req_types[0] ? '<button class="btn sm" data-sent="' + esc(rq.req_id) + '">Mark sent to Verified First</button>' : "") +
-        '<div class="res crewres"><button class="pass' + (rk === "Pass" ? " on" : "") + '" data-r="Pass">Pass</button><button class="fail' + (rk === "Fail" ? " on" : "") + '" data-r="Fail">Fail</button><button class="pend' + (rk === "Pending" ? " on" : "") + '" data-r="Pending">Pend</button></div></div></div>';
+        '<div class="res crewres"><button class="pass' + (rk === "Clear" ? " on" : "") + '" data-r="Clear" title="Cleared for access">Clear</button><button class="fail' + (rk === "Not clear" ? " on" : "") + '" data-r="Not clear" title="Not cleared for access">Not clear</button><button class="pend' + (rk === "Pending" ? " on" : "") + '" data-r="Pending">Pend</button></div></div></div>';
     });
     // requests with no roster person (badge only, or unmatched name)
     reqs.filter(function(r){ return !crew.some(function(p){ return p.first_name.toLowerCase() === r.first_name.toLowerCase() && p.last_name.toLowerCase() === r.last_name.toLowerCase(); }); }).forEach(function(r){
@@ -720,11 +720,11 @@ function wireDetail(o){
       var item = b.closest(".item"), key3 = item.dataset.crew, mk = key3.split(":")[0], row = Number(key3.split(":")[1]);
       var p = D.crew.filter(function(x){ return x.market === mk && x.row === row; })[0]; if(!p) return;
       var v = b.dataset.r; if(p.result === v) v = "";
-      if(v === "Fail" && !confirm("Mark " + p.first_name + " " + p.last_name + " as FAILED? They come off the Ops Hub directory for " + o.vendor + " right away.")) return;
+      if(v === "Not clear" && !confirm("Mark " + p.first_name + " " + p.last_name + " as NOT CLEARED for access? They come off the Ops Hub directory for " + o.vendor + " right away. Do not record the reason anywhere on the hub.")) return;
       item.classList.add("busy");
       api({ kind:"vd_bc_upsert", reviewed_by:me(), rows:[{ market:mk, row:row, result:v }] }).then(function(r){
         if(!r.ok || (r.errors && r.errors.length)) throw new Error((r.errors && r.errors[0]) || r.error || "Save failed");
-        p.result = v; p.result_date = v ? today() : ""; p.status = v === "Pass" ? "Cleared" : v === "Fail" ? "Removed" : v === "Pending" ? "Pending" : "Cleared";
+        p.result = v; p.result_date = v ? today() : ""; p.status = v === "Clear" ? "Cleared" : v === "Not clear" ? "Removed" : v === "Pending" ? "Pending" : "Cleared";
         o.calc = calc(o); toast(p.first_name + " " + p.last_name + ": " + (v || "result cleared"), "ok"); render(); openOb(o.ob_id, "bc");
       }).catch(function(err){ item.classList.remove("busy"); toast("Not saved: " + err.message, "err"); });
       return;
