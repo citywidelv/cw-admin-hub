@@ -11,7 +11,12 @@ rec_list, rec_save, rec_remove, rec_nom_status; team passcode checked on the ser
 Nominations arrive from the Vendor Hub (public) and the Ops Hub (team); nobody is emailed.
 The vendor picker reads the CW Vendor Directory (vd_list) so a plate carries the vendor_id;
 the G.O.A.T. picker reads the CW Team Directory (staff_list). The wall on the Vendor Hub
-reads rec_wall and shows the moment a plate is saved. -->
+reads rec_wall and shows the moment a plate is saved.
+build 2026-09-21: Vendor of the Month certificates and $150 shop codes. Saving a vendor plate
+issues a one-time code (rec_coupon_issue), draws the certificate in the browser (cert.js) and,
+when the box is ticked, emails both from the company Google account (rec_cert_send) with the
+vendor in To and the staff lists in CC exactly as typed here. The Coupons card shows who has
+redeemed and who has not, and can resend, reissue or void. Nothing is sent on page load. -->
 <link rel="stylesheet" href="admin.css">
 <link rel="icon" href="https://citywidelv.github.io/cw-ops-desk/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="https://citywidelv.github.io/cw-ops-desk/favicon-32x32.png">
@@ -67,7 +72,51 @@ reads rec_wall and shows the moment a plate is saved. -->
 .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:sp .8s linear infinite;vertical-align:middle;margin-right:8px}
 @keyframes sp{to{transform:rotate(360deg)}}
 .filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
-@media(max-width:700px){.frm .row,.frm .row3{grid-template-columns:1fr}}
+.sendbox{border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;background:#FAFAFA}
+.sendbox .chk{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;text-transform:none;letter-spacing:0;color:var(--black);margin:0 0 10px}
+.sendbox .chk input{width:17px;height:17px;margin:0}
+.sendbox details{margin-top:8px}
+.sendbox summary{cursor:pointer;font-size:11.5px;font-weight:700;color:var(--grey);letter-spacing:.06em;text-transform:uppercase}
+.sendbox details>div{margin-top:8px;display:grid;gap:8px}
+.sendbox textarea{min-height:130px}
+.sendbox .reset{font-size:11px;color:var(--grey);text-decoration:underline;cursor:pointer;background:none;border:none;padding:0;font-family:inherit}
+.cpn{width:100%;border-collapse:collapse;font-size:12.5px}
+.cpn th{text-align:left;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--grey);padding:6px 8px;border-bottom:1px solid var(--border)}
+.cpn td{padding:9px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+.cpn tr:last-child td{border-bottom:none}
+.cpn .mo{white-space:nowrap;font-weight:700}
+.cpn .mo small{display:block;font-weight:400;color:var(--grey);font-size:10.5px}
+.cpn .nm{font-weight:700;line-height:1.3}
+.cpn .nm small{display:block;font-weight:400;color:var(--grey);font-size:10.5px;word-break:break-all}
+.cpn code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--black);background:#fff;border:1px dashed var(--red);border-radius:6px;padding:3px 7px;white-space:nowrap}
+.cpn .copy{border:none;background:none;color:var(--grey);font-size:10.5px;font-weight:700;cursor:pointer;padding:2px 4px;text-decoration:underline;font-family:inherit}
+.cpn .st small{display:block;font-weight:400;color:var(--grey);font-size:10.5px;margin-top:3px;line-height:1.4}
+.cpn .acts{display:flex;gap:6px;flex-wrap:wrap}
+.cpn .acts .btn{padding:6px 9px;font-size:11px;border-radius:7px}
+.pill.iss{background:var(--blue-bg);color:var(--blue)}
+.pill.rdm{background:var(--green-bg);color:var(--green)}
+.pill.void{background:var(--light);color:var(--grey);border:1px solid var(--border)}
+.pill.none{background:var(--amber-bg);color:var(--amber)}
+.cpn-sum{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--grey);margin:0 0 10px}
+.cpn-sum b{color:var(--black)}
+.sendm .mbox{width:min(1180px,100%)}
+.sendm .mbody{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(320px,.85fr);gap:0}
+.sendm .prev{background:#3b3835;display:flex;align-items:center;justify-content:center;min-height:320px}
+.sendm .prev iframe{height:min(78vh,760px)}
+.sendm .prev .ph{color:#ddd;font-size:12.5px;text-align:center;padding:30px}
+.sendm .frm{padding:16px 18px;overflow:auto;max-height:min(78vh,760px)}
+.sendm .frm h4{font-size:14px;margin:0 0 2px}
+.sendm .frm .meta{font-size:11.5px;color:var(--grey);margin-bottom:8px;line-height:1.5}
+.sendm .codebox{display:flex;align-items:center;gap:10px;border:1px dashed var(--red);border-radius:9px;padding:9px 12px;background:#FFF7F7;font-size:12px}
+.sendm .codebox code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;font-weight:700;letter-spacing:.06em;color:var(--red)}
+.sendm .codebox .k{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--grey)}
+.sendm .testrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sendm .testrow input{flex:1;min-width:160px}
+.sendm .status{font-size:12px;color:var(--grey);min-height:18px;line-height:1.5}
+.sendm .status.ok{color:var(--green);font-weight:700}
+.sendm .status.err{color:var(--red);font-weight:700}
+@media(max-width:900px){.sendm .mbody{grid-template-columns:1fr}.sendm .prev iframe{height:46vw}.sendm .frm{max-height:none}}
+@media(max-width:700px){.frm .row,.frm .row3{grid-template-columns:1fr}.cpn thead{display:none}.cpn td{display:block;padding:4px 8px}.cpn tr{display:block;border-bottom:1px solid var(--border);padding:8px 0}}
 </style>
 <link rel="stylesheet" href="https://citywidelv.github.io/cw-base.css">
 </head>
@@ -82,7 +131,7 @@ reads rec_wall and shows the moment a plate is saved. -->
 <div class="htext">
 <div class="kick">Recognition</div>
 <h1>Vendor of the Month and G.O.A.T. of the Month</h1>
-<p>Plates saved here go straight onto the wall on the Vendor Hub. Nominations from the Vendor Hub and the Ops Hub collect on the right; award one and the plate is filled in for you.</p>
+<p>Plates saved here go straight onto the wall on the Vendor Hub. A Vendor of the Month plate also gets a one-time $150 Vendor Shop code and a certificate, emailed from City Wide with the staff lists copied. Nominations from the Vendor Hub and the Ops Hub collect on the right; award one and the plate is filled in for you.</p>
 </div>
 </div>
 </section>
@@ -127,6 +176,20 @@ reads rec_wall and shows the moment a plate is saved. -->
 <div class="hint">From the CW Team Directory. Missing someone? Add them on the Staff tab first.</div>
 </div>
 <div><label>Why they earned it <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional, shows on the wall)</span></label><textarea id="blurb" maxlength="600" placeholder="One or two sentences. Skip it and the wall shows the name only, like the plaque."></textarea></div>
+<div id="sendField">
+<label>Certificate and $150 shop code <span style="font-weight:400;text-transform:none;letter-spacing:0">(Vendor of the Month only)</span></label>
+<div class="sendbox">
+<label class="chk"><input type="checkbox" id="sendOnSave" checked> Email the certificate and the shop code when I save</label>
+<div class="row">
+<div><label>To (the vendor)</label><input id="sendTo" type="text" placeholder="vendor@email.com" autocomplete="off"><div class="hint" id="sendToHint">Fills in from the directory when the vendor is linked. Change it if you need to.</div></div>
+<div><label>CC</label><input id="sendCc" type="text" autocomplete="off"><div class="hint">Comma separated. Add or remove anyone. Your last list is remembered on this browser.</div></div>
+</div>
+<details><summary>Subject and message</summary><div>
+<div><label>Subject</label><input id="sendSubject" type="text"></div>
+<div><label>Message</label><textarea id="sendBody"></textarea><div class="hint">{name}, {month} and {year} fill in when it sends. The code, the shop button and the certificate are added under the message automatically. <button type="button" class="reset" id="sendReset">Reset to the standard wording</button></div></div>
+</div></details>
+</div>
+</div>
 <input type="hidden" id="nomId">
 <div class="actions">
 <button class="btn solid" id="save" type="submit">Save the plate</button>
@@ -147,6 +210,19 @@ reads rec_wall and shows the moment a plate is saved. -->
 <div id="wall"><span class="loading"><span class="spin"></span>Reading the plates...</span></div>
 </div>
 </div>
+
+<div class="card" id="coupons" style="margin-top:16px">
+<div class="chead"><span class="bar-accent"></span><h3>Shop codes and certificates</h3><span class="sub" id="cpnCount"></span></div>
+<div class="cbody">
+<div class="filters">
+<div class="seg" id="cpnRegion"><button type="button" data-r="Las Vegas" class="on">Las Vegas</button><button type="button" data-r="Northern Nevada">Northern Nevada</button></div>
+<label style="font-size:11.5px;color:var(--grey);display:inline-flex;align-items:center;gap:5px"><input type="checkbox" id="cpnOld"> Show earlier plates without a code</label>
+</div>
+<div class="cpn-sum" id="cpnSum"></div>
+<div id="cpnList"><span class="loading"><span class="spin"></span>Reading the codes...</span></div>
+<div class="hint" style="margin-top:10px">Each code is $150 off one Vendor Shop order, supplies or uniforms, used once in full. Whatever part is not used on that order is forfeited. Codes are checked on the server at checkout, so they never appear in page code. Plates before July 2026 were rewarded on the old platform and do not get a code unless you issue one.</div>
+</div>
+</div>
 </div>
 
 <aside>
@@ -162,10 +238,35 @@ reads rec_wall and shows the moment a plate is saved. -->
 </div>
 </div>
 
+<div class="modal sendm" id="sendModal" aria-hidden="true">
+<div class="mbox">
+<div class="mhead"><h3 id="smTitle">Certificate and shop code</h3><button class="x" type="button" id="smClose" aria-label="Close">&#10005;</button></div>
+<div class="mbody">
+<div class="prev" id="smPrev"><div class="ph">Drawing the certificate...</div></div>
+<div class="frm">
+<h4 id="smName"></h4>
+<div class="meta" id="smMeta"></div>
+<div class="codebox" id="smCode"></div>
+<div><label>To (the vendor)</label><input id="smTo" type="text" autocomplete="off"></div>
+<div><label>CC</label><input id="smCc" type="text" autocomplete="off"><div class="hint">Everyone here gets the same email, with the vendor. Edit freely.</div></div>
+<div><label>Subject</label><input id="smSubject" type="text"></div>
+<div><label>Message</label><textarea id="smBody" style="min-height:150px"></textarea></div>
+<div class="actions">
+<button class="btn solid" type="button" id="smSend">Send from City Wide</button>
+<a class="btn" id="smDownload" href="#" download>Download PDF</a>
+</div>
+<div class="testrow"><input id="smTestTo" type="text" placeholder="your@gocitywide.com"><button class="btn sm" type="button" id="smTest">Send a test to me</button></div>
+<div class="status" id="smStatus"></div>
+</div>
+</div>
+</div>
+</div>
+
 <script src="https://citywidelv.github.io/cw-ops-desk/cw-auth.js"></script>
 <script src="nav.js"></script>
 <script src="https://citywidelv.github.io/cw-ops-desk/cw-nav.js"></script>
 <script src="admin-shared.js"></script>
+<script src="cert.js"></script>
 <script>
 (function(){
 var esc = ADMIN.esc, api = ADMIN.api, toast = ADMIN.toast;
@@ -173,6 +274,26 @@ function $(id){ return document.getElementById(id); }
 var MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 var DATA = { winners:[], nominations:[] }, VENDORS = [], STAFF = [];
 var TYPE = "vendor", WALL = { region:"Las Vegas", type:"vendor" };
+
+/* ---- certificate email + shop code (Sep 21 2026) ---- */
+var CPN = { region:"Las Vegas" };
+var FROM_MONTH = { year:2026, month:7 };   // plates from here on get a code; earlier ones were rewarded on the old platform
+var DEFAULT_CC = "Nevada_Staff@gocitywide.com, CWLV_NM@gocitywide.com";
+var DEFAULT_SUBJECT = "Congratulations, {name}: Vendor of the Month for {month} {year}";
+var DEFAULT_BODY = "Congratulations! {name} has been named City Wide's Vendor of the Month for {month} {year}.\n\n" +
+  "You were selected for your performance. We appreciate the way you take care of the properties and make sure our clients are taken care of.\n\n" +
+  "Your certificate is attached. Your ${amount} award code is below. It is good for one order in the Vendor Shop, supplies or uniforms.\n\n" +
+  "Thank you for the work you do with City Wide.";
+var LS = { cc:"cwRecCC", subject:"cwRecSubject", body:"cwRecBody", test:"cwRecTestTo" };
+function lsGet(k, d){ try{ var v = localStorage.getItem(k); return v === null ? d : v; }catch(e){ return d; } }
+function lsSet(k, v){ try{ localStorage.setItem(k, v); }catch(e){} }
+function fill(t, w){
+  var amt = (w.coupon && w.coupon.amount) || (DATA.coupon_amount || 150);
+  return String(t || "").replace(/\{name\}/g, w.name || "").replace(/\{month\}/g, MONTHS[(w.month || 1) - 1] || "").replace(/\{year\}/g, w.year || "").replace(/\{amount\}/g, amt);
+}
+function money(n){ return "$" + Number(n || 0).toFixed(2).replace(/\.00$/, ""); }
+function afterFrom(w){ return w.year > FROM_MONTH.year || (w.year === FROM_MONTH.year && w.month >= FROM_MONTH.month); }
+var TO_AUTO = true;   // sendTo still holds what the directory filled in (not hand-typed)
 
 /* month select: default to the current month and year */
 var now = new Date();
@@ -184,6 +305,7 @@ function setType(t){
   Array.prototype.forEach.call($("typeSeg").querySelectorAll("button"), function(b){ b.classList.toggle("on", b.getAttribute("data-t") === t); });
   $("vendorField").classList.toggle("hidden", t !== "vendor");
   $("staffField").classList.toggle("hidden", t !== "goat");
+  $("sendField").classList.toggle("hidden", t !== "vendor");
   $("formTitle").textContent = t === "goat" ? "Add a G.O.A.T. of the Month" : "Add a Vendor of the Month";
   $("typeHint").textContent = t === "goat" ? "Greatest of All Time. A City Wide team member, picked from the team directory." : "A vendor crew that earned the plate. Pick from the vendor directory so the plate links to their record.";
 }
@@ -200,12 +322,17 @@ function showLink(){
   $("vendorLink").innerHTML = v
     ? '<span class="linked">&#10003; Linked to ' + esc(v.dba) + ' (' + esc(v.id) + ', ' + esc(v.region) + ')</span>'
     : '<span class="linked no">' + ($("vendorName").value.trim() ? 'No directory match. The plate saves with the name as typed.' : 'Not linked to a directory record yet') + '</span>';
+  if(TO_AUTO){
+    $("sendTo").value = v && v.email ? v.email : "";
+    $("sendToHint").textContent = v ? (v.email ? "From the directory record. Change it if you need to." : "The directory record has no email. Type one in, or the certificate will not send.") : "Fills in from the directory when the vendor is linked. Change it if you need to.";
+  }
 }
+$("sendTo").addEventListener("input", function(){ TO_AUTO = !$("sendTo").value.trim(); });
 $("vendorName").addEventListener("input", showLink);
 function loadVendors(){
   api({ kind:"vd_list" }).then(function(r){
     if(!r.ok) return;
-    VENDORS = (r.vendors || []).map(function(v){ return { id:v.vendor_id, dba:String(v.dba_name || ""), legal:String(v.legal_name || ""), region:v.region || "" }; })
+    VENDORS = (r.vendors || []).map(function(v){ return { id:v.vendor_id, dba:String(v.dba_name || ""), legal:String(v.legal_name || ""), region:v.region || "", email:String(v.email || "").trim() }; })
       .filter(function(v){ return v.dba; }).sort(function(a, b){ return a.dba.toLowerCase() < b.dba.toLowerCase() ? -1 : 1; });
     $("vendorList").innerHTML = VENDORS.map(function(v){ return '<option value="' + esc(v.dba) + '">' + esc(v.region) + '</option>'; }).join("");
     showLink();
@@ -229,16 +356,200 @@ $("frm").addEventListener("submit", function(e){
             vendor_id: v ? v.id : "", blurb:$("blurb").value.trim(), nomination_id:$("nomId").value };
   var exists = DATA.winners.filter(function(x){ return x.type === w.type && x.region === w.region && x.year === w.year && x.month === w.month; })[0];
   if(exists && exists.name !== w.name && !confirm(MONTHS[w.month - 1] + " " + w.year + " (" + w.region + ") already reads " + exists.name + ". Replace it with " + w.name + "?")) return;
+  var sendPlan = null;
+  if(TYPE === "vendor"){
+    sendPlan = { auto:$("sendOnSave").checked, to:$("sendTo").value.trim(), cc:$("sendCc").value.trim(), subject:$("sendSubject").value, body:$("sendBody").value,
+                 alreadySent: !!(exists && exists.last_sent && exists.name === w.name) };
+    lsSet(LS.cc, sendPlan.cc); lsSet(LS.subject, sendPlan.subject); lsSet(LS.body, sendPlan.body);
+  }
   $("save").disabled = true; $("saveNote").textContent = "Saving...";
   api({ kind:"rec_save", winner:w, who:ADMIN.who() }).then(function(r){
-    $("save").disabled = false; $("saveNote").textContent = "";
-    if(!r.ok){ toast(r.error || "Could not save.", "err"); return; }
+    if(!r.ok){ $("save").disabled = false; $("saveNote").textContent = ""; toast(r.error || "Could not save.", "err"); return; }
     toast((r.replaced ? "Plate updated: " : "Plate added: ") + MONTHS[w.month - 1] + " " + w.year + ", " + name, "ok");
-    clearForm(); load();
+    if(!sendPlan){ $("save").disabled = false; $("saveNote").textContent = ""; clearForm(); load(); return; }
+    // Vendor of the Month: issue the shop code, draw the certificate, then send or open for review
+    var winner = { id:r.id, type:"vendor", region:w.region, year:w.year, month:w.month, name:name, vendor_id:r.vendor_id || w.vendor_id, email:sendPlan.to };
+    $("saveNote").textContent = "Issuing the shop code...";
+    return api({ kind:"rec_coupon_issue", winner_id:r.id, who:ADMIN.who() }).then(function(c){
+      winner.coupon = c.ok ? c.coupon : null;
+      if(!c.ok) toast("Plate saved, but no code was issued: " + (c.error || "?"), "err");
+      $("save").disabled = false; $("saveNote").textContent = "";
+      clearForm();
+      if(sendPlan.auto && sendPlan.to && !sendPlan.alreadySent){
+        $("saveNote").textContent = "Sending the certificate...";
+        return sendCert(winner, { to:sendPlan.to, cc:sendPlan.cc, subject:fill(sendPlan.subject, winner), body:fill(sendPlan.body, winner) }).then(function(out){
+          $("saveNote").textContent = "";
+          if(out.ok) toast("Certificate and code sent to " + out.to.join(", ") + (out.cc.length ? " (cc " + out.cc.length + ")" : ""), "ok");
+          else { toast(out.error || "The email did not send. Opening it for you.", "err"); openSend(winner, sendPlan); }
+          load();
+        });
+      }
+      if(sendPlan.auto && sendPlan.alreadySent) toast("Already emailed on " + (exists.last_sent.sent || "").slice(0, 10) + ". Use Resend if you want it again.", "ok");
+      openSend(winner, sendPlan);
+      load();
+    });
   }).catch(function(){ $("save").disabled = false; $("saveNote").textContent = ""; toast("Could not reach the server.", "err"); });
+});
+function resetSendDefaults(){
+  $("sendCc").value = lsGet(LS.cc, DEFAULT_CC);
+  $("sendSubject").value = lsGet(LS.subject, DEFAULT_SUBJECT);
+  $("sendBody").value = lsGet(LS.body, DEFAULT_BODY);
+}
+$("sendReset").addEventListener("click", function(){
+  $("sendCc").value = DEFAULT_CC; $("sendSubject").value = DEFAULT_SUBJECT; $("sendBody").value = DEFAULT_BODY;
+  lsSet(LS.cc, DEFAULT_CC); lsSet(LS.subject, DEFAULT_SUBJECT); lsSet(LS.body, DEFAULT_BODY);
+});
+
+/* ---- certificate: draw, preview, send ---- */
+var CERT = {};   // winner.id -> {blob, base64, filename, url}
+function makeCert(w){
+  if(CERT[w.id] && CERT[w.id].name === w.name) return Promise.resolve(CERT[w.id]);
+  return CWCert.make({ name:w.name, month:w.month, year:w.year, region:w.region }).then(function(r){
+    var c = { name:w.name, blob:r.blob, base64:r.base64, filename:r.filename, url:URL.createObjectURL(r.blob) };
+    CERT[w.id] = c; return c;
+  });
+}
+function sendCert(w, m, test){
+  return makeCert(w).then(function(c){
+    return api({ kind:"rec_cert_send", winner_id:w.id, to:m.to, cc:m.cc, subject:m.subject, heading:"Vendor of the Month, " + MONTHS[w.month - 1] + " " + w.year,
+                 body:m.body, coupon_code:w.coupon ? w.coupon.code : "", pdf_b64:c.base64, filename:c.filename, test:!!test, who:ADMIN.who() });
+  }).catch(function(e){ return { ok:false, error:"Could not draw or send the certificate: " + (e && e.message || e) }; });
+}
+var SM = { w:null };
+function openSend(w, plan){
+  SM.w = w;
+  var cc = plan && plan.cc !== undefined ? plan.cc : lsGet(LS.cc, DEFAULT_CC);
+  $("smTitle").textContent = "Certificate and shop code: " + MONTHS[w.month - 1] + " " + w.year;
+  $("smName").textContent = w.name;
+  $("smMeta").innerHTML = esc(w.region) + " &middot; sends as <b>" + (w.region === "Northern Nevada" ? "City Wide of Northern Nevada" : "City Wide of Las Vegas") + "</b> from the company Google account, replies go to the " + (w.region === "Northern Nevada" ? "Reno" : "Las Vegas") + " service inbox." +
+    (w.last_sent ? "<br>Last sent " + esc((w.last_sent.sent || "").slice(0, 16)) + " to " + esc(w.last_sent.to || "") + (w.last_sent.by ? " by " + esc(w.last_sent.by) : "") + "." : "");
+  $("smCode").innerHTML = w.coupon
+    ? '<span class="k">Shop code</span><code>' + esc(w.coupon.code) + '</code><span>' + money(w.coupon.amount) + ' off one order' + (w.coupon.status === "Redeemed" ? ', <b>already redeemed</b> ' + esc((w.coupon.redeemed_at || "").slice(0, 10)) : '') + '</span>'
+    : '<span class="k">Shop code</span><span>No code on this plate. The email goes out with the certificate only. Issue one from the codes card first if they should get the $150.</span>';
+  $("smTo").value = (plan && plan.to) || w.email || "";
+  $("smCc").value = cc;
+  $("smSubject").value = fill((plan && plan.subject) || lsGet(LS.subject, DEFAULT_SUBJECT), w);
+  $("smBody").value = fill((plan && plan.body) || lsGet(LS.body, DEFAULT_BODY), w);
+  $("smTestTo").value = lsGet(LS.test, "");
+  $("smStatus").className = "status"; $("smStatus").textContent = w.email || (plan && plan.to) ? "" : "No email on file for this vendor. Type it in To.";
+  $("smPrev").innerHTML = '<div class="ph"><span class="spin"></span>Drawing the certificate...</div>';
+  $("smDownload").removeAttribute("href");
+  $("sendModal").classList.add("show"); $("sendModal").setAttribute("aria-hidden", "false");
+  makeCert(w).then(function(c){
+    if(SM.w !== w) return;
+    $("smPrev").innerHTML = '<iframe title="Certificate preview" src="' + c.url + '#toolbar=0&navpanes=0&view=Fit"></iframe>';
+    $("smDownload").href = c.url; $("smDownload").download = c.filename;
+  }).catch(function(e){ $("smPrev").innerHTML = '<div class="ph">Could not draw the certificate: ' + esc(e && e.message || e) + '</div>'; });
+}
+function closeSend(){ $("sendModal").classList.remove("show"); $("sendModal").setAttribute("aria-hidden", "true"); SM.w = null; }
+$("smClose").addEventListener("click", closeSend);
+$("sendModal").addEventListener("click", function(e){ if(e.target === $("sendModal")) closeSend(); });
+document.addEventListener("keydown", function(e){ if(e.key === "Escape" && $("sendModal").classList.contains("show")) closeSend(); });
+function smMsg(){ return { to:$("smTo").value.trim(), cc:$("smCc").value.trim(), subject:$("smSubject").value.trim(), body:$("smBody").value }; }
+function smBusy(on, txt){ $("smSend").disabled = on; $("smTest").disabled = on; $("smStatus").className = "status"; $("smStatus").textContent = txt || ""; }
+$("smSend").addEventListener("click", function(){
+  var w = SM.w; if(!w) return;
+  var m = smMsg();
+  if(!m.to){ $("smStatus").className = "status err"; $("smStatus").textContent = "Add the vendor email in To."; $("smTo").focus(); return; }
+  if(w.last_sent && !confirm("This was already emailed on " + (w.last_sent.sent || "").slice(0, 10) + ". Send it again?")) return;
+  lsSet(LS.cc, m.cc);
+  smBusy(true, "Sending from City Wide...");
+  sendCert(w, m).then(function(r){
+    smBusy(false);
+    if(!r.ok){ $("smStatus").className = "status err"; $("smStatus").textContent = r.error || "Did not send."; return; }
+    $("smStatus").className = "status ok"; $("smStatus").textContent = "Sent to " + r.to.join(", ") + (r.cc.length ? ", cc " + r.cc.join(", ") : "") + (r.cert_url ? ". Filed in Drive." : "");
+    toast("Certificate sent to " + r.to.join(", "), "ok"); load();
+  });
+});
+$("smTest").addEventListener("click", function(){
+  var w = SM.w; if(!w) return;
+  var m = smMsg(); var t = $("smTestTo").value.trim();
+  if(!t){ $("smStatus").className = "status err"; $("smStatus").textContent = "Type the address the test should go to."; $("smTestTo").focus(); return; }
+  lsSet(LS.test, t);
+  smBusy(true, "Sending a test to " + t + "...");
+  sendCert(w, { to:t, cc:"", subject:m.subject, body:m.body }, true).then(function(r){
+    smBusy(false);
+    $("smStatus").className = "status " + (r.ok ? "ok" : "err");
+    $("smStatus").textContent = r.ok ? "Test sent to " + t + ". Nobody else got it." : (r.error || "Did not send.");
+  });
+});
+
+/* ---- shop codes card ---- */
+function cpnRows(){
+  return DATA.winners.filter(function(w){ return w.type === "vendor" && w.region === CPN.region && !w.hidden && (w.coupon || afterFrom(w) || $("cpnOld").checked); });
+}
+function renderCoupons(){
+  var rows = cpnRows();
+  var issued = 0, redeemed = 0, none = 0;
+  DATA.winners.forEach(function(w){ if(w.type !== "vendor" || w.hidden) return; if(!w.coupon){ if(afterFrom(w)) none++; return; } if(w.coupon.status === "Redeemed") redeemed++; else if(w.coupon.status === "Issued") issued++; });
+  $("cpnCount").textContent = (issued + redeemed) + (issued + redeemed === 1 ? " code" : " codes");
+  $("cpnSum").innerHTML = '<span><b>' + issued + '</b> waiting to be used</span><span><b>' + redeemed + '</b> redeemed</span>' + (none ? '<span><b>' + none + '</b> plate' + (none === 1 ? '' : 's') + ' since ' + MONTHS[FROM_MONTH.month - 1] + ' ' + FROM_MONTH.year + ' with no code yet</span>' : '');
+  if(!rows.length){ $("cpnList").innerHTML = '<div class="loading">No Vendor of the Month plates for ' + esc(CPN.region) + ' since ' + MONTHS[FROM_MONTH.month - 1] + ' ' + FROM_MONTH.year + '. Save one above and the code is issued with it.</div>'; return; }
+  $("cpnList").innerHTML = '<table class="cpn"><thead><tr><th>Month</th><th>Vendor</th><th>Code</th><th>Status</th><th>Certificate</th></tr></thead><tbody>' + rows.map(function(w){
+    var c = w.coupon, st, pill;
+    if(!c){ pill = '<span class="pill none">No code</span>'; st = ''; }
+    else if(c.status === "Redeemed"){ pill = '<span class="pill rdm">Redeemed</span>'; st = '<small>' + esc((c.redeemed_at || "").slice(0, 10)) + (c.redeemed_company ? ' by ' + esc(c.redeemed_company) : '') + (c.redeemed_name ? ' (' + esc(c.redeemed_name) + ')' : '') + '<br>' + money(c.discount) + ' off a ' + money(c.order_subtotal) + ' order' + (Number(c.amount) - Number(c.discount) > 0 ? ', ' + money(Number(c.amount) - Number(c.discount)) + ' forfeited' : '') + (c.redeemed_account ? '<br>for ' + esc(c.redeemed_account) : '') + '</small>'; }
+    else if(c.status === "Void"){ pill = '<span class="pill void">Void</span>'; st = '<small>' + esc((c.voided_at || "").slice(0, 10)) + '</small>'; }
+    else { pill = '<span class="pill iss">Not used yet</span>'; st = '<small>issued ' + esc((c.issued || "").slice(0, 10)) + (c.issued_by ? ' by ' + esc(c.issued_by) : '') + '</small>'; }
+    var sent = w.last_sent ? '<small>sent ' + esc((w.last_sent.sent || "").slice(0, 10)) + ' to ' + esc(w.last_sent.to || "") + '</small>' : '<small>not emailed from here yet</small>';
+    var acts = '<div class="acts">' +
+      (c && c.status !== "Void" ? '<button class="btn" data-open="' + esc(w.id) + '">' + (w.last_sent ? 'Resend' : 'Send') + '</button>' : (c ? '' : '<button class="btn solid" data-issue="' + esc(w.id) + '">Issue a code</button>')) +
+      '<button class="btn" data-cert="' + esc(w.id) + '">Certificate</button>' +
+      (c && c.status === "Issued" ? '<button class="btn" data-void="' + esc(c.code) + '" title="Cancel this code">Void</button>' : '') +
+      (c && c.status === "Void" ? '<button class="btn" data-reissue="' + esc(w.id) + '">Issue a new code</button>' : '') +
+      '</div>';
+    return '<tr><td class="mo">' + MONTHS[w.month - 1].slice(0, 3) + ' ' + w.year + '</td>' +
+      '<td class="nm">' + esc(w.name) + (w.email ? '<small>' + esc(w.email) + '</small>' : '<small style="color:var(--amber)">no email in the directory</small>') + '</td>' +
+      '<td>' + (c ? '<code>' + esc(c.code) + '</code> <button class="copy" data-copy="' + esc(c.code) + '">copy</button>' : '<span class="hint">none</span>') + '</td>' +
+      '<td class="st">' + pill + st + '</td>' +
+      '<td>' + sent + acts + '</td></tr>';
+  }).join("") + '</tbody></table>';
+}
+$("cpnRegion").addEventListener("click", function(e){ var b = e.target.closest("button"); if(!b) return; CPN.region = b.getAttribute("data-r"); Array.prototype.forEach.call(this.querySelectorAll("button"), function(x){ x.classList.toggle("on", x === b); }); renderCoupons(); });
+$("cpnOld").addEventListener("change", renderCoupons);
+$("cpnList").addEventListener("click", function(e){
+  var b = e.target.closest("button"); if(!b) return;
+  var id = b.getAttribute("data-open") || b.getAttribute("data-cert") || b.getAttribute("data-issue") || b.getAttribute("data-reissue");
+  var w = id ? DATA.winners.filter(function(x){ return x.id === id; })[0] : null;
+  if(b.hasAttribute("data-copy")){
+    var code = b.getAttribute("data-copy");
+    (navigator.clipboard ? navigator.clipboard.writeText(code) : Promise.reject()).then(function(){ toast("Copied " + code, "ok"); }, function(){ prompt("Copy the code:", code); });
+    return;
+  }
+  if(b.hasAttribute("data-void")){
+    var code2 = b.getAttribute("data-void");
+    if(!confirm("Void " + code2 + "? It stops working at checkout right away. You can issue a new one after.")) return;
+    b.disabled = true;
+    api({ kind:"rec_coupon_void", code:code2, who:ADMIN.who() }).then(function(r){
+      if(!r.ok){ b.disabled = false; toast(r.error || "Could not void.", "err"); return; }
+      toast("Voided " + code2, "ok"); load();
+    }).catch(function(){ b.disabled = false; toast("Could not reach the server.", "err"); });
+    return;
+  }
+  if(!w) return;
+  if(b.hasAttribute("data-open")){ openSend(w); return; }
+  if(b.hasAttribute("data-cert")){
+    b.disabled = true;
+    makeCert(w).then(function(c){ b.disabled = false; var a = document.createElement("a"); a.href = c.url; a.download = c.filename; document.body.appendChild(a); a.click(); a.remove(); })
+      .catch(function(err){ b.disabled = false; toast("Could not draw the certificate: " + (err && err.message || err), "err"); });
+    return;
+  }
+  if(b.hasAttribute("data-issue") || b.hasAttribute("data-reissue")){
+    b.disabled = true;
+    api({ kind:"rec_coupon_issue", winner_id:w.id, reissue:b.hasAttribute("data-reissue"), who:ADMIN.who() }).then(function(r){
+      b.disabled = false;
+      if(!r.ok){ toast(r.error || "Could not issue a code.", "err"); return; }
+      toast((r.existing ? "Already had a code: " : "Code issued: ") + r.coupon.code, "ok");
+      w.coupon = r.coupon; renderCoupons();
+      if(!r.existing && confirm("Email the certificate and the code to " + w.name + " now?")) openSend(w);
+      load();
+    }).catch(function(){ b.disabled = false; toast("Could not reach the server.", "err"); });
+    return;
+  }
 });
 function clearForm(){
   $("vendorName").value = ""; $("staffName").value = ""; $("blurb").value = ""; $("nomId").value = ""; $("formSub").textContent = "";
+  TO_AUTO = true; $("sendTo").value = "";
   showLink();
 }
 $("clear").addEventListener("click", clearForm);
@@ -321,7 +632,7 @@ $("wall").addEventListener("click", function(e){
   var w = DATA.winners.filter(function(x){ return x.id === (t.getAttribute("data-remove") || t.getAttribute("data-edit")); })[0]; if(!w) return;
   if(t.hasAttribute("data-edit")){
     setType(w.type); $("region").value = w.region; $("month").value = w.month; $("year").value = w.year; $("blurb").value = w.blurb || "";
-    if(w.type === "goat") $("staffName").value = w.name; else { $("vendorName").value = w.name; showLink(); }
+    if(w.type === "goat") $("staffName").value = w.name; else { $("vendorName").value = w.name; TO_AUTO = true; showLink(); if(w.email && !$("sendTo").value) $("sendTo").value = w.email; }
     $("formSub").textContent = "editing " + MONTHS[w.month - 1] + " " + w.year;
     $("add").scrollIntoView({ behavior:"smooth", block:"start" });
     return;
@@ -337,18 +648,20 @@ function load(){
   api({ kind:"rec_list" }).then(function(r){
     if(!r.ok){
       var msg = /rec_setup/.test(r.error || "") ? "The recognition sheet has not been created yet. Ask TJ to run the setup once." : (r.error || "Could not load.");
-      $("wall").innerHTML = $("noms").innerHTML = '<span class="loading">' + esc(msg) + '</span>'; return;
+      $("wall").innerHTML = $("noms").innerHTML = $("cpnList").innerHTML = '<span class="loading">' + esc(msg) + '</span>'; return;
     }
     DATA = r; if(r.url) $("sheetlink").href = r.url;
-    renderWall(); renderNoms();
-  }).catch(function(){ $("wall").innerHTML = $("noms").innerHTML = '<span class="loading">Could not reach the server.</span>'; });
+    renderWall(); renderNoms(); renderCoupons();
+  }).catch(function(){ $("wall").innerHTML = $("noms").innerHTML = $("cpnList").innerHTML = '<span class="loading">Could not reach the server.</span>'; });
 }
 $("reload").addEventListener("click", load);
 
 ADMIN.init({ page:"vendors", onReady:function(){
   $("who").value = ADMIN.who();
   $("who").addEventListener("change", function(){ ADMIN.setWho($("who").value.trim()); });
+  resetSendDefaults();
   if(location.hash === "#add") setTimeout(function(){ $("add").scrollIntoView({ block:"start" }); $("vendorName").focus(); }, 50);
+  if(location.hash === "#coupons") setTimeout(function(){ $("coupons").scrollIntoView({ block:"start" }); }, 50);
   load(); loadVendors(); loadStaff();
 } });
 })();

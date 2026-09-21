@@ -1,4 +1,4 @@
-/* CW Admin Hub shared script. Build 2026-09-19b (Vendor Onboarding desk: onboarding.html; Asana onboarding boards and the Asana background check form retired from the menus). 2026-09-19 (Ops Admin Desk: desk.html, records.html, sheet.html under Team & Admin). 2026-09-13 (Site Admin: MENU below is the fallback, nav.js is live; cascade submenus; Vendor of the Month).
+/* CW Admin Hub shared script. Build 2026-09-21 (Shop Codes & Certificates under Vendor of the Month). 2026-09-19b (Vendor Onboarding desk: onboarding.html; Asana onboarding boards and the Asana background check form retired from the menus). 2026-09-19 (Ops Admin Desk: desk.html, records.html, sheet.html under Team & Admin). 2026-09-13 (Site Admin: MENU below is the fallback, nav.js is live; cascade submenus; Vendor of the Month).
    Gate, header, cascading nav, webhook helper, Asana project registry.
    Every page: <link admin.css> ... <div id="gate"> + <div id="app" class="hidden">, then
    this file, then ADMIN.init({page:'...'}). Data lives in Google Sheets through the
@@ -123,6 +123,7 @@ var MENU = [
     {sub:"Vendor of the Month", items:[
       {label:"Add a Vendor of the Month", href:"recognition.html#add", tag:"Hub"},
       {label:"Nominations & Plates", href:"recognition.html", tag:"Hub"},
+      {label:"Shop Codes & Certificates", href:"recognition.html#coupons", tag:"Hub"},
       {label:"Nominate a Vendor or G.O.A.T.", href:OPS + "nominate.html", tag:"Ops Hub"},
       {label:"The Wall (Vendor Hub)", href:VS + "#recognition", tag:"Vendor Hub"}
     ]},

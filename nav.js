@@ -236,6 +236,11 @@ window.CW_NAV = {
        "tag": "Hub"
       },
       {
+       "label": "Shop Codes & Certificates",
+       "href": "recognition.html#coupons",
+       "tag": "Hub"
+      },
+      {
        "label": "Nominate a Vendor or G.O.A.T.",
        "href": "https://citywidelv.github.io/cw-ops-desk/nominate.html",
        "tag": "Ops Hub"
