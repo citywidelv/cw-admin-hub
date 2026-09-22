@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Vendor Profile | CW Admin Hub</title>
-<!-- build 2026-09-22a. One vendor, everything, one page.
+<!-- build 2026-09-22b (four parallel loads, index cache). One vendor, everything, one page.
 Backend: VendorProfile.gs (kinds vp_index, vp_get) on the CW Solicitations script, read only.
 Every edit goes through the kind that already owns that data, so the same logs and the
 same undo apply: adr_save (directory fields), ob_save / ob_doc / ob_docs / ob_note
@@ -13,8 +13,8 @@ same undo apply: adr_save (directory fields), ob_save / ob_doc / ob_docs / ob_no
 roster), dne_add / dne_remove / dne_hide (do not email, hide).
 Speed rule: nothing is fetched on load unless the URL names a vendor (?id=V-042). The
 search list loads the first time the search box is focused and is kept in sessionStorage
-for 15 minutes. A vendor loads in two calls: the directory book first (paints at once),
-then the other books (responses, uploads, notices, insurance, profile requests). -->
+for 15 minutes. A vendor loads in four calls fired at once (head, onboarding, crew, more); each part
+paints as it lands, so the page is as fast as the slowest part, not the sum. -->
 <link rel="stylesheet" href="admin.css">
 <link rel="icon" href="https://citywidelv.github.io/cw-ops-desk/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="https://citywidelv.github.io/cw-ops-desk/favicon-32x32.png">
@@ -256,7 +256,8 @@ function loadIndex(force){
   if(S.idx && !force) return Promise.resolve(S.idx);
   try{ var c = JSON.parse(sessionStorage.getItem(IDX_KEY) || "null"); if(c && !force && Date.now() - c.t < IDX_TTL){ S.idx = c.v; return Promise.resolve(S.idx); } }catch(e){}
   $("dd").innerHTML = '<div class="none">Loading the vendor list&hellip;</div>'; $("dd").classList.remove("hidden");
-  return post({ kind:"vp_index" }).then(function(r){
+  var fresh = !!S.idxFresh; S.idxFresh = false;
+  return post({ kind:"vp_index", fresh:fresh }).then(function(r){
     if(!r || r.ok === false) throw new Error((r && r.error) || "Could not load the vendor list.");
     S.idx = r.vendors || [];
     try{ sessionStorage.setItem(IDX_KEY, JSON.stringify({ t:Date.now(), v:S.idx })); }catch(e){}
@@ -289,27 +290,45 @@ $("dd").addEventListener("mousedown", function(e){ var b = e.target.closest("but
 document.addEventListener("click", function(e){ if(!e.target.closest(".srch")) $("dd").classList.add("hidden"); });
 
 /* ---------- load ---------- */
+/* Four calls go out at once (head, onboarding, crew, more) so the page is as fast as the
+   slowest part, not the sum. Each part paints as soon as it lands. */
+var PARTS = ["head", "onboarding", "crew", "more"];
 function open(vid){
   if(S.editing && !confirm("You have unsaved changes on Details. Leave without saving?")) return;
-  S.vid = vid; S.core = null; S.more = null; S.editing = false; setUrl();
+  S.vid = vid; S.core = {}; S.more = null; S.editing = false; setUrl();
   $("start").classList.add("hidden"); $("prof").classList.remove("hidden");
   $("phead").innerHTML = '<div class="skel" style="width:40%"></div><div class="skel" style="width:70%"></div>';
   ["d_body","o_body","b_body","e_body","k_body","a_body"].forEach(function(id){ $(id).innerHTML = '<div class="skel" style="width:60%"></div><div class="skel" style="width:35%"></div>'; });
   $("r_body").innerHTML = '<div class="skel" style="width:60%"></div>'; $("n_body").innerHTML = '<div class="skel" style="width:50%"></div>';
+  ["d_sub","o_sub","b_sub","e_sub","r_sub","k_sub","n_sub","a_sub"].forEach(function(id){ $(id).textContent = ""; });
   $("jump").innerHTML = "";
   window.scrollTo({ top: 0 });
-  post({ kind:"vp_get", vendor_id:vid, part:"core" }).then(function(r){
-    if(vid !== S.vid) return;
-    if(!r || r.ok === false){ $("phead").innerHTML = '<div class="banner red">' + esc((r && r.error) || "Could not load this vendor.") + '</div>'; return; }
-    S.core = r; renderCore();
-    return post({ kind:"vp_get", vendor_id:vid, part:"more" }).then(function(m){ if(vid !== S.vid) return; S.more = (m && m.ok !== false) ? m : { errors:{ all:(m && m.error) || "Could not load the other books." } }; renderMore(); });
-  }).catch(function(){ if(vid === S.vid) $("phead").innerHTML = '<div class="banner red">Could not reach the script. Try again.</div>'; });
+  PARTS.forEach(function(part){ loadPart(vid, part); });
 }
-function reloadCore(){ var vid = S.vid; return post({ kind:"vp_get", vendor_id:vid, part:"core" }).then(function(r){ if(vid !== S.vid) return; if(r && r.ok !== false){ S.core = r; renderCore(); } }); }
+function loadPart(vid, part){
+  return post({ kind:"vp_get", vendor_id:vid, part:part }).then(function(r){
+    if(vid !== S.vid) return;
+    if(!r || r.ok === false){
+      var msg = (r && r.error) || "Could not load this vendor.";
+      if(part === "head") $("phead").innerHTML = '<div class="banner red">' + esc(msg) + '</div>';
+      else toast("Could not load " + part + ": " + msg, "err");
+      return;
+    }
+    if(part === "more"){ S.more = r; renderMore(); return; }
+    Object.keys(r).forEach(function(k){ if(k !== "ok" && k !== "part" && k !== "errors" && k !== "timing") S.core[k] = r[k]; });
+    Object.keys(r.errors || {}).forEach(function(k){ toast("Could not load " + k + ": " + r.errors[k], "err"); });
+    if(part === "head"){ renderHead(); renderDetails(); renderOnboarding(); renderCrew(); renderEval(); renderActivity(); }
+    if(part === "onboarding"){ renderOnboarding(); renderActivity(); renderCrew(); }
+    if(part === "crew"){ renderCrew(); renderEval(); renderActivity(); }
+    if(part !== "head") renderCompliance();
+  }).catch(function(){ if(vid === S.vid){ if(part === "head") $("phead").innerHTML = '<div class="banner red">Could not reach the script. Try again.</div>'; else toast("Could not reach the script for " + part + ".", "err"); } });
+}
+function reloadCore(part){ return loadPart(S.vid, part || "head"); }
+function ready(){ return S.core && S.core.summary; }
 
 /* ---------- head ---------- */
-function renderCore(){
-  var c = S.core, s = c.summary || {}, errs = c.errors || {};
+function renderHead(){
+  var c = S.core, s = c.summary || {};
   var h = '<div class="top"><div><h2>' + esc(s.dba_name) + '</h2>' + (s.legal_name && s.legal_name !== s.dba_name ? '<div class="legal">' + esc(s.legal_name) + '</div>' : "") +
     '<div class="pills">' + pill(s.status || "No status", s.live ? "pass" : s.prospect ? "grey" : "pend") + pill(s.region, s.market === "nnv" ? "nnv" : "lv") + (s.both ? pill("Both markets", "lv") : "") + pill(s.vendor_id, "std") + (s.ic_type ? pill(s.ic_type, "grey") : "") +
     (s.types || []).map(function(t){ return pill(t.name, t.slug === "janitorial" ? "todo" : "grey"); }).join("") + '</div></div>' +
@@ -329,9 +348,8 @@ function renderCore(){
   $("phead").innerHTML = h;
   document.title = s.dba_name + " | Vendor Profile";
   var jumps = [["c_details","Details"],["c_onb","Onboarding"],["c_bc","Background checks"],["c_eval","Evaluation"],["c_resp","Interest letters"],["c_comp","Compliance"],["c_notices","Notices"],["c_act","Activity"]];
-  $("jump").innerHTML = jumps.map(function(j){ return '<a href="#' + j[0] + '" data-j="' + j[0] + '">' + j[1] + '<span class="n hidden"></span></a>'; }).join("");
-  renderDetails(); renderOnboarding(); renderCrew(); renderEval(); renderCompliance(); renderActivity();
-  Object.keys(errs).forEach(function(k){ toast("Could not load " + k + ": " + errs[k], "err"); });
+  if(!$("jump").innerHTML) $("jump").innerHTML = jumps.map(function(j){ return '<a href="#' + j[0] + '" data-j="' + j[0] + '">' + j[1] + '<span class="n hidden"></span></a>'; }).join("");
+  renderCompliance();
 }
 function fact(label, v, raw){ return '<div><label>' + esc(label) + '</label><div class="v">' + (v ? (raw ? v : esc(v)) : '<span style="color:#aaa">none</span>') + '</div></div>'; }
 function count(id, n){ var el = $("jump").querySelector('[data-j="' + id + '"] .n'); if(!el) return; if(n){ el.textContent = n; el.classList.remove("hidden"); } else el.classList.add("hidden"); }
@@ -420,15 +438,15 @@ function saveDetails(){
   S.busy = true; $("d_save").classList.add("busy");
   post({ kind:"adr_save", surface:r.surface, row:r.row, id:r.id, changes:c.changes }).then(function(x){
     S.busy = false; $("d_save").classList.remove("busy");
-    if(!x || x.ok === false){ toast((x && x.error) || "Save failed.", "err"); if(x && x.stale) reloadCore(); return; }
+    if(!x || x.ok === false){ toast((x && x.error) || "Save failed.", "err"); if(x && x.stale) reloadCore("head"); return; }
     (x.written || []).forEach(function(col){ r.rec[col] = c.changes[col]["new"]; });
     var msg = "Saved " + (x.written || []).length + " field" + ((x.written || []).length === 1 ? "" : "s") + ".";
     if(x.stale && x.stale.length) msg += " Skipped (changed on the Sheet since you opened it): " + x.stale.join(", ") + ".";
     if(x.skipped && x.skipped.length) msg += " Not written: " + x.skipped.join(", ") + ".";
     toast(msg, x.stale && x.stale.length ? "err" : "ok");
     S.editing = false;
-    try{ sessionStorage.removeItem(IDX_KEY); S.idx = null; }catch(e){}
-    reloadCore();
+    try{ sessionStorage.removeItem(IDX_KEY); S.idx = null; S.idxFresh = true; }catch(e){}
+    reloadCore("head");
   }).catch(function(){ S.busy = false; $("d_save").classList.remove("busy"); toast("Could not reach the script. Nothing was saved.", "err"); });
 }
 $("d_body").addEventListener("click", function(e){ var b = e.target.closest("button[data-act]"); if(!b) return; var a = b.getAttribute("data-act"); if(a === "edit") startEdit(); else if(a === "cancel") cancelEdit(); else if(a === "save") saveDetails(); });
@@ -441,7 +459,7 @@ function itemsFor(o){ return (S.core.onboarding.checklist || []).filter(function
 function calcOb(o){ var items = itemsFor(o), req = items.filter(function(i){ return i.required; }), ver = req.filter(function(i){ return (o.docs[i.key] || {}).s === "verified"; }).length, left = req.filter(function(i){ return (o.docs[i.key] || {}).s !== "verified"; }); return { req:req.length, ver:ver, left:left }; }
 function renderOnboarding(){
   var ob = S.core.onboarding, s = S.core.summary, h = "";
-  if(!ob){ $("o_body").innerHTML = '<div class="banner red">Onboarding could not be read.</div>'; return; }
+  if(!ob || !s){ if(ob === null) $("o_body").innerHTML = '<div class="banner red">Onboarding could not be read.</div>'; return; }
   var rows = ob.rows || [];
   $("o_sub").textContent = rows.length ? rows.map(function(o){ return (o.track === "JS" ? "Janitorial" : "Other services") + ": " + o.stage; }).join(" · ") : "not started";
   count("c_onb", rows.length ? rows.reduce(function(n, o){ return n + calcOb(o).left.length; }, 0) : 0);
@@ -484,19 +502,19 @@ $("o_body").addEventListener("change", function(e){
   var ob = el.closest(".obrec"); if(!ob || !needWho()) return;
   var obId = ob.getAttribute("data-ob"), f = el.getAttribute("data-f"), v = el.value.trim();
   var p = { kind:"ob_save", ob_id:obId }; p[f] = v;
-  post(p).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Save failed"); toast((f === "stage" ? "Stage: " + v : f === "track" ? "Track changed" : f === "assignee" ? "Assigned" : "Priority saved"), "ok"); return reloadCore(); })
+  post(p).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Save failed"); toast((f === "stage" ? "Stage: " + v : f === "track" ? "Track changed" : f === "assignee" ? "Assigned" : "Priority saved"), "ok"); return reloadCore("onboarding"); })
     .catch(function(err){ toast("Not saved: " + err.message, "err"); });
 });
 $("o_body").addEventListener("click", function(e){
   var b = e.target.closest("button"); if(!b) return;
   if(b.id === "ob_start"){
     if(!needWho()) return; b.classList.add("busy");
-    post({ kind:"ob_save", vendor_id:S.vid, track:$("ob_track").value, stage:$("ob_stage").value }).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Could not start"); toast("Onboarding started", "ok"); return reloadCore(); }).catch(function(err){ b.classList.remove("busy"); toast(err.message, "err"); });
+    post({ kind:"ob_save", vendor_id:S.vid, track:$("ob_track").value, stage:$("ob_stage").value }).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Could not start"); toast("Onboarding started", "ok"); return reloadCore("onboarding"); }).catch(function(err){ b.classList.remove("busy"); toast(err.message, "err"); });
     return;
   }
   if(b.dataset.attach){
     if(!needWho()) return; b.classList.add("busy");
-    post({ kind:"ob_save", ob_id:b.dataset.attach, vendor_id:S.vid }).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Could not attach"); toast("Attached", "ok"); return reloadCore(); }).catch(function(err){ b.classList.remove("busy"); toast(err.message, "err"); });
+    post({ kind:"ob_save", ob_id:b.dataset.attach, vendor_id:S.vid }).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Could not attach"); toast("Attached", "ok"); return reloadCore("onboarding"); }).catch(function(err){ b.classList.remove("busy"); toast(err.message, "err"); });
     return;
   }
   var ob = b.closest(".obrec"); if(!ob) return;
@@ -534,7 +552,8 @@ $("o_body").addEventListener("click", function(e){
 
 /* ---------- crew background checks (vd_bc_upsert, ob_bc_update) ---------- */
 function renderCrew(){
-  var c = S.core.crew || { rows:[] }, rq = (S.core.requests || { rows:[] }).rows, s = S.core.summary, ob = S.core.onboarding || {};
+  var c = S.core.crew, rq = (S.core.requests || { rows:[] }).rows, s = S.core.summary, ob = S.core.onboarding || {};
+  if(!c || !s) return;
   var crew = c.rows || [];
   var clear = crew.filter(function(p){ return p.result === "Clear"; }).length, pend = crew.filter(function(p){ return p.result === "Pending" || !p.result; }).length, nc = crew.filter(function(p){ return p.result === "Not clear"; }).length;
   $("b_sub").textContent = crew.length ? clear + " cleared · " + pend + " pending · " + nc + " not clear" : "no one on the roster";
@@ -569,12 +588,12 @@ $("b_body").addEventListener("click", function(e){
     var f = $("bc_first").value.trim(), l = $("bc_last").value.trim(); if(!f && !l){ toast("Type the person's name", "err"); return; }
     b.classList.add("busy");
     post({ kind:"vd_bc_upsert", reviewed_by:who(), rows:[{ market:$("bc_mk").value, vendor_id:S.vid, vendor:S.core.summary.dba_name, first_name:f, last_name:l, check_type:$("bc_type").value, result:"Pending", source:"City Wide" }] })
-      .then(function(r){ if(!r || r.ok === false || (r.errors && r.errors.length)) throw new Error((r && r.errors && r.errors[0]) || (r && r.error) || "Not added"); toast("Added as pending", "ok"); return reloadCore(); }).catch(function(err){ b.classList.remove("busy"); toast(err.message, "err"); });
+      .then(function(r){ if(!r || r.ok === false || (r.errors && r.errors.length)) throw new Error((r && r.errors && r.errors[0]) || (r && r.error) || "Not added"); toast("Added as pending", "ok"); return reloadCore("crew"); }).catch(function(err){ b.classList.remove("busy"); toast(err.message, "err"); });
     return;
   }
   if(b.dataset.sent){
     if(!needWho()) return; b.classList.add("busy");
-    post({ kind:"ob_bc_update", req_id:b.dataset.sent, status:"Sent" }).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Not saved"); toast("Marked sent to Verified First", "ok"); return reloadCore(); }).catch(function(err){ b.classList.remove("busy"); toast("Not saved: " + err.message, "err"); });
+    post({ kind:"ob_bc_update", req_id:b.dataset.sent, status:"Sent" }).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Not saved"); toast("Marked sent to Verified First", "ok"); return reloadCore("onboarding"); }).catch(function(err){ b.classList.remove("busy"); toast("Not saved: " + err.message, "err"); });
     return;
   }
   if(b.dataset.r){
@@ -598,7 +617,7 @@ $("b_body").addEventListener("change", function(e){
 /* ---------- evaluation ---------- */
 function labelFor(name){ var f = rec() && rec().fields.filter(function(x){ return x.name === name; })[0]; if(f) return f.label; return String(name).replace(/_/g, " ").replace(/^./, function(c){ return c.toUpperCase(); }); }
 function renderEval(){
-  var it = S.core.intake || { rows:[], eval:null }, s = S.core.summary, ev = it.eval;
+  var it = S.core.intake, s = S.core.summary; if(!it || !s) return; var ev = it.eval;
   $("e_sub").textContent = ev ? "submitted " + niceDate(ev.received) + (it.eval_count > 1 ? " (" + it.eval_count + " submissions, newest shown)" : "") : (s.eval_date ? "eval date " + niceDate(s.eval_date) + ", answers not on file" : "none on file");
   if(!ev){
     $("e_body").innerHTML = '<p class="help">' + (s.eval_date ? 'The directory shows an evaluation date but the answers were not logged (older submissions came through the Jotform, which never reached the directory). What the vendor told us lives in the Details card above.' : 'No Vendor Evaluation on file. Send the vendor the link and it fills in on its own: <b>' + esc(VS + 'vendor-evaluation.html') + '</b>. Use <a href="' + OPS + 'vendor-email.html?vendor=' + encodeURIComponent(S.vid) + '">Vendor Email</a> to send it.') + '</p>';
@@ -614,7 +633,8 @@ function renderEval(){
 
 /* ---------- compliance ---------- */
 function renderCompliance(){
-  var s = S.core.summary, au = (S.core.audits || { rows:[] }).rows, m = S.more || {}, ins = m.insurance, docs = (m.documents || {}).rows, pr = (m.profile_requests || {}).rows;
+  var s = S.core.summary; if(!s) return;
+  var au = (S.core.audits || { rows:[] }).rows, m = S.more || {}, ins = m.insurance, docs = (m.documents || {}).rows, pr = (m.profile_requests || {}).rows;
   var h = '<div class="cols">';
   // COI
   h += '<div class="box"><h5>Insurance on file</h5>';
@@ -666,21 +686,21 @@ $("k_body").addEventListener("click", function(e){
   if(b.id === "dne_add"){
     var reason = prompt("Why? (goes on the list, e.g. asked to be removed by reply on Sep 22)", ""); if(reason === null) return;
     b.classList.add("busy");
-    post({ kind:"dne_add", reason:reason, vendor_ids:[S.vid], emails:[] }).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Not saved"); toast(r.no_email ? "No email on file to block" : "On the do not email list", r.no_email ? "err" : "ok"); return reloadCore(); }).catch(function(err){ b.classList.remove("busy"); toast(err.message, "err"); });
+    post({ kind:"dne_add", reason:reason, vendor_ids:[S.vid], emails:[] }).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Not saved"); toast(r.no_email ? "No email on file to block" : "On the do not email list", r.no_email ? "err" : "ok"); return reloadCore("head"); }).catch(function(err){ b.classList.remove("busy"); toast(err.message, "err"); });
   } else if(b.id === "dne_lift"){
     if(!confirm("Take " + s.dba_name + " off the do not email list? They start getting vendor emails again.")) return;
     b.classList.add("busy");
-    post({ kind:"dne_remove", email:s.email }).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Not saved"); toast("Off the list", "ok"); return reloadCore(); }).catch(function(err){ b.classList.remove("busy"); toast(err.message, "err"); });
+    post({ kind:"dne_remove", email:s.email }).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Not saved"); toast("Off the list", "ok"); return reloadCore("head"); }).catch(function(err){ b.classList.remove("busy"); toast(err.message, "err"); });
   } else if(b.id === "hide_tog"){
     var hide = !s.hide, reason2 = hide ? prompt("Why hide them?", "") : ""; if(reason2 === null) return;
     b.classList.add("busy");
-    post({ kind:"dne_hide", vendor_id:S.vid, hide:hide, reason:reason2 }).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Not saved"); toast(hide ? "Hidden from pickers" : "Shown again", "ok"); try{ sessionStorage.removeItem(IDX_KEY); S.idx = null; }catch(e){} return reloadCore(); }).catch(function(err){ b.classList.remove("busy"); toast(err.message, "err"); });
+    post({ kind:"dne_hide", vendor_id:S.vid, hide:hide, reason:reason2 }).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Not saved"); toast(hide ? "Hidden from pickers" : "Shown again", "ok"); try{ sessionStorage.removeItem(IDX_KEY); S.idx = null; S.idxFresh = true; }catch(e){} return reloadCore("head"); }).catch(function(err){ b.classList.remove("busy"); toast(err.message, "err"); });
   }
 });
 
 /* ---------- more: responses, notices ---------- */
 function renderMore(){
-  var m = S.more, errs = m.errors || {};
+  var m = S.more, errs = m.errors || {}; if(!ready()){ setTimeout(renderMore, 400); return; }
   // responses
   var rs = (m.responses || {}).rows;
   if(!rs){ $("r_body").innerHTML = '<div class="banner red">Could not read responses' + (errs.responses ? ": " + esc(errs.responses) : "") + '.</div>'; $("r_sub").textContent = ""; }
@@ -723,7 +743,8 @@ function renderMore(){
 
 /* ---------- activity ---------- */
 function renderActivity(){
-  var it = (S.core.intake || {}).rows || [], lg = (S.core.log || {}).rows || [], s = S.core.summary;
+  var s = S.core.summary; if(!s) return;
+  var it = (S.core.intake || {}).rows || [], lg = (S.core.log || {}).rows || [];
   var items = [];
   it.forEach(function(r){
     var what = r.kind === "EVAL" ? "Vendor Evaluation submitted" + (r.action ? " (" + r.action + ")" : "") : r.kind === "INVITE" ? "Invited to become a vendor" + (r.raw && r.raw.by ? " by " + r.raw.by : "") + (r.raw && r.raw.fsm ? " for " + r.raw.fsm : "") + (r.action ? " · " + r.action : "") : (r.kind || "intake") + (r.action ? " · " + r.action : "");
