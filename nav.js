@@ -145,6 +145,16 @@ window.CW_NAV = {
    "page": "vendors",
    "items": [
     {
+     "label": "Vendor Profile (everything about one vendor)",
+     "href": "vendor-profile.html",
+     "tag": "Hub"
+    },
+    {
+     "label": "Vendor Email (one place to send)",
+     "href": "https://citywidelv.github.io/cw-ops-desk/vendor-email.html?from=admin",
+     "tag": "Ops Hub"
+    },
+    {
      "sub": "Onboarding",
      "items": [
       {

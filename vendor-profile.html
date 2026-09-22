@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Vendor Profile | CW Admin Hub</title>
+<!-- build 2026-09-22a. One vendor, everything, one page.
+Backend: VendorProfile.gs (kinds vp_index, vp_get) on the CW Solicitations script, read only.
+Every edit goes through the kind that already owns that data, so the same logs and the
+same undo apply: adr_save (directory fields), ob_save / ob_doc / ob_docs / ob_note
+(onboarding), ob_bc_update (background check requests), vd_bc_upsert (people on the
+roster), dne_add / dne_remove / dne_hide (do not email, hide).
+Speed rule: nothing is fetched on load unless the URL names a vendor (?id=V-042). The
+search list loads the first time the search box is focused and is kept in sessionStorage
+for 15 minutes. A vendor loads in two calls: the directory book first (paints at once),
+then the other books (responses, uploads, notices, insurance, profile requests). -->
+<link rel="stylesheet" href="admin.css">
+<link rel="icon" href="https://citywidelv.github.io/cw-ops-desk/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="https://citywidelv.github.io/cw-ops-desk/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://citywidelv.github.io/cw-ops-desk/apple-touch-icon.png">
+<style>
+.topbar{position:relative;z-index:6;margin-top:-46px}
+.topbar .qcard{padding:12px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.topbar .who{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--grey)}
+.topbar .who input{font-size:11.5px;border:1px solid var(--border);border-radius:6px;padding:5px 8px;width:150px}
+.topbar .sp{flex:1}
+.srch{position:relative;flex:1;min-width:260px}
+.srch input{width:100%;font:inherit;font-size:13.5px;border:1.5px solid var(--border);border-radius:9px;padding:10px 12px 10px 36px;min-height:42px}
+.srch svg{position:absolute;left:12px;top:13px;width:16px;height:16px;fill:none;stroke:var(--grey);stroke-width:2}
+.srch .dd{position:absolute;left:0;right:0;top:46px;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-lift);max-height:380px;overflow-y:auto;z-index:20}
+.srch .dd button{display:block;width:100%;text-align:left;border:none;border-bottom:1px solid var(--light);background:none;font:inherit;padding:9px 12px;cursor:pointer;color:var(--black)}
+.srch .dd button:hover,.srch .dd button.on{background:var(--light)}
+.srch .dd button b{display:block;font-size:13px}
+.srch .dd button span{display:block;font-size:11px;color:var(--grey)}
+.srch .dd .none{padding:12px;font-size:12.5px;color:var(--grey)}
+.help{font-size:12.5px;color:var(--grey);line-height:1.5}
+.help b{color:var(--black)}
+.empty{padding:26px;text-align:center;color:var(--grey);font-size:13px}
+.skel{height:12px;border-radius:6px;background:linear-gradient(90deg,#eee 25%,#f7f7f7 50%,#eee 75%);background-size:200% 100%;animation:sk 1.2s infinite;margin:10px 0}
+@keyframes sk{0%{background-position:200% 0}100%{background-position:-200% 0}}
+/* profile head */
+.phead{padding:18px 20px}
+.phead .top{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.phead h2{font-size:22px;line-height:1.25;overflow-wrap:anywhere}
+.phead .legal{font-size:12.5px;color:var(--grey);margin-top:2px}
+.phead .pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.phead .acts{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px 22px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+.facts div{min-width:0}
+.facts label{display:block;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--grey)}
+.facts .v{font-size:13.5px;overflow-wrap:anywhere}
+.facts .v a{color:var(--red);text-decoration:none;font-weight:700}
+.flags{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.flag{font-size:12px;font-weight:700;border-radius:9px;padding:7px 11px;background:var(--light);border:1px solid var(--border);color:var(--grey)}
+.flag.bad{background:var(--red-bg);color:var(--red);border-color:#f3c5c8}
+.flag.warn{background:var(--amber-bg);color:var(--amber);border-color:#f0d9a0}
+.flag.good{background:var(--green-bg);color:var(--green);border-color:#bfe3cf}
+/* jump bar */
+.jump{position:sticky;top:60px;z-index:5;background:var(--light);padding:10px 0 8px;display:flex;gap:6px;flex-wrap:wrap}
+.jump a{font-size:11.5px;font-weight:700;color:var(--black);text-decoration:none;border:1.5px solid var(--border);border-radius:9px;padding:7px 11px;background:#fff;white-space:nowrap;min-height:34px;display:inline-flex;align-items:center;gap:6px}
+.jump a:hover{border-color:var(--red);color:var(--red)}
+.jump a .n{font-size:10px;background:var(--light);border-radius:8px;padding:1px 6px;color:var(--grey)}
+.card{margin-top:16px}
+.card .chead .tools{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.match{font-size:11px;font-weight:700;color:var(--amber);background:var(--amber-bg);border-radius:6px;padding:2px 7px;white-space:nowrap}
+.mini{font-size:11.5px;color:var(--grey)}
+/* details editor (same shapes as records.html) */
+.sec{padding:4px 0 10px}
+.sec h4{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--grey);padding:12px 0 8px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.sec:first-child h4{border-top:none;padding-top:2px}
+.fgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 22px}
+.f{min-width:0}
+.f.wide{grid-column:1/-1}
+.f label{display:block;font-size:11px;font-weight:700;color:var(--grey);margin-bottom:3px;letter-spacing:.02em}
+.f .v{font-size:13.5px;line-height:1.5;overflow-wrap:anywhere;white-space:pre-wrap;min-height:20px}
+.f .v.muted{color:#aaa;font-style:italic;white-space:normal}
+.f .v a{color:var(--red);text-decoration:none;font-weight:700}
+.f .v .yes{color:var(--green);font-weight:700}
+.f .v .no{color:var(--grey)}
+.f input[type=text],.f input[type=email],.f input[type=url],.f input[type=date],.f input[type=datetime-local],.f select,.f textarea{width:100%;font:inherit;font-size:13px;border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;background:#fff;min-height:40px}
+.f textarea{min-height:88px;resize:vertical;line-height:1.5}
+.f.ro input,.f.ro textarea,.f.ro select{background:var(--light);color:var(--grey)}
+.f.dirty label{color:var(--red)}
+.f.dirty input,.f.dirty textarea,.f.dirty select{border-color:var(--red);background:#fff8e6}
+.f .tog{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;cursor:pointer;min-height:40px}
+.f .tog input{width:20px;height:20px;accent-color:var(--red)}
+.rfoot{padding:12px 0 2px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.rfoot .sp{flex:1}
+.banner{background:var(--amber-bg);color:var(--amber);border-radius:9px;padding:9px 12px;font-size:12px;font-weight:700;margin-bottom:10px}
+.banner.red{background:var(--red-bg);color:var(--red)}
+.btn.busy{opacity:.6;pointer-events:none}
+/* onboarding */
+.ctrls{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+.ctrls label{display:block;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--grey);margin-bottom:3px}
+.ctrls select,.ctrls input{width:100%;font:inherit;font-size:13px;border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;min-height:40px;background:#fff}
+.grp{border:1px solid var(--border);border-radius:12px;margin-top:10px;overflow:hidden}
+.grp .gh{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--light);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--grey);flex-wrap:wrap}
+.grp .gh .gc{margin-left:auto;text-transform:none;letter-spacing:0;font-size:11.5px}
+.grp .gh .bulk{border:none;background:none;font:inherit;font-size:11px;font-weight:700;color:var(--red);cursor:pointer;text-transform:none;letter-spacing:0;padding:0;text-decoration:none}
+.item{display:flex;gap:12px;align-items:center;padding:10px 12px;border-top:1px solid var(--light);flex-wrap:wrap}
+.item>div:first-child{flex:1;min-width:220px}
+.item .lb{font-size:13px;font-weight:700}
+.item .lb small{display:block;font-weight:400;font-size:11.5px;color:var(--grey)}
+.item .lb .req{font-size:10px;color:var(--grey);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.item .lb .auto{font-size:10px;color:var(--blue);background:var(--blue-bg);border-radius:6px;padding:1px 6px;margin-left:4px;font-weight:700}
+.item .st{font-size:11.5px;color:var(--grey);margin-top:2px}
+.item .st b{color:var(--black)}
+.item .st .nt{color:var(--amber);font-weight:700}
+.item .st button{border:none;background:none;font:inherit;font-size:11px;color:var(--red);cursor:pointer;padding:0 0 0 6px;font-weight:700}
+.item.done .lb{color:var(--green)}
+.item.busy{opacity:.5;pointer-events:none}
+.res{display:inline-flex;border:1.5px solid var(--border);border-radius:9px;overflow:hidden}
+.res button{border:none;background:#fff;font:inherit;font-size:11.5px;font-weight:700;padding:7px 11px;cursor:pointer;color:var(--grey);border-right:1px solid var(--border);min-height:36px}
+.res button:last-child{border-right:none}
+.res button.on.rec,.res button.on.pend{background:var(--amber);color:#fff}
+.res button.on.ver,.res button.on.pass{background:var(--green);color:#fff}
+.res button.on.fix,.res button.on.fail{background:var(--red);color:#fff}
+.notes textarea{width:100%;font:inherit;font-size:13px;border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;min-height:60px;resize:vertical}
+.nlist{white-space:pre-wrap;font-size:12.5px;line-height:1.55;margin-top:10px;padding:10px 12px;background:var(--light);border-radius:9px;max-height:260px;overflow-y:auto}
+.addrow{display:grid;grid-template-columns:1fr 1fr 150px 130px auto;gap:8px;align-items:end;padding:10px 12px;border-top:1px solid var(--light)}
+.addrow label{display:block;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--grey);margin-bottom:3px}
+.addrow input,.addrow select{width:100%;font:inherit;font-size:12.5px;border:1.5px solid var(--border);border-radius:8px;padding:7px 9px;min-height:38px;background:#fff}
+/* tables */
+.tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.lst{width:100%;border-collapse:collapse;font-size:12.5px}
+table.lst th{text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--grey);padding:8px;border-bottom:2px solid var(--border);white-space:nowrap}
+table.lst td{padding:9px 8px;border-bottom:1px solid var(--light);vertical-align:top;max-width:320px;overflow-wrap:anywhere}
+table.lst td.t{font-weight:700;color:var(--black);white-space:nowrap}
+table.lst td a{color:var(--red);text-decoration:none;font-weight:700}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px 22px}
+.kv div{min-width:0;padding:6px 0;border-bottom:1px solid var(--light)}
+.kv label{display:block;font-size:10.5px;font-weight:700;color:var(--grey);letter-spacing:.04em}
+.kv .v{font-size:13px;overflow-wrap:anywhere;white-space:pre-wrap}
+.kv .v.muted{color:#aaa;font-style:italic}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.box{border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+.box h5{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);margin-bottom:8px}
+.coi{display:flex;gap:10px;flex-wrap:wrap}
+.coi div{flex:1;min-width:120px;border-radius:9px;padding:8px 10px;background:var(--light)}
+.coi div b{display:block;font-size:11px;color:var(--grey);letter-spacing:.06em;text-transform:uppercase}
+.coi div.ok{background:var(--green-bg);color:var(--green)}
+.coi div.soon{background:var(--amber-bg);color:var(--amber)}
+.coi div.expired{background:var(--red-bg);color:var(--red)}
+.act{font-size:12.5px;padding:7px 0;border-bottom:1px solid var(--light)}
+.act .t{font-size:11px;color:var(--grey)}
+.mailbtn{margin-top:6px}
+@media(max-width:900px){.fgrid{grid-template-columns:1fr}.addrow{grid-template-columns:1fr 1fr}.jump{top:56px}.phead .acts{margin-left:0}}
+</style>
+<link rel="stylesheet" href="https://citywidelv.github.io/cw-base.css">
+</head>
+<body>
+<div id="gate" class="gate"></div>
+<div id="app" class="hidden">
+<header class="head" id="adminhead"></header>
+
+<section class="hero slim">
+<div class="bg" style="background-image:url('https://citywidelv.github.io/cw-ops-desk/images/fsm-team.jpg')"></div>
+<div class="wrap">
+<div class="htext">
+<div class="kick">Vendors</div>
+<h1>Vendor Profile</h1>
+<p>Everything about one vendor in one place: their record, evaluation, onboarding checklist, crew background checks, interest letters, uploads, insurance and notices. Change what needs changing here, not on the Sheets.</p>
+</div>
+</div>
+</section>
+
+<div class="wrap topbar">
+<div class="qcard">
+<div class="srch">
+<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+<input type="search" id="q" placeholder="Find a vendor by company, owner, email, phone or vendor number" autocomplete="off" spellcheck="false">
+<div class="dd hidden" id="dd"></div>
+</div>
+<span class="who">Editing as <input id="who" placeholder="Your name"></span>
+<a class="btn sm" href="onboarding.html">Onboarding desk</a>
+</div>
+</div>
+
+<main class="wrap" style="padding-top:6px">
+
+<div id="start" class="card"><div class="cbody">
+<p class="help"><b>Start by finding a vendor above.</b> Type part of the company name, the owner, an email address or the vendor number. Pick one and the whole profile opens.</p>
+<p class="help" style="margin-top:8px">Tip: the Ops Hub vendor lists and the Onboarding desk can link straight here with <b>vendor-profile.html?id=V-042</b>.</p>
+</div></div>
+
+<div id="prof" class="hidden">
+<div class="card" id="pheadcard"><div class="phead" id="phead"></div></div>
+
+<nav class="jump" id="jump"></nav>
+
+<div class="card" id="c_details"><div class="chead"><span class="bar-accent"></span><h3>Details</h3><div class="tools"><span class="mini" id="d_sub"></span><a class="btn sm" id="d_sheet" href="#" target="_blank" rel="noopener">This row in the Sheet</a><button class="btn sm dark" id="d_edit" type="button">Edit</button><button class="btn sm hidden" id="d_cancel" type="button">Cancel</button><button class="btn sm solid hidden" id="d_save" type="button">Save changes</button></div></div>
+<div class="cbody" id="d_body"></div></div>
+
+<div class="card" id="c_onb"><div class="chead"><span class="bar-accent"></span><h3>Onboarding</h3><div class="tools"><span class="mini" id="o_sub"></span></div></div>
+<div class="cbody" id="o_body"></div></div>
+
+<div class="card" id="c_bc"><div class="chead"><span class="bar-accent"></span><h3>Crew background checks</h3><div class="tools"><span class="mini" id="b_sub"></span></div></div>
+<div class="cbody" id="b_body"></div></div>
+
+<div class="card" id="c_eval"><div class="chead"><span class="bar-accent"></span><h3>Vendor Evaluation</h3><div class="tools"><span class="mini" id="e_sub"></span></div></div>
+<div class="cbody" id="e_body"></div></div>
+
+<div class="card" id="c_resp"><div class="chead"><span class="bar-accent"></span><h3>Interest letters and quotes</h3><div class="tools"><span class="mini" id="r_sub"></span></div></div>
+<div class="cbody" id="r_body"><div class="skel" style="width:60%"></div><div class="skel" style="width:40%"></div></div></div>
+
+<div class="card" id="c_comp"><div class="chead"><span class="bar-accent"></span><h3>Compliance</h3><div class="tools"><span class="mini" id="k_sub"></span></div></div>
+<div class="cbody" id="k_body"></div></div>
+
+<div class="card" id="c_notices"><div class="chead"><span class="bar-accent"></span><h3>Violation notices</h3><div class="tools"><span class="mini" id="n_sub"></span><a class="btn sm" id="n_new" href="#" target="_blank" rel="noopener">Issue a notice</a></div></div>
+<div class="cbody" id="n_body"><div class="skel" style="width:50%"></div></div></div>
+
+<div class="card" id="c_act"><div class="chead"><span class="bar-accent"></span><h3>Activity</h3><div class="tools"><span class="mini" id="a_sub"></span></div></div>
+<div class="cbody" id="a_body"></div></div>
+</div>
+
+</main>
+<footer class="foot"><div class="fin">
+<b>City Wide Facility Solutions</b> &middot; Admin Hub &middot; Internal use only &middot; Something missing? Tell TJ. &middot; <a href="https://www.gocitywide.com" target="_blank" rel="noopener">GoCityWide.com</a>
+<span class="fr">Las Vegas<span>&bull;</span>Reno</span>
+</div></footer>
+</div><!-- /app -->
+
+<script src="https://citywidelv.github.io/cw-ops-desk/cw-auth.js"></script>
+<script src="nav.js"></script>
+<script src="https://citywidelv.github.io/cw-ops-desk/cw-nav.js"></script>
+<script src="admin-shared.js"></script>
+<script>
+(function(){
+"use strict";
+var esc = ADMIN.esc, toast = ADMIN.toast, OPS = ADMIN.OPS, VS = ADMIN.VS;
+function $(id){ return document.getElementById(id); }
+var IDX_KEY = "vp:index", IDX_TTL = 15 * 60 * 1000;
+var S = { vid:"", core:null, more:null, idx:null, editing:false, busy:false, ddi:-1, hits:[] };
+
+function who(){ return ($("who").value || ADMIN.who() || "").trim() || "unknown"; }
+function needWho(){ if(!who() || who() === "unknown"){ toast("Type your name in Editing as first, so the log knows who.", "err"); $("who").focus(); return false; } return true; }
+function post(payload){ payload.who = who(); if(!payload.by) payload.by = payload.who; return ADMIN.api(payload); }
+function param(n){ var m = new RegExp("[?&]" + n + "=([^&]*)").exec(location.search); return m ? decodeURIComponent(m[1].replace(/\+/g, " ")) : ""; }
+function setUrl(){ try{ history.replaceState(null, "", "vendor-profile.html" + (S.vid ? "?id=" + encodeURIComponent(S.vid) : "")); }catch(e){} }
+function niceDate(s){
+  s = String(s == null ? "" : s);
+  var m = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/.exec(s); if(!m) return s;
+  var out = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][Number(m[2]) - 1] + " " + Number(m[3]) + ", " + m[1];
+  if(m[4]){ var h = Number(m[4]), ap = h >= 12 ? "pm" : "am"; h = h % 12 || 12; out += " " + h + ":" + m[5] + " " + ap; }
+  return out;
+}
+function today(){ var d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+function money(s){ var n = Number(String(s).replace(/[$,\s]/g, "")); return isNaN(n) || s === "" ? esc(s) : "$" + n.toLocaleString("en-US", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }); }
+function matchTag(how){ return how && how !== "id" ? ' <span class="match" title="Tied to this vendor by ' + esc(how === "vendor_no" ? "vendor number" : how) + ', not by vendor id. Check it is the right company.">matched by ' + esc(how === "vendor_no" ? "vendor number" : how) + '</span>' : ""; }
+function links(s){ return esc(s).replace(/(https?:\/\/[^\s<]+)/g, function(u){ return '<a href="' + u + '" target="_blank" rel="noopener">Open</a>'; }); }
+function pill(text, cls){ return '<span class="pill ' + cls + '">' + esc(text) + '</span>'; }
+
+/* ---------- search ---------- */
+function loadIndex(force){
+  if(S.idx && !force) return Promise.resolve(S.idx);
+  try{ var c = JSON.parse(sessionStorage.getItem(IDX_KEY) || "null"); if(c && !force && Date.now() - c.t < IDX_TTL){ S.idx = c.v; return Promise.resolve(S.idx); } }catch(e){}
+  $("dd").innerHTML = '<div class="none">Loading the vendor list&hellip;</div>'; $("dd").classList.remove("hidden");
+  return post({ kind:"vp_index" }).then(function(r){
+    if(!r || r.ok === false) throw new Error((r && r.error) || "Could not load the vendor list.");
+    S.idx = r.vendors || [];
+    try{ sessionStorage.setItem(IDX_KEY, JSON.stringify({ t:Date.now(), v:S.idx })); }catch(e){}
+    return S.idx;
+  });
+}
+function norm(s){ return String(s || "").toLowerCase().replace(/[^a-z0-9@.]+/g, " ").trim(); }
+function search(q){
+  q = norm(q); if(!q){ $("dd").classList.add("hidden"); return; }
+  var words = q.split(" ");
+  var hits = S.idx.filter(function(v){
+    var hay = norm(v.dba_name + " " + v.legal_name + " " + v.contact_name + " " + v.email + " " + v.phone + " " + v.vendor_id + " " + v.bc_vendor_no + " " + v.city_state);
+    return words.every(function(w){ return hay.indexOf(w) >= 0; });
+  });
+  hits.sort(function(a, b){ var x = norm(a.dba_name).indexOf(words[0]) === 0 ? 0 : 1, y = norm(b.dba_name).indexOf(words[0]) === 0 ? 0 : 1; return x - y || (a.dba_name < b.dba_name ? -1 : 1); });
+  S.hits = hits.slice(0, 14); S.ddi = -1;
+  $("dd").innerHTML = S.hits.length ? S.hits.map(function(v, i){
+    return '<button type="button" data-i="' + i + '"><b>' + esc(v.dba_name) + (v.hide ? ' <span class="pill grey">hidden</span>' : "") + '</b><span>' + esc([v.vendor_id, v.status, v.region, v.contact_name, v.email].filter(Boolean).join(" · ")) + '</span></button>';
+  }).join("") + (hits.length > 14 ? '<div class="none">' + (hits.length - 14) + ' more. Keep typing to narrow it.</div>' : "") : '<div class="none">No vendor matches that. Add them on the <a href="' + OPS + 'vendor-add.html">Ops Hub</a> first.</div>';
+  $("dd").classList.remove("hidden");
+}
+$("q").addEventListener("focus", function(){ loadIndex().then(function(){ if($("q").value) search($("q").value); }).catch(function(e){ $("dd").innerHTML = '<div class="none">' + esc(e.message) + '</div>'; }); });
+$("q").addEventListener("input", function(){ if(S.idx) search(this.value); });
+$("q").addEventListener("keydown", function(e){
+  var bs = $("dd").querySelectorAll("button[data-i]"); if(!bs.length) return;
+  if(e.key === "ArrowDown"){ S.ddi = Math.min(bs.length - 1, S.ddi + 1); } else if(e.key === "ArrowUp"){ S.ddi = Math.max(0, S.ddi - 1); } else if(e.key === "Enter"){ e.preventDefault(); var b = bs[S.ddi >= 0 ? S.ddi : 0]; if(b) b.click(); return; } else if(e.key === "Escape"){ $("dd").classList.add("hidden"); return; } else return;
+  e.preventDefault(); bs.forEach(function(x, i){ x.classList.toggle("on", i === S.ddi); });
+});
+$("dd").addEventListener("mousedown", function(e){ var b = e.target.closest("button[data-i]"); if(!b) return; e.preventDefault(); var v = S.hits[Number(b.getAttribute("data-i"))]; if(v){ $("q").value = ""; $("dd").classList.add("hidden"); open(v.vendor_id); } });
+document.addEventListener("click", function(e){ if(!e.target.closest(".srch")) $("dd").classList.add("hidden"); });
+
+/* ---------- load ---------- */
+function open(vid){
+  if(S.editing && !confirm("You have unsaved changes on Details. Leave without saving?")) return;
+  S.vid = vid; S.core = null; S.more = null; S.editing = false; setUrl();
+  $("start").classList.add("hidden"); $("prof").classList.remove("hidden");
+  $("phead").innerHTML = '<div class="skel" style="width:40%"></div><div class="skel" style="width:70%"></div>';
+  ["d_body","o_body","b_body","e_body","k_body","a_body"].forEach(function(id){ $(id).innerHTML = '<div class="skel" style="width:60%"></div><div class="skel" style="width:35%"></div>'; });
+  $("r_body").innerHTML = '<div class="skel" style="width:60%"></div>'; $("n_body").innerHTML = '<div class="skel" style="width:50%"></div>';
+  $("jump").innerHTML = "";
+  window.scrollTo({ top: 0 });
+  post({ kind:"vp_get", vendor_id:vid, part:"core" }).then(function(r){
+    if(vid !== S.vid) return;
+    if(!r || r.ok === false){ $("phead").innerHTML = '<div class="banner red">' + esc((r && r.error) || "Could not load this vendor.") + '</div>'; return; }
+    S.core = r; renderCore();
+    return post({ kind:"vp_get", vendor_id:vid, part:"more" }).then(function(m){ if(vid !== S.vid) return; S.more = (m && m.ok !== false) ? m : { errors:{ all:(m && m.error) || "Could not load the other books." } }; renderMore(); });
+  }).catch(function(){ if(vid === S.vid) $("phead").innerHTML = '<div class="banner red">Could not reach the script. Try again.</div>'; });
+}
+function reloadCore(){ var vid = S.vid; return post({ kind:"vp_get", vendor_id:vid, part:"core" }).then(function(r){ if(vid !== S.vid) return; if(r && r.ok !== false){ S.core = r; renderCore(); } }); }
+
+/* ---------- head ---------- */
+function renderCore(){
+  var c = S.core, s = c.summary || {}, errs = c.errors || {};
+  var h = '<div class="top"><div><h2>' + esc(s.dba_name) + '</h2>' + (s.legal_name && s.legal_name !== s.dba_name ? '<div class="legal">' + esc(s.legal_name) + '</div>' : "") +
+    '<div class="pills">' + pill(s.status || "No status", s.live ? "pass" : s.prospect ? "grey" : "pend") + pill(s.region, s.market === "nnv" ? "nnv" : "lv") + (s.both ? pill("Both markets", "lv") : "") + pill(s.vendor_id, "std") + (s.ic_type ? pill(s.ic_type, "grey") : "") +
+    (s.types || []).map(function(t){ return pill(t.name, t.slug === "janitorial" ? "todo" : "grey"); }).join("") + '</div></div>' +
+    '<div class="acts"><a class="btn sm solid" href="' + OPS + 'vendor-email.html?vendor=' + encodeURIComponent(s.vendor_id) + '">Email this vendor</a><a class="btn sm" href="onboarding.html" target="_blank" rel="noopener">Onboarding desk</a></div></div>';
+  h += '<div class="facts">' +
+    fact("Owner / contact", s.contact_name) + fact("Email", s.email ? '<a href="mailto:' + esc(s.email) + '">' + esc(s.email) + '</a>' : "", true) +
+    fact("Phone", s.phone ? '<a href="tel:' + esc(s.phone) + '">' + esc(s.phone) + '</a>' : "", true) + fact("Vendor number", s.bc_vendor_no) +
+    fact("Started with City Wide", s.cw_start_date ? niceDate(s.cw_start_date) : "") + fact("City", s.city_state) +
+    fact("Source", s.source) + fact("Last updated", s.updated ? niceDate(s.updated) : "") + '</div>';
+  var flags = [];
+  if(s.dne) flags.push('<span class="flag bad">On the do not email list</span>');
+  if(s.hide) flags.push('<span class="flag warn">Hidden from pickers</span>');
+  if(s.invited) flags.push('<span class="flag warn">Invited, evaluation not in yet</span>');
+  if(s.audit_result) flags.push('<span class="flag ' + (/pass/i.test(s.audit_result) ? "good" : "bad") + '">Last audit ' + esc(s.audit_result) + (s.last_audit ? " " + esc(niceDate(s.last_audit)) : "") + (s.audit_next_due ? ", next due " + esc(niceDate(s.audit_next_due)) : "") + '</span>');
+  if(s.dne_error) flags.push('<span class="flag warn">Could not read the do not email list</span>');
+  if(flags.length) h += '<div class="flags">' + flags.join("") + '</div>';
+  $("phead").innerHTML = h;
+  document.title = s.dba_name + " | Vendor Profile";
+  var jumps = [["c_details","Details"],["c_onb","Onboarding"],["c_bc","Background checks"],["c_eval","Evaluation"],["c_resp","Interest letters"],["c_comp","Compliance"],["c_notices","Notices"],["c_act","Activity"]];
+  $("jump").innerHTML = jumps.map(function(j){ return '<a href="#' + j[0] + '" data-j="' + j[0] + '">' + j[1] + '<span class="n hidden"></span></a>'; }).join("");
+  renderDetails(); renderOnboarding(); renderCrew(); renderEval(); renderCompliance(); renderActivity();
+  Object.keys(errs).forEach(function(k){ toast("Could not load " + k + ": " + errs[k], "err"); });
+}
+function fact(label, v, raw){ return '<div><label>' + esc(label) + '</label><div class="v">' + (v ? (raw ? v : esc(v)) : '<span style="color:#aaa">none</span>') + '</div></div>'; }
+function count(id, n){ var el = $("jump").querySelector('[data-j="' + id + '"] .n'); if(!el) return; if(n){ el.textContent = n; el.classList.remove("hidden"); } else el.classList.add("hidden"); }
+
+/* ---------- details (adr_save) ---------- */
+function rec(){ return S.core.record; }
+function fieldHtml(f, v, editing){
+  var wide = f.type === "long" || (v && String(v).length > 70);
+  var cls = "f" + (wide ? " wide" : "") + (f.readonly ? " ro" : "");
+  var lab = '<label>' + esc(f.label) + '</label>';
+  if(!editing || f.readonly) return '<div class="' + cls + '" data-f="' + esc(f.name) + '">' + lab + '<div class="v">' + viewValue(f, v) + '</div></div>';
+  return '<div class="' + cls + '" data-f="' + esc(f.name) + '">' + lab + inputHtml(f, v) + '</div>';
+}
+function viewValue(f, v){
+  var s = v == null ? "" : String(v);
+  if(s === "") return '<span class="muted">none</span>';
+  if(f.type === "bool") return s === "TRUE" ? '<span class="yes">Yes</span>' : '<span class="no">No</span>';
+  if(f.type === "date" || f.type === "datetime") return esc(niceDate(s));
+  if(f.type === "email") return '<a href="mailto:' + esc(s) + '">' + esc(s) + '</a>';
+  if(f.type === "url") return '<a href="' + esc(s) + '" target="_blank" rel="noopener">Open</a> <span style="color:var(--grey);font-size:11px">' + esc(s.length > 60 ? s.slice(0, 58) + "..." : s) + '</span>';
+  if(f.type === "number" && /amount|total|price|revenue/i.test(f.name)) return money(s);
+  return esc(s);
+}
+function inputHtml(f, v){
+  var s = v == null ? "" : String(v), n = 'name="' + esc(f.name) + '"';
+  if(f.type === "bool") return '<label class="tog"><input type="checkbox" ' + n + (s === "TRUE" ? " checked" : "") + '> ' + (s === "TRUE" ? "Yes" : "No") + '</label>';
+  if(f.type === "select"){ var opts = (f.options || []).slice(); if(s !== "" && opts.indexOf(s) < 0) opts.unshift(s); if(opts.indexOf("") < 0) opts.unshift(""); return '<select ' + n + '>' + opts.map(function(o){ return '<option value="' + esc(o) + '"' + (o === s ? " selected" : "") + '>' + esc(o === "" ? "(blank)" : o) + '</option>'; }).join("") + '</select>'; }
+  if(f.type === "long") return '<textarea ' + n + '>' + esc(s) + '</textarea>';
+  if(f.type === "date") return '<input type="date" ' + n + ' value="' + esc(s.slice(0, 10)) + '">';
+  if(f.type === "datetime"){ var dv = s ? s.slice(0, 10) + "T" + (s.length > 10 ? s.slice(11, 16) : "00:00") : ""; return '<input type="datetime-local" ' + n + ' value="' + esc(dv) + '">'; }
+  if(f.type === "email") return '<input type="email" ' + n + ' value="' + esc(s) + '">';
+  if(f.type === "url") return '<input type="url" ' + n + ' value="' + esc(s) + '">';
+  if(f.type === "number") return '<input type="text" inputmode="decimal" ' + n + ' value="' + esc(s) + '">';
+  return '<input type="text" ' + n + ' value="' + esc(s) + '">';
+}
+function renderDetails(){
+  var r = rec();
+  if(!r){ $("d_body").innerHTML = '<div class="banner red">The directory row could not be read.</div>'; return; }
+  $("d_sub").textContent = (r.tab || "") + ", row " + r.row;
+  $("d_sheet").href = r.url || "#";
+  var editing = S.editing, h = "";
+  if(editing) h += '<div class="banner">Only the fields you change are written. If someone changed a field on the Sheet since you opened this, that field is skipped and you are told. Every change is logged and can be undone from the <a href="records.html?s=' + esc(r.surface) + '">Ops Admin Desk</a>.</div>';
+  var secs = [], bySec = {};
+  r.fields.forEach(function(x){ var sname = x.section || "Details"; if(!bySec[sname]){ bySec[sname] = []; secs.push(sname); } bySec[sname].push(x); });
+  secs.forEach(function(sname){
+    var list = bySec[sname];
+    if(sname === "More" && !editing && !list.some(function(x){ return r.rec[x.name] != null && String(r.rec[x.name]) !== ""; })) return;
+    h += '<div class="sec"><h4><span class="bar-accent"></span>' + esc(sname) + '</h4><div class="fgrid">';
+    list.forEach(function(x){ h += fieldHtml(x, r.rec[x.name], editing); });
+    h += '</div></div>';
+  });
+  h += '<div class="rfoot"><span class="mini">' + (editing ? "Save writes to the Vendor Directory Sheet." : "Read only until you press Edit.") + '</span><span class="sp"></span>' + (editing ? '<button class="btn sm" type="button" data-act="cancel">Cancel</button> <button class="btn sm solid" type="button" data-act="save">Save changes</button>' : '<button class="btn sm dark" type="button" data-act="edit">Edit</button>') + '</div>';
+  $("d_body").innerHTML = h;
+  $("d_edit").classList.toggle("hidden", editing); $("d_cancel").classList.toggle("hidden", !editing); $("d_save").classList.toggle("hidden", !editing);
+  if(editing){ var first = $("d_body").querySelector("input:not([type=checkbox]),textarea,select"); if(first) first.focus(); }
+}
+$("d_body").addEventListener("input", markDirty); $("d_body").addEventListener("change", markDirty);
+function markDirty(e){
+  if(!S.editing) return;
+  var el = e.target, wrap = el.closest(".f"); if(!wrap) return;
+  if(el.value === "") el.dataset.cleared = "1"; else delete el.dataset.cleared;
+  var f = fieldByName(wrap.getAttribute("data-f")); if(!f) return;
+  var cur = readInput(el, f), was = rec().rec[f.name] == null ? "" : String(rec().rec[f.name]);
+  wrap.classList.toggle("dirty", cur !== was);
+  if(f.type === "bool"){ var lab = el.closest(".tog"); if(lab) lab.lastChild.textContent = " " + (el.checked ? "Yes" : "No"); }
+}
+function fieldByName(n){ var fs = rec().fields; for(var i = 0; i < fs.length; i++) if(fs[i].name === n) return fs[i]; return null; }
+function readInput(el, f){ if(f.type === "bool") return el.checked ? "TRUE" : "FALSE"; var v = el.value; if(f.type === "datetime") return v ? v.replace("T", " ").slice(0, 16) : ""; if(f.type === "date") return v ? v.slice(0, 10) : ""; return v; }
+function collect(){
+  var changes = {}, n = 0, r = rec();
+  r.fields.forEach(function(f){
+    if(f.readonly) return;
+    var el = $("d_body").querySelector('[name="' + f.name.replace(/"/g, '\\"') + '"]'); if(!el) return;
+    var v = readInput(el, f), was = r.rec[f.name] == null ? "" : String(r.rec[f.name]);
+    if(v === "" && was !== "" && /^(date|datetime|number)$/.test(f.type) && !el.dataset.cleared) return;
+    if(v !== was){ changes[f.name] = { old: was, "new": v }; n++; }
+  });
+  return { changes: changes, n: n };
+}
+function startEdit(){ if(!rec() || !needWho()) return; S.editing = true; renderDetails(); }
+function cancelEdit(){ S.editing = false; renderDetails(); }
+function saveDetails(){
+  if(S.busy) return;
+  var c = collect(), r = rec();
+  if(!c.n){ toast("Nothing changed."); S.editing = false; renderDetails(); return; }
+  S.busy = true; $("d_save").classList.add("busy");
+  post({ kind:"adr_save", surface:r.surface, row:r.row, id:r.id, changes:c.changes }).then(function(x){
+    S.busy = false; $("d_save").classList.remove("busy");
+    if(!x || x.ok === false){ toast((x && x.error) || "Save failed.", "err"); if(x && x.stale) reloadCore(); return; }
+    (x.written || []).forEach(function(col){ r.rec[col] = c.changes[col]["new"]; });
+    var msg = "Saved " + (x.written || []).length + " field" + ((x.written || []).length === 1 ? "" : "s") + ".";
+    if(x.stale && x.stale.length) msg += " Skipped (changed on the Sheet since you opened it): " + x.stale.join(", ") + ".";
+    if(x.skipped && x.skipped.length) msg += " Not written: " + x.skipped.join(", ") + ".";
+    toast(msg, x.stale && x.stale.length ? "err" : "ok");
+    S.editing = false;
+    try{ sessionStorage.removeItem(IDX_KEY); S.idx = null; }catch(e){}
+    reloadCore();
+  }).catch(function(){ S.busy = false; $("d_save").classList.remove("busy"); toast("Could not reach the script. Nothing was saved.", "err"); });
+}
+$("d_body").addEventListener("click", function(e){ var b = e.target.closest("button[data-act]"); if(!b) return; var a = b.getAttribute("data-act"); if(a === "edit") startEdit(); else if(a === "cancel") cancelEdit(); else if(a === "save") saveDetails(); });
+$("d_edit").addEventListener("click", startEdit); $("d_cancel").addEventListener("click", cancelEdit); $("d_save").addEventListener("click", saveDetails);
+
+/* ---------- onboarding (ob_*) ---------- */
+function docLabel(s){ return s === "fix" ? "Needs a fix" : s === "received" ? "Received" : s === "verified" ? "Verified" : ""; }
+function stateBtns(key, d){ var s = d.s || ""; return '<div class="res" data-key="' + esc(key) + '"><button class="rec' + (s === "received" ? " on" : "") + '" data-s="received" title="It came in">Received</button><button class="ver' + (s === "verified" ? " on" : "") + '" data-s="verified" title="Checked and correct">Verified</button><button class="fix' + (s === "fix" ? " on" : "") + '" data-s="fix" title="Came in wrong, needs a correction">Fix</button></div>'; }
+function itemsFor(o){ return (S.core.onboarding.checklist || []).filter(function(c){ return c.track === "Both" || c.track === o.track; }); }
+function calcOb(o){ var items = itemsFor(o), req = items.filter(function(i){ return i.required; }), ver = req.filter(function(i){ return (o.docs[i.key] || {}).s === "verified"; }).length, left = req.filter(function(i){ return (o.docs[i.key] || {}).s !== "verified"; }); return { req:req.length, ver:ver, left:left }; }
+function renderOnboarding(){
+  var ob = S.core.onboarding, s = S.core.summary, h = "";
+  if(!ob){ $("o_body").innerHTML = '<div class="banner red">Onboarding could not be read.</div>'; return; }
+  var rows = ob.rows || [];
+  $("o_sub").textContent = rows.length ? rows.map(function(o){ return (o.track === "JS" ? "Janitorial" : "Other services") + ": " + o.stage; }).join(" · ") : "not started";
+  count("c_onb", rows.length ? rows.reduce(function(n, o){ return n + calcOb(o).left.length; }, 0) : 0);
+  if(!rows.length){
+    h += '<p class="help">No onboarding record yet. Starting one puts this vendor on the <a href="onboarding.html">Onboarding desk</a> with the checklist for their track.</p>' +
+      '<div class="ctrls" style="margin-top:10px;max-width:520px"><div><label>Track</label><select id="ob_track"><option value="JS"' + (s.janitorial ? " selected" : "") + '>Janitorial (JS)</option><option value="OS"' + (!s.janitorial ? " selected" : "") + '>Other services (OS)</option></select></div><div><label>Stage</label><select id="ob_stage">' + (ob.stages || []).filter(function(x){ return x !== "Invited"; }).map(function(x){ return '<option' + (x === "New" ? " selected" : "") + '>' + esc(x) + '</option>'; }).join("") + '</select></div><div><label>&nbsp;</label><button class="btn sm solid" type="button" id="ob_start" style="min-height:40px">Start onboarding</button></div></div>';
+  }
+  rows.forEach(function(o){
+    var c = calcOb(o), groups = [];
+    itemsFor(o).forEach(function(it){ var g = groups.filter(function(x){ return x.name === it.group; })[0]; if(!g){ g = { name: it.group, items: [] }; groups.push(g); } g.items.push(it); });
+    h += '<div class="obrec" data-ob="' + esc(o.ob_id) + '">';
+    if(rows.length > 1) h += '<h4 style="font-size:12px;margin:14px 0 8px">' + (o.track === "JS" ? "Janitorial track" : "Other services track") + ' <span class="mini">' + esc(o.ob_id) + '</span></h4>';
+    h += '<div class="ctrls">' +
+      '<div><label>Stage</label><select data-f="stage">' + (ob.stages || []).filter(function(x){ return x !== "Invited"; }).map(function(x){ return '<option' + (x === o.stage ? " selected" : "") + '>' + esc(x) + '</option>'; }).join("") + '</select></div>' +
+      '<div><label>Track</label><select data-f="track"><option value="JS"' + (o.track === "JS" ? " selected" : "") + '>Janitorial (JS)</option><option value="OS"' + (o.track === "OS" ? " selected" : "") + '>Other services (OS)</option></select></div>' +
+      '<div><label>Assigned to</label><input data-f="assignee" value="' + esc(o.assignee || "") + '" placeholder="Name"></div>' +
+      '<div><label>Priority</label><select data-f="priority"><option value="">None</option>' + ["High","Medium","Low"].map(function(p){ return '<option' + (p === o.priority ? " selected" : "") + '>' + p + '</option>'; }).join("") + '</select></div>' +
+      '<div><label>Progress</label><div style="font-size:13px;font-weight:700;min-height:40px;display:flex;align-items:center">' + (c.left.length ? c.ver + " of " + c.req + " verified, " + c.left.length + " left" : '<span style="color:var(--green)">Ready: everything verified</span>') + '</div></div></div>';
+    groups.forEach(function(g){
+      var done = g.items.filter(function(it){ return (o.docs[it.key] || {}).s === "verified"; }).length, isPacket = /packet/i.test(g.name);
+      h += '<div class="grp"><div class="gh"><span>' + esc(g.name) + '</span><span class="gc">' + done + ' of ' + g.items.length + '</span>' + (isPacket ? '<button class="bulk" data-bulk="received">Mark the whole packet received</button><button class="bulk" data-bulk="verified" style="margin-left:10px">Verify all</button>' : "") + '</div>';
+      g.items.forEach(function(it){
+        var d = o.docs[it.key] || {};
+        h += '<div class="item' + (d.s === "verified" ? " done" : "") + '" data-key="' + esc(it.key) + '"><div><div class="lb">' + esc(it.label) + (it.required ? "" : ' <span class="req">optional</span>') + (it.auto ? ' <span class="auto" title="Fills itself from the Vendor Hub">auto</span>' : "") + '</div>' +
+          '<div class="st">' + (d.s ? '<b>' + esc(docLabel(d.s)) + '</b> ' + esc(d.d || "") + (d.by ? " by " + esc(d.by) : "") : '<span>Not in yet</span>') + (d.n ? ' <span class="nt">' + esc(d.n) + '</span>' : "") + (it.hint && !d.s ? ' <span>' + esc(it.hint) + '</span>' : "") + '<button data-note="' + esc(it.key) + '">' + (d.n ? "edit note" : "note") + '</button></div></div>' + stateBtns(it.key, d) + '</div>';
+      });
+      h += '</div>';
+    });
+    h += '<div class="notes" style="margin-top:12px"><h5 style="font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);margin:0 0 6px">Onboarding notes</h5><textarea data-note-for="' + esc(o.ob_id) + '" placeholder="W-9 needs the legal name corrected, COI names the wrong entity, called and left a message..."></textarea><div style="display:flex;gap:8px;align-items:center;margin-top:6px"><button class="btn sm solid" type="button" data-noteadd="' + esc(o.ob_id) + '">Add note</button><span class="mini">Newest first. Notes also live on the Onboarding tab.</span></div>' +
+      '<div class="nlist">' + (o.notes ? esc(o.notes) : '<span class="mini">No notes yet.</span>') + '</div></div>';
+    h += '</div>';
+  });
+  (ob.unmatched || []).forEach(function(u){
+    h += '<div class="banner" style="margin-top:12px">An onboarding record for <b>' + esc(u.vendor) + '</b> (' + esc(u.track) + ', ' + esc(u.stage) + ') is not tied to any vendor id but the name matches. <button class="btn sm" type="button" data-attach="' + esc(u.ob_id) + '" style="margin-left:8px">Attach it to this vendor</button></div>';
+  });
+  $("o_body").innerHTML = h;
+}
+$("o_body").addEventListener("change", function(e){
+  var el = e.target.closest("[data-f]"); if(!el) return;
+  var ob = el.closest(".obrec"); if(!ob || !needWho()) return;
+  var obId = ob.getAttribute("data-ob"), f = el.getAttribute("data-f"), v = el.value.trim();
+  var p = { kind:"ob_save", ob_id:obId }; p[f] = v;
+  post(p).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Save failed"); toast((f === "stage" ? "Stage: " + v : f === "track" ? "Track changed" : f === "assignee" ? "Assigned" : "Priority saved"), "ok"); return reloadCore(); })
+    .catch(function(err){ toast("Not saved: " + err.message, "err"); });
+});
+$("o_body").addEventListener("click", function(e){
+  var b = e.target.closest("button"); if(!b) return;
+  if(b.id === "ob_start"){
+    if(!needWho()) return; b.classList.add("busy");
+    post({ kind:"ob_save", vendor_id:S.vid, track:$("ob_track").value, stage:$("ob_stage").value }).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Could not start"); toast("Onboarding started", "ok"); return reloadCore(); }).catch(function(err){ b.classList.remove("busy"); toast(err.message, "err"); });
+    return;
+  }
+  if(b.dataset.attach){
+    if(!needWho()) return; b.classList.add("busy");
+    post({ kind:"ob_save", ob_id:b.dataset.attach, vendor_id:S.vid }).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Could not attach"); toast("Attached", "ok"); return reloadCore(); }).catch(function(err){ b.classList.remove("busy"); toast(err.message, "err"); });
+    return;
+  }
+  var ob = b.closest(".obrec"); if(!ob) return;
+  var obId = ob.getAttribute("data-ob"), o = S.core.onboarding.rows.filter(function(x){ return x.ob_id === obId; })[0]; if(!o) return;
+  function setDoc(items, label){
+    if(!needWho()) return;
+    items.forEach(function(i){ var el = ob.querySelector('.item[data-key="' + i.key + '"]'); if(el) el.classList.add("busy"); });
+    var payload = items.length === 1 ? { kind:"ob_doc", ob_id:obId, key:items[0].key, state:items[0].state, note:items[0].note } : { kind:"ob_docs", ob_id:obId, items:items };
+    post(payload).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Save failed"); o.docs = r.docs; toast(label || "Saved", "ok"); renderOnboarding(); }).catch(function(err){ toast("Not saved: " + err.message, "err"); renderOnboarding(); });
+  }
+  if(b.dataset.s){
+    var key = b.closest(".res").dataset.key, cur = (o.docs[key] || {}).s || "", next = cur === b.dataset.s ? "" : b.dataset.s, note;
+    if(next === "fix"){ note = prompt("What needs fixing?", (o.docs[key] || {}).n || ""); if(note === null) return; }
+    setDoc([{ key:key, state:next, note:note }], next ? (next === "fix" ? "Marked: needs a fix" : next === "verified" ? "Verified" : "Received") : "Cleared");
+    return;
+  }
+  if(b.dataset.note){
+    var k2 = b.dataset.note, d2 = o.docs[k2] || {}, n2 = prompt("Note for this item", d2.n || ""); if(n2 === null) return;
+    setDoc([{ key:k2, state:d2.s || "", note:n2 }], "Note saved"); return;
+  }
+  if(b.dataset.bulk){
+    var st = b.dataset.bulk, items = [];
+    itemsFor(o).filter(function(it){ return /packet/i.test(it.group); }).forEach(function(it){ var d = o.docs[it.key] || {}; if(st === "received" && !d.s) items.push({ key:it.key, state:"received" }); if(st === "verified" && d.s !== "verified") items.push({ key:it.key, state:"verified" }); });
+    if(!items.length){ toast("Nothing to change in the packet", "ok"); return; }
+    if(st === "verified" && !confirm("Mark every packet item Verified? Only do this after you have read the signed packet in PandaDoc.")) return;
+    setDoc(items, st === "received" ? "Packet marked received" : "Packet verified"); return;
+  }
+  if(b.dataset.noteadd){
+    if(!needWho()) return;
+    var ta = ob.querySelector('[data-note-for="' + obId + '"]'), t = ta.value.trim(); if(!t){ toast("Type the note first", "err"); return; }
+    b.classList.add("busy");
+    post({ kind:"ob_note", ob_id:obId, note:t }).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Not saved"); o.notes = r.notes; toast("Note added", "ok"); renderOnboarding(); }).catch(function(err){ b.classList.remove("busy"); toast("Not saved: " + err.message, "err"); });
+  }
+});
+
+/* ---------- crew background checks (vd_bc_upsert, ob_bc_update) ---------- */
+function renderCrew(){
+  var c = S.core.crew || { rows:[] }, rq = (S.core.requests || { rows:[] }).rows, s = S.core.summary, ob = S.core.onboarding || {};
+  var crew = c.rows || [];
+  var clear = crew.filter(function(p){ return p.result === "Clear"; }).length, pend = crew.filter(function(p){ return p.result === "Pending" || !p.result; }).length, nc = crew.filter(function(p){ return p.result === "Not clear"; }).length;
+  $("b_sub").textContent = crew.length ? clear + " cleared · " + pend + " pending · " + nc + " not clear" : "no one on the roster";
+  count("c_bc", pend);
+  function reqFor(p){ return rq.filter(function(r){ return !r.dupe_of && (r.first_name || "").toLowerCase() === (p.first_name || "").toLowerCase() && (r.last_name || "").toLowerCase() === (p.last_name || "").toLowerCase(); })[0]; }
+  var h = '<p class="help">Every person working in a client building must be on this list with a result. <b>Clear</b> and <b>Not clear</b> are the only results that go anywhere. Never record a reason here. The vendor adds people on the <a href="' + VS + 'background-check.html" target="_blank" rel="noopener">Vendor Hub background check page</a>; you can also add someone below.</p>';
+  h += '<div class="grp"><div class="gh"><span>People</span><span class="gc">' + crew.length + ' on the roster</span></div>';
+  if(!crew.length) h += '<div class="item"><div class="lb" style="color:var(--grey)">No one yet.</div></div>';
+  crew.forEach(function(p){
+    var r = reqFor(p), rk = p.result || "";
+    h += '<div class="item" data-crew="' + esc(p.market + ":" + p.row) + '"><div><div class="lb">' + esc(p.first_name) + ' ' + esc(p.last_name) + (/10-Year/.test(p.check_type) ? ' <span class="pill ten">10-Yr</span>' : "") + (p.source === "Vendor submitted" ? ' <span class="pill pend">vendor ran it</span>' : "") + matchTag(p._how) + (r && r.report_link ? ' <a href="' + esc(r.report_link) + '" target="_blank" rel="noopener" style="font-size:11px;color:var(--red)">Open the report</a>' : "") +
+      '<small>' + (r ? 'Requested ' + esc(niceDate(r.received)) + (r.report_link ? ', <b style="color:var(--amber)">report attached, review it and mark the result</b>' : r.status === "Sent" ? ', sent to Verified First ' + esc(niceDate(r.sent || "")) : r.status === "New" ? ', <b style="color:var(--amber)">not sent yet</b>' : ", " + esc(r.status)) + (r.email ? " &middot; " + esc(r.email) : "") + (r.mobile ? " &middot; " + esc(r.mobile) : "") : (p.most_recent_check ? "checked " + esc(niceDate(p.most_recent_check)) : "on the roster") + (p.result_date ? " &middot; result " + esc(niceDate(p.result_date)) + (p.reviewed_by ? " by " + esc(p.reviewed_by) : "") : "")) + (p.notes ? " &middot; " + esc(p.notes.slice(0, 90)) : "") + '</small></div></div>' +
+      '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">' + (r && r.status === "New" && r.request_type === ((ob.req_types || [])[0] || "Background check and name badge") ? '<button class="btn sm" data-sent="' + esc(r.req_id) + '">Mark sent to Verified First</button>' : "") +
+      '<div class="res"><button class="pass' + (rk === "Clear" ? " on" : "") + '" data-r="Clear" title="Cleared for access">Clear</button><button class="fail' + (rk === "Not clear" ? " on" : "") + '" data-r="Not clear" title="Not cleared for access">Not clear</button><button class="pend' + (rk === "Pending" ? " on" : "") + '" data-r="Pending">Pend</button></div></div></div>';
+  });
+  h += '<div class="addrow"><div><label>First name</label><input id="bc_first"></div><div><label>Last name</label><input id="bc_last"></div><div><label>Check</label><select id="bc_type">' + (c.types || ["Standard"]).map(function(t){ return '<option>' + esc(t) + '</option>'; }).join("") + '</select></div><div><label>Market</label><select id="bc_mk"><option value="lv"' + (s.market === "lv" ? " selected" : "") + '>Las Vegas</option><option value="nnv"' + (s.market === "nnv" ? " selected" : "") + '>Northern Nevada</option></select></div><div><button class="btn sm solid" type="button" id="bc_add" style="min-height:38px">Add person</button></div></div></div>';
+  var extra = rq.filter(function(r){ return !r.dupe_of && !crew.some(function(p){ return (p.first_name || "").toLowerCase() === (r.first_name || "").toLowerCase() && (p.last_name || "").toLowerCase() === (r.last_name || "").toLowerCase(); }); });
+  if(extra.length){
+    h += '<div class="grp"><div class="gh"><span>Requests not on the roster</span><span class="gc">' + extra.length + '</span></div>';
+    extra.forEach(function(r){
+      h += '<div class="item" data-req="' + esc(r.req_id) + '"><div><div class="lb">' + esc((r.first_name || "") + " " + (r.last_name || "")) + ' <span class="pill grey">' + esc(r.request_type) + '</span>' + matchTag(r._how) + '<small>Requested ' + esc(niceDate(r.received)) + (r.submitted_by ? " by " + esc(r.submitted_by) : "") + (r.email ? " &middot; " + esc(r.email) : "") + (r.client_account ? " &middot; " + esc(r.client_account) : "") + '</small></div></div>' +
+        '<div style="display:flex;gap:6px;align-items:center"><select data-reqstatus="' + esc(r.req_id) + '" style="font:inherit;font-size:12px;border:1.5px solid var(--border);border-radius:8px;padding:6px 8px;min-height:36px">' + (ob.req_status || []).map(function(x){ return '<option' + (x === r.status ? " selected" : "") + '>' + esc(x) + '</option>'; }).join("") + '</select><span class="mini">badge: ' + esc(r.badge || "none") + '</span></div></div>';
+    });
+    h += '</div>';
+  }
+  $("b_body").innerHTML = h;
+}
+$("b_body").addEventListener("click", function(e){
+  var b = e.target.closest("button"); if(!b) return;
+  if(b.id === "bc_add"){
+    if(!needWho()) return;
+    var f = $("bc_first").value.trim(), l = $("bc_last").value.trim(); if(!f && !l){ toast("Type the person's name", "err"); return; }
+    b.classList.add("busy");
+    post({ kind:"vd_bc_upsert", reviewed_by:who(), rows:[{ market:$("bc_mk").value, vendor_id:S.vid, vendor:S.core.summary.dba_name, first_name:f, last_name:l, check_type:$("bc_type").value, result:"Pending", source:"City Wide" }] })
+      .then(function(r){ if(!r || r.ok === false || (r.errors && r.errors.length)) throw new Error((r && r.errors && r.errors[0]) || (r && r.error) || "Not added"); toast("Added as pending", "ok"); return reloadCore(); }).catch(function(err){ b.classList.remove("busy"); toast(err.message, "err"); });
+    return;
+  }
+  if(b.dataset.sent){
+    if(!needWho()) return; b.classList.add("busy");
+    post({ kind:"ob_bc_update", req_id:b.dataset.sent, status:"Sent" }).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Not saved"); toast("Marked sent to Verified First", "ok"); return reloadCore(); }).catch(function(err){ b.classList.remove("busy"); toast("Not saved: " + err.message, "err"); });
+    return;
+  }
+  if(b.dataset.r){
+    if(!needWho()) return;
+    var item = b.closest(".item"), key = item.dataset.crew, mk = key.split(":")[0], row = Number(key.split(":")[1]);
+    var p = S.core.crew.rows.filter(function(x){ return x.market === mk && x.row === row; })[0]; if(!p) return;
+    var v = b.dataset.r; if(p.result === v) v = "";
+    if(v === "Not clear" && !confirm("Mark " + p.first_name + " " + p.last_name + " as NOT CLEARED for access? They come off the cleared list for " + S.core.summary.dba_name + " right away. Do not record the reason anywhere on the hub.")) return;
+    item.classList.add("busy");
+    post({ kind:"vd_bc_upsert", reviewed_by:who(), rows:[{ market:mk, row:row, result:v }] }).then(function(r){
+      if(!r || r.ok === false || (r.errors && r.errors.length)) throw new Error((r && r.errors && r.errors[0]) || (r && r.error) || "Save failed");
+      p.result = v; p.result_date = v ? today() : ""; p.reviewed_by = who(); toast(p.first_name + " " + p.last_name + ": " + (v || "result cleared"), "ok"); renderCrew();
+    }).catch(function(err){ item.classList.remove("busy"); toast("Not saved: " + err.message, "err"); });
+  }
+});
+$("b_body").addEventListener("change", function(e){
+  var sel = e.target.closest("[data-reqstatus]"); if(!sel || !needWho()) return;
+  post({ kind:"ob_bc_update", req_id:sel.getAttribute("data-reqstatus"), status:sel.value }).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Not saved"); toast("Request: " + sel.value, "ok"); }).catch(function(err){ toast("Not saved: " + err.message, "err"); });
+});
+
+/* ---------- evaluation ---------- */
+function labelFor(name){ var f = rec() && rec().fields.filter(function(x){ return x.name === name; })[0]; if(f) return f.label; return String(name).replace(/_/g, " ").replace(/^./, function(c){ return c.toUpperCase(); }); }
+function renderEval(){
+  var it = S.core.intake || { rows:[], eval:null }, s = S.core.summary, ev = it.eval;
+  $("e_sub").textContent = ev ? "submitted " + niceDate(ev.received) + (it.eval_count > 1 ? " (" + it.eval_count + " submissions, newest shown)" : "") : (s.eval_date ? "eval date " + niceDate(s.eval_date) + ", answers not on file" : "none on file");
+  if(!ev){
+    $("e_body").innerHTML = '<p class="help">' + (s.eval_date ? 'The directory shows an evaluation date but the answers were not logged (older submissions came through the Jotform, which never reached the directory). What the vendor told us lives in the Details card above.' : 'No Vendor Evaluation on file. Send the vendor the link and it fills in on its own: <b>' + esc(VS + 'vendor-evaluation.html') + '</b>. Use <a href="' + OPS + 'vendor-email.html?vendor=' + encodeURIComponent(S.vid) + '">Vendor Email</a> to send it.') + '</p>';
+    return;
+  }
+  var raw = ev.raw || {}, skip = { vendor_id:1, kind:1, company_fax:1, website_hp:1 };
+  var order = rec() ? rec().fields.map(function(f){ return f.name; }) : Object.keys(raw);
+  var keys = order.filter(function(k){ return raw[k] != null && String(raw[k]) !== "" && !skip[k]; }).concat(Object.keys(raw).filter(function(k){ return order.indexOf(k) < 0 && raw[k] != null && String(raw[k]) !== "" && !skip[k]; }));
+  var h = '<p class="help">What the vendor typed on the evaluation form' + matchTag(ev._how) + '. The directory row was filled from this; if the two disagree, the Details card is what the hubs use.</p><div class="kv" style="margin-top:10px">';
+  keys.forEach(function(k){ var v = raw[k]; if(typeof v === "object") v = JSON.stringify(v); h += '<div><label>' + esc(labelFor(k)) + '</label><div class="v">' + esc(String(v)) + '</div></div>'; });
+  $("e_body").innerHTML = h + '</div>';
+}
+
+/* ---------- compliance ---------- */
+function renderCompliance(){
+  var s = S.core.summary, au = (S.core.audits || { rows:[] }).rows, m = S.more || {}, ins = m.insurance, docs = (m.documents || {}).rows, pr = (m.profile_requests || {}).rows;
+  var h = '<div class="cols">';
+  // COI
+  h += '<div class="box"><h5>Insurance on file</h5>';
+  if(!S.more) h += '<div class="skel" style="width:70%"></div>';
+  else if(!ins) h += '<p class="mini">Could not read the insurance roster' + (m.errors && m.errors.insurance ? ": " + esc(m.errors.insurance) : "") + '.</p><div class="coi">' + coiBox("General liability", s.gl_exp) + coiBox("Workers comp", s.wc_exp) + '</div>';
+  else {
+    h += '<div class="coi">' + coiBox("General liability", ins.gl.label || (ins.roster ? ins.roster.gl_exp : s.gl_exp), ins.gl.state, ins.gl.days) + coiBox("Workers comp", ins.wc.label || (ins.roster ? ins.roster.wc_exp : s.wc_exp), ins.wc.state, ins.wc.days) + '</div>';
+    if(ins.roster && ((ins.roster.gl_exp || "") !== (s.gl_exp || "") || (ins.roster.wc_exp || "") !== (s.wc_exp || ""))) h += '<p class="mini" style="margin-top:8px">The directory row says GL ' + esc(s.gl_exp || "blank") + ', WC ' + esc(s.wc_exp || "blank") + '. The insurance roster (what reminders run from) says GL ' + esc(ins.roster.gl_exp || "blank") + ', WC ' + esc(ins.roster.wc_exp || "blank") + '. Fix whichever is wrong.</p>';
+    if(!ins.roster) h += '<p class="mini" style="margin-top:8px">Not on the insurance roster yet, so no expiry reminders go to this vendor. Dates shown are from the directory row.</p>';
+    if(ins.reminders && ins.reminders.length) h += '<p class="mini" style="margin-top:8px">Last reminder sent ' + esc(niceDate(ins.reminders[0].sent)) + ' (' + esc(ins.reminders[0].coverage) + ').</p>';
+  }
+  h += '<p class="mailbtn"><a class="btn sm" href="' + OPS + 'insurance.html" target="_blank" rel="noopener">Insurance page</a> <a class="btn sm" href="' + VS + 'upload.html" target="_blank" rel="noopener">Vendor upload page</a></p></div>';
+  // uploads
+  h += '<div class="box"><h5>Documents the vendor uploaded</h5>';
+  if(!S.more) h += '<div class="skel" style="width:60%"></div>';
+  else if(!docs) h += '<p class="mini">Could not read uploads.</p>';
+  else if(!docs.length) h += '<p class="mini">Nothing uploaded through the Vendor Hub yet.</p>';
+  else docs.slice(0, 12).forEach(function(d){ h += '<div class="act"><b>' + esc(d.doc_type) + (d.coi_coverage ? " (" + esc(d.coi_coverage) + ")" : "") + '</b>' + matchTag(d._how) + ' ' + links(d.drive_links || "") + '<div class="t">' + esc(niceDate(d.received)) + (d.entity ? " · " + esc(d.entity) : "") + (d.file_names ? " · " + esc(d.file_names) : "") + '</div></div>'; });
+  h += '</div>';
+  // profile change requests
+  h += '<div class="box"><h5>Profile change requests</h5>';
+  if(!S.more) h += '<div class="skel" style="width:60%"></div>';
+  else if(!pr) h += '<p class="mini">Could not read profile requests.</p>';
+  else if(!pr.length) h += '<p class="mini">None. Vendors send these from the Vendor Hub profile update page.</p>';
+  else pr.slice(0, 8).forEach(function(p){ h += '<div class="act"><b>' + esc(p.changes || "change") + '</b> ' + pill(p.status, p.status === "Applied" ? "pass" : p.status === "Rejected" ? "fail" : "pend") + matchTag(p._how) + '<div class="t">' + esc(niceDate(p.received)) + (p.submitted_by ? " · " + esc(p.submitted_by) : "") + (p.drive_links ? " · " + links(p.drive_links) : "") + '</div></div>'; });
+  h += '</div>';
+  // audits
+  h += '<div class="box"><h5>Quarterly audits</h5>';
+  if(!au.length) h += '<p class="mini">No audit on file.' + (s.janitorial ? ' <a href="' + OPS + 'vendor-audit.html" target="_blank" rel="noopener">Submit one</a>.' : "") + '</p>';
+  else au.slice(0, 6).forEach(function(a){ h += '<div class="act"><b>' + esc(niceDate(a.audit_date)) + '</b> ' + pill(a.result || "?", /pass/i.test(a.result) ? "pass" : "fail") + (a.pdf_url ? ' <a href="' + esc(a.pdf_url) + '" target="_blank" rel="noopener" style="color:var(--red);font-weight:700;text-decoration:none">PDF</a>' : "") + '<div class="t">' + esc(a.submitted_by || "") + (a.accounts_audited ? " · " + esc(a.accounts_audited) + " accounts" : "") + (a.next_due ? " · next due " + esc(niceDate(a.next_due)) : "") + (a.fail_reasons ? " · " + esc(a.fail_reasons) : "") + '</div></div>'; });
+  h += '</div>';
+  // email standing
+  h += '<div class="box"><h5>Email standing</h5>' +
+    (s.dne ? '<p style="font-size:13px"><b style="color:var(--red)">On the do not email list.</b> Gets no opportunity or vendor messages. Notices, COI and background check emails still go.</p><p class="mailbtn"><button class="btn sm" type="button" id="dne_lift">Take them off the list</button></p>' :
+      '<p style="font-size:13px">Gets vendor emails' + (s.email ? "" : " (no email address on file)") + '.</p><p class="mailbtn"><button class="btn sm" type="button" id="dne_add">Put on the do not email list</button></p>') +
+    '<p style="font-size:13px;margin-top:8px">' + (s.hide ? '<b style="color:var(--amber)">Hidden</b> from every picker (opportunity emails, violations, messages).' : 'Shown in the pickers.') + '</p><p class="mailbtn"><button class="btn sm" type="button" id="hide_tog">' + (s.hide ? "Show in pickers again" : "Hide from pickers") + '</button> <a class="btn sm" href="' + OPS + 'vendor-dne.html?from=admin" target="_blank" rel="noopener">Do Not Email page</a></p></div>';
+  $("k_body").innerHTML = h + '</div>';
+  var bad = 0; if(ins && ins.gl && (ins.gl.state === "expired" || ins.gl.state === "soon")) bad++; if(ins && ins.wc && (ins.wc.state === "expired" || ins.wc.state === "soon")) bad++;
+  count("c_comp", bad);
+}
+function coiBox(label, date, state, days){
+  var cls = state || "", txt = date ? niceDate(date) : "not on file";
+  if(state === "expired") txt += " (expired)"; else if(state === "soon") txt += " (" + days + " days)"; else if(state === "none") txt = "not required";
+  return '<div class="' + esc(cls) + '"><b>' + esc(label) + '</b>' + esc(txt) + '</div>';
+}
+$("k_body").addEventListener("click", function(e){
+  var b = e.target.closest("button"); if(!b || !needWho()) return;
+  var s = S.core.summary;
+  if(b.id === "dne_add"){
+    var reason = prompt("Why? (goes on the list, e.g. asked to be removed by reply on Sep 22)", ""); if(reason === null) return;
+    b.classList.add("busy");
+    post({ kind:"dne_add", reason:reason, vendor_ids:[S.vid], emails:[] }).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Not saved"); toast(r.no_email ? "No email on file to block" : "On the do not email list", r.no_email ? "err" : "ok"); return reloadCore(); }).catch(function(err){ b.classList.remove("busy"); toast(err.message, "err"); });
+  } else if(b.id === "dne_lift"){
+    if(!confirm("Take " + s.dba_name + " off the do not email list? They start getting vendor emails again.")) return;
+    b.classList.add("busy");
+    post({ kind:"dne_remove", email:s.email }).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Not saved"); toast("Off the list", "ok"); return reloadCore(); }).catch(function(err){ b.classList.remove("busy"); toast(err.message, "err"); });
+  } else if(b.id === "hide_tog"){
+    var hide = !s.hide, reason2 = hide ? prompt("Why hide them?", "") : ""; if(reason2 === null) return;
+    b.classList.add("busy");
+    post({ kind:"dne_hide", vendor_id:S.vid, hide:hide, reason:reason2 }).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Not saved"); toast(hide ? "Hidden from pickers" : "Shown again", "ok"); try{ sessionStorage.removeItem(IDX_KEY); S.idx = null; }catch(e){} return reloadCore(); }).catch(function(err){ b.classList.remove("busy"); toast(err.message, "err"); });
+  }
+});
+
+/* ---------- more: responses, notices ---------- */
+function renderMore(){
+  var m = S.more, errs = m.errors || {};
+  // responses
+  var rs = (m.responses || {}).rows;
+  if(!rs){ $("r_body").innerHTML = '<div class="banner red">Could not read responses' + (errs.responses ? ": " + esc(errs.responses) : "") + '.</div>'; $("r_sub").textContent = ""; }
+  else {
+    $("r_sub").textContent = rs.length ? rs.length + " on file" : "none";
+    count("c_resp", rs.length);
+    if(!rs.length) $("r_body").innerHTML = '<p class="help">This vendor has not replied to an opportunity posting. Replies are matched by the company name and email the vendor typed, so a reply under a different spelling will not show here.</p>';
+    else {
+      var h = '<p class="help">Every reply this vendor sent to an opportunity, newest first. Matched by the company name or email they typed.</p><div class="tblwrap"><table class="lst"><thead><tr><th>When</th><th>Opportunity</th><th>Reply</th><th>Quote</th><th>Notes</th><th></th></tr></thead><tbody>';
+      rs.forEach(function(r){
+        h += '<tr><td class="t">' + esc(niceDate(r.received)) + '</td><td><b>' + esc(r.posting_title || r.posting_id) + '</b>' + (r.posting_state ? " " + pill(r.posting_state, r.posting_state === "open" ? "pass" : "grey") : "") + '<div class="mini">' + esc([r.posting_id, r.region, r.trade].filter(Boolean).join(" · ")) + '</div></td>' +
+          '<td>' + esc(r.mode || "interest") + matchTag(r._how) + (r.earliest_start ? '<div class="mini">start ' + esc(r.earliest_start) + '</div>' : "") + (r.crew_size ? '<div class="mini">crew ' + esc(r.crew_size) + '</div>' : "") + '</td>' +
+          '<td>' + (r.quote_amount ? money(r.quote_amount) + (r.quote_basis ? '<div class="mini">' + esc(r.quote_basis) + '</div>' : "") : '<span class="mini">none</span>') + '</td><td>' + esc(String(r.comments || "").slice(0, 160)) + '</td>' +
+          '<td>' + (r.pdf_url ? '<a href="' + esc(r.pdf_url) + '" target="_blank" rel="noopener">PDF</a>' : "") + ' <a href="' + OPS + 'responses.html" target="_blank" rel="noopener">Responses</a></td></tr>';
+      });
+      $("r_body").innerHTML = h + '</tbody></table></div>';
+    }
+  }
+  // notices
+  var ns = (m.notices || {}).rows, s = S.core.summary;
+  $("n_new").href = OPS + "violations.html";
+  if(!ns){ $("n_body").innerHTML = '<div class="banner red">Could not read the notices log' + (errs.notices ? ": " + esc(errs.notices) : "") + '.</div>'; $("n_sub").textContent = ""; }
+  else {
+    var openN = ns.filter(function(n){ return n.status && !/discarded|closed|corrected/i.test(n.status); }).length;
+    $("n_sub").textContent = ns.length ? ns.length + " issued" + (openN ? ", " + openN + " open" : "") : "none";
+    count("c_notices", openN);
+    if(!ns.length) $("n_body").innerHTML = '<p class="help">No violation notices on file for this vendor' + (s.bc_vendor_no ? "" : ". They have no vendor number on the directory, so only an exact name match would show here") + '.</p>';
+    else {
+      var h2 = '<div class="tblwrap"><table class="lst"><thead><tr><th>Issued</th><th>Notice</th><th>Level</th><th>Account</th><th>Findings</th><th>Status</th></tr></thead><tbody>';
+      ns.forEach(function(n){
+        var lv = String(n.level) === "3" ? "Final notice" : String(n.level) === "2" ? "Second notice" : "Notice";
+        h2 += '<tr><td class="t">' + esc(niceDate(n.issued)) + '</td><td><b>' + esc(n.notice_id) + '</b>' + matchTag(n._how) + '<div class="mini">' + esc(n.issuer_name || "") + '</div></td><td>' + pill(lv, String(n.level) === "3" ? "fail" : String(n.level) === "2" ? "pend" : "grey") + (n.chargeback_amount ? '<div class="mini">' + money(n.chargeback_amount) + '</div>' : "") + '</td><td>' + esc(n.account) + '</td><td>' + esc(String(n.findings_summary || n.nature || "").slice(0, 200)) + '</td><td>' + esc(n.status) + (n.corrected_date ? '<div class="mini">corrected ' + esc(niceDate(n.corrected_date)) + '</div>' : "") + (n.email_status ? '<div class="mini">' + esc(String(n.email_status).slice(0, 60)) + '</div>' : "") + '</td></tr>';
+      });
+      $("n_body").innerHTML = h2 + '</tbody></table></div>';
+    }
+  }
+  renderCompliance();
+  Object.keys(errs).forEach(function(k){ if(k !== "responses" && k !== "notices") toast("Could not load " + k + ": " + errs[k], "err"); });
+}
+
+/* ---------- activity ---------- */
+function renderActivity(){
+  var it = (S.core.intake || {}).rows || [], lg = (S.core.log || {}).rows || [], s = S.core.summary;
+  var items = [];
+  it.forEach(function(r){
+    var what = r.kind === "EVAL" ? "Vendor Evaluation submitted" + (r.action ? " (" + r.action + ")" : "") : r.kind === "INVITE" ? "Invited to become a vendor" + (r.raw && r.raw.by ? " by " + r.raw.by : "") + (r.raw && r.raw.fsm ? " for " + r.raw.fsm : "") + (r.action ? " · " + r.action : "") : (r.kind || "intake") + (r.action ? " · " + r.action : "");
+    items.push({ when:r.received, html:'<b>' + esc(what) + '</b>' + matchTag(r._how) + '<div class="t">' + esc(niceDate(r.received)) + (r.region ? " · " + esc(r.region) : "") + (r.raw && r.raw.subject ? ' · "' + esc(r.raw.subject) + '"' : "") + (r.raw && r.raw.error ? ' · <span style="color:var(--red)">' + esc(r.raw.error) + '</span>' : "") + '</div>' });
+  });
+  lg.forEach(function(l){
+    var what = l.action === "doc" ? esc(l.item) + " &rarr; " + (l.to ? esc(docLabel(l.to) || l.to) : "cleared") + (l.note ? " (" + esc(String(l.note).slice(0, 80)) + ")" : "") : l.action === "note" ? "note: " + esc(String(l.note).slice(0, 120)) : esc(l.action) + (l.item ? " " + esc(l.item) : "") + (l.to ? " &rarr; " + esc(l.to) : "") + (l.note ? " · " + esc(String(l.note).slice(0, 80)) : "");
+    items.push({ when:l.when, html:what + '<div class="t">' + esc(l.who || "") + ' &middot; ' + esc(niceDate(l.when || "")) + '</div>' });
+  });
+  if(s.outreach) items.push({ when:"", html:'<b>Outreach notes on the directory</b><div class="t" style="white-space:pre-wrap">' + esc(s.outreach.slice(0, 600)) + '</div>' });
+  items.sort(function(a, b){ return String(b.when) < String(a.when) ? -1 : String(b.when) > String(a.when) ? 1 : 0; });
+  $("a_sub").textContent = items.length ? items.length + " entries" : "nothing yet";
+  $("a_body").innerHTML = items.length ? items.slice(0, 80).map(function(i){ return '<div class="act">' + i.html + '</div>'; }).join("") : '<p class="help">Nothing logged for this vendor yet. Evaluation submissions, invites, onboarding changes and notes show here.</p>';
+}
+
+/* ---------- boot ---------- */
+ADMIN.init({ page:"vendors", onReady:function(){
+  $("who").value = ADMIN.who() || "";
+  $("who").addEventListener("change", function(){ ADMIN.setWho(this.value.trim()); });
+  var id = param("id") || (location.hash && /^#V-\d+$/i.test(location.hash) ? location.hash.slice(1) : "");
+  if(id) open(id.toUpperCase());
+  else if(param("q")){ $("q").value = param("q"); $("q").focus(); }
+}});
+})();
+</script>
+</body>
+</html>

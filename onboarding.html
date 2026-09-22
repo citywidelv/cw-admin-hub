@@ -586,7 +586,7 @@ function asideHtml(v, o){
       '<div><span>Contact</span><span>' + esc(v.contact_name || "") + '</span></div><div><span>Email</span><span>' + esc(v.email || "") + '</span></div><div><span>Phone</span><span>' + esc(v.phone || "") + '</span></div>' +
       '<div><span>Services</span><span>' + esc(v.service_types || "") + '</span></div><div><span>Source</span><span>' + esc(v.source || "") + (v.eval_date ? ", eval " + esc(fmtDate(v.eval_date)) : "") + '</span></div>' +
       (v.gl_exp || v.wc_exp ? '<div><span>COI exp</span><span>GL ' + esc(v.gl_exp || "?") + ' &middot; WC ' + esc(v.wc_exp || "?") + '</span></div>' : "") + '</div>' +
-      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px"><a class="btn sm" href="records.html?s=' + (v.market === "nnv" ? "vendors_nnv" : "vendors_lv") + '" target="_blank" rel="noopener">Edit record</a>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px"><a class="btn sm solid" href="vendor-profile.html?id=' + esc(v.vendor_id) + '" target="_blank" rel="noopener">Vendor Profile</a><a class="btn sm" href="records.html?s=' + (v.market === "nnv" ? "vendors_nnv" : "vendors_lv") + '" target="_blank" rel="noopener">Edit record</a>' +
       '<a class="btn sm" href="' + ADMIN.OPS + 'vendors.html#/' + v.market + '/' + (v.janitorial ? "janitorial" : "unclassified") + '" target="_blank" rel="noopener">Ops Hub</a>' +
       '<a class="btn sm" href="background-checks.html" target="_blank" rel="noopener">Roster</a></div>';
   } else if(o){

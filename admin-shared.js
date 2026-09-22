@@ -102,6 +102,8 @@ var MENU = [
     {label:"InsurLink (Vertafore)", href:"https://insurlink.vertafore.com/end-insured/2260313c6a34459c8a098ede23d21fb7/2094911/overview", tag:"Site"}
   ]},
   { label:"Vendors", icon:"clip", page:"vendors", items:[
+    {label:"Vendor Profile (everything about one vendor)", href:"vendor-profile.html", tag:"Hub"},
+    {label:"Vendor Email (one place to send)", href:OPS + "vendor-email.html?from=admin", tag:"Ops Hub"},
     {sub:"Onboarding", items:[
       {label:"Vendor Onboarding desk", href:"onboarding.html", tag:"Hub"},
       {label:"Start onboarding for a vendor", href:"onboarding.html#start", tag:"Hub"},
