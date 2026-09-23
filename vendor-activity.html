@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Vendor Activity | CW Admin Hub</title>
-<!-- build 2026-09-23a. One feed of everything vendors send or change: evaluations, profile
+<!-- build 2026-09-23b (attention count matches the default view). One feed of everything vendors send or change: evaluations, profile
      edits from the Vendor Hub self-service page, contact changes, profile change requests,
      uploads, background check requests, cleaner roster changes, interest letters, audits.
      Backend: VendorSelf.gs (kinds vs_feed {source}, vs_feed_set). Eight sources load in
@@ -197,7 +197,8 @@ function visible(){
 }
 function renderStats(){
   var counts = {}, open = 0, items = all();
-  items.forEach(function(it){ if(!it.status && it.type !== "link"){ open++; counts[it.type] = (counts[it.type] || 0) + 1; } });
+  var DEFAULT_ON = { link:0, response:0, audit:0 };
+  items.forEach(function(it){ if(!it.status && !(it.type in DEFAULT_ON)){ open++; counts[it.type] = (counts[it.type] || 0) + 1; } });
   var top = [["eval","New evaluations"],["profile_edit","Profile edits"],["contact","Contact changes"],["request","Change requests"],["upload","Uploads"],["bc","BC requests"],["cleaner","Cleaner changes"]];
   $("stats").innerHTML = '<div class="stat' + (Object.keys(S.types).every(function(k){ return S.types[k] === (k !== "link" && k !== "response" && k !== "audit"); }) ? " on" : "") + '" data-all="1"><div class="n">' + open + '</div><div class="l">Needs attention</div></div>' +
     top.map(function(t){ return '<div class="stat" data-type="' + t[0] + '"><div class="n">' + (counts[t[0]] || 0) + '</div><div class="l">' + esc(t[1]) + '</div></div>'; }).join("");
