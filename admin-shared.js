@@ -81,7 +81,7 @@ var MENU = [
     {label:"Background Checks on File (Sheet)", href:SHEET, tag:"Sheet"},
     {label:"Verified First (portal)", href:"https://portal.verifiedfirst.com/#/dashboard", tag:"Site"}
   ]},
-  { label:"Account Changes", icon:"sheet", page:"act", items:[
+  { label:"Account Changes", icon:"sheet", page:"act", hidden:true, items:[   // hidden Sep 23 2026 at TJ's request until he wants ACT back; nothing deleted
     {label:"ACT and Ledger Documents", href:"act-document.html", tag:"Hub"},
     {label:"Accounting Queue (not yet checked off)", href:"accounting-queue.html", tag:"Hub"},
     {label:"Log an Account Change", href:OPS + "act-entry.html", tag:"Ops Hub"},
@@ -212,6 +212,7 @@ function renderHeader(page){
   if(!h) return;
   var nav = "";
   MENU.forEach(function(m, mi){
+    if(m.hidden) return;                       // hidden:true hides a whole menu without deleting it
     var here = !!page && m.page === page;
     var items = "";
     items = menuItems(m.items);

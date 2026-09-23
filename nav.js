@@ -57,6 +57,7 @@ window.CW_NAV = {
    "label": "Account Changes",
    "icon": "sheet",
    "page": "act",
+   "hidden": true,
    "items": [
     {
      "label": "ACT and Ledger Documents",
