@@ -275,6 +275,12 @@ function load(){
 }
 function apply(r, fromCache){
   S.meta = r.surface; S.cols = r.cols; S.rows = r.rows; S.url = r.url;
+  // ?f=<chip label> preselects a quick filter once (the Ops Hub opens postings on "Open").
+  if(S.pendingChip){
+    var want = S.pendingChip.toLowerCase();
+    (S.meta.quick || []).forEach(function(c, i){ if(String(c.label).toLowerCase() === want) S.chip = i; });
+    S.pendingChip = "";
+  }
   $("hhelp").textContent = S.meta.help || "";
   $("sheetlink").href = r.url || "#";
   $("addbtn").classList.toggle("hidden", !S.meta.add);
@@ -595,6 +601,7 @@ ADMIN.init({ page:"emails", onReady:function(){
   $("who").value = ADMIN.who();
   $("who").addEventListener("change", function(){ ADMIN.setWho($("who").value.trim()); });
   var k = param("s"), row = Number(param("row")) || 0;
+  S.pendingChip = param("f");
   renderTabs();
   if(k && SURFACES.some(function(s){ return s.key === k; })) open(k, row);
   else { $("pick").classList.remove("hidden"); }
