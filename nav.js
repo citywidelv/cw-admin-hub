@@ -350,6 +350,11 @@ window.CW_NAV = {
      "tag": "Hub"
     },
     {
+     "label": "Account FSM (CRM upload, who owns each account)",
+     "href": "account-fsm.html",
+     "tag": "Hub"
+    },
+    {
      "sub": "Edit records",
      "items": [
       {

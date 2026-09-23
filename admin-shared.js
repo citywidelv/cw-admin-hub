@@ -149,6 +149,7 @@ var MENU = [
   { label:"Team & Admin", icon:"home", page:"emails", items:[
     {ghead:"Ops Admin Desk"},
     {label:"Desk home (records, one per page)", href:"desk.html", tag:"Hub"},
+    {label:"Account FSM (CRM upload, who owns each account)", href:"account-fsm.html", tag:"Hub"},
     {sub:"Edit records", items:[
       {ghead:"Opportunity Wall"},
       {label:"Opportunity postings", href:"records.html?s=postings", tag:"Hub"},

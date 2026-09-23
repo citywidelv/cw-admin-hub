@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Account FSM | CW Admin Hub</title>
+<!-- build 2026-09-23. Which FSM owns each account. Intake for the Dynamics CRM view "Active Customers -
+JS and OS Clients" (Export to Excel). The workbook is read in this browser (SheetJS, loaded only when a
+file is dropped) and the rows go to AccountFsm.gs on the CW Solicitations script through alDispatch:
+alerts_acct_import (dry run first, then apply), alerts_acct_list, alerts_acct_set. The Ops Hub alerts
+match supply reports and shop orders against this list, so every report lands with the right FSM.
+CRM wins when CRM changes; a hub choice holds until CRM changes that account. Nothing is deleted.
+The page paints from the last list this browser saw and fetches after first paint. -->
+<link rel="stylesheet" href="admin.css">
+<link rel="icon" href="https://citywidelv.github.io/cw-ops-desk/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="https://citywidelv.github.io/cw-ops-desk/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://citywidelv.github.io/cw-ops-desk/apple-touch-icon.png">
+<style>
+.topbar{position:relative;z-index:5;margin-top:-46px}
+.topbar .qcard{padding:12px 18px;display:flex;align-items:center;gap:10px 16px;flex-wrap:wrap}
+.topbar .who{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--grey)}
+.topbar .who input{font-size:13px;border:1px solid var(--border);border-radius:6px;padding:6px 8px;width:160px;min-height:36px}
+.topbar .sp{flex:1}
+.lastup{font-size:12px;color:var(--grey);line-height:1.5}
+.lastup b{color:var(--black)}
+.help{font-size:12.5px;color:var(--grey);line-height:1.6}
+.help b{color:var(--black)}
+.help ol{margin:6px 0 0 18px}
+.drop{display:block;border:2px dashed var(--border);border-radius:12px;padding:26px 18px;text-align:center;color:var(--grey);font-size:13px;background:#fff;cursor:pointer;margin-top:12px}
+.drop b{color:var(--black)}
+.drop.on{border-color:var(--red);background:#FFF6F6}
+.drop input{display:none}
+.sumgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:14px 0 6px}
+.stat{border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:#fff}
+.stat b{display:block;font-size:20px;line-height:1.2}
+.stat span{font-size:11.5px;color:var(--grey)}
+.stat.warn b{color:var(--red)}
+details.dl{border:1px solid var(--border);border-radius:10px;margin-top:8px;background:#fff}
+details.dl summary{cursor:pointer;padding:10px 12px;font-size:13px;font-weight:700;min-height:40px}
+details.dl ul{list-style:none;padding:0 12px 10px;max-height:280px;overflow:auto;font-size:12.5px}
+details.dl li{padding:5px 0;border-top:1px solid var(--light)}
+details.dl li small{color:var(--grey)}
+.acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.err{color:var(--red);font-weight:700;font-size:13px;margin-top:10px}
+.ltools{display:flex;gap:8px 10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.ltools input[type=search]{flex:1;min-width:200px;font:inherit;font-size:16px;border:1.5px solid var(--border);border-radius:9px;padding:8px 12px;min-height:42px}
+.ltools select{font:inherit;font-size:13px;border:1.5px solid var(--border);border-radius:9px;padding:8px 10px;min-height:42px;background:#fff}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--border);background:#fff;border-radius:16px;font:inherit;font-size:12px;font-weight:700;padding:6px 11px;cursor:pointer;color:var(--grey);min-height:34px}
+.chip:hover{border-color:var(--red);color:var(--red)}
+.chip.on{background:var(--red);border-color:var(--red);color:#fff}
+.count{font-size:12px;color:var(--grey);white-space:nowrap}
+.tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.lst{width:100%;border-collapse:collapse;font-size:12.5px}
+table.lst th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--grey);padding:8px;border-bottom:2px solid var(--border);white-space:nowrap}
+table.lst td{padding:9px 8px;border-bottom:1px solid var(--light);vertical-align:top}
+table.lst td.n b{display:block;font-size:13px;overflow-wrap:anywhere}
+table.lst td.n small{display:block;color:var(--grey);font-size:11.5px}
+table.lst td select{font:inherit;font-size:13px;border:1.5px solid var(--border);border-radius:8px;padding:6px 8px;min-height:38px;background:#fff;max-width:190px}
+table.lst td select.saving{opacity:.5}
+table.lst tr.gone td{opacity:.55}
+.src{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:9px;padding:2px 8px;margin-top:4px;white-space:nowrap}
+.src.crm{background:var(--light);color:var(--grey);border:1px solid var(--border)}
+.src.hub{background:var(--blue-bg);color:var(--blue)}
+.src.guess{background:var(--amber-bg);color:var(--amber)}
+.src.none{background:var(--red-bg);color:var(--red)}
+.al{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;background:var(--light);border:1px solid var(--border);border-radius:12px;padding:2px 4px 2px 9px;margin:2px 4px 2px 0}
+.al button{border:none;background:none;cursor:pointer;color:var(--grey);font-size:14px;line-height:1;min-width:24px;min-height:24px}
+.al button:hover{color:var(--red)}
+.crmnote{font-size:11.5px;color:var(--grey)}
+.skel{height:12px;border-radius:6px;background:linear-gradient(90deg,#eee 25%,#f7f7f7 50%,#eee 75%);background-size:200% 100%;animation:sk 1.2s infinite;margin:10px 0}
+@keyframes sk{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@media(prefers-reduced-motion:reduce){.skel{animation:none}}
+.empty{padding:24px;text-align:center;color:var(--grey);font-size:13px}
+.more{display:block;width:100%;margin-top:10px}
+.btn.busy{opacity:.6;pointer-events:none}
+@media(max-width:760px){
+  table.lst thead{display:none}
+  table.lst tr{display:block;border-bottom:1px solid var(--border);padding:8px 0}
+  table.lst td{display:block;border:none;padding:3px 4px}
+  table.lst td.c{display:none}
+  .topbar .who{order:9}
+}
+</style>
+<link rel="stylesheet" href="https://citywidelv.github.io/cw-base.css">
+</head>
+<body>
+<div id="gate" class="gate"></div>
+<div id="app" class="hidden">
+<header class="head" id="adminhead"></header>
+
+<section class="hero slim">
+<div class="bg" style="background-image:url('https://citywidelv.github.io/cw-ops-desk/images/fsm-team.jpg')"></div>
+<div class="wrap">
+<div class="htext">
+<div class="kick">Ops Admin Desk</div>
+<h1>Account FSM</h1>
+<p>Who owns each account. Upload the CRM export when assignments change, and every supply report and shop order lands in the right FSM's alerts.</p>
+</div>
+</div>
+</section>
+
+<div class="wrap topbar">
+<div class="qcard">
+<div class="lastup" id="lastup">Last CRM upload: checking...</div>
+<span class="sp"></span>
+<span class="who">Editing as <input id="who" placeholder="Your name"></span>
+<a class="btn sm" href="desk.html">Desk home</a>
+</div>
+</div>
+
+<main class="wrap" style="padding-top:18px;padding-bottom:30px">
+
+<div class="card" id="upcard">
+<div class="chead"><h3>Upload from CRM</h3><span class="sub">Intake</span></div>
+<div class="cbody">
+<div class="help">
+<ol>
+<li>In CRM, open the view <b>Active Customers - JS and OS Clients</b>.</li>
+<li>Click <b>Export to Excel</b>. Las Vegas and Northern Nevada can be separate files. Upload one at a time.</li>
+<li>Drop the file below. Check the preview, then click <b>Apply</b>.</li>
+</ol>
+<p style="margin-top:8px">Upload the file as CRM gives it. Do not edit or delete columns. CRM wins whenever CRM changes an account. A change made on this page or on an alert stays until CRM changes that account.</p>
+</div>
+<label class="drop" id="drop"><b>Drop the CRM export (.xlsx) here</b><br>or click to choose it<input type="file" id="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label>
+<div id="prev" class="hidden"></div>
+<div class="err hidden" id="uperr"></div>
+</div>
+</div>
+
+<div class="card" style="margin-top:16px">
+<div class="chead"><h3>Accounts</h3><span class="sub" id="acount"></span></div>
+<div class="cbody">
+<div class="ltools">
+<input type="search" id="q" placeholder="Search account, street, city or BC number" autocomplete="off">
+<select id="ffsm" aria-label="FSM"><option value="">Every FSM</option></select>
+<div class="chips" id="mk"></div>
+</div>
+<div class="ltools"><div class="chips" id="flags"></div><span class="count" id="shown"></span></div>
+<div class="tblwrap"><table class="lst">
+<thead><tr><th>Account</th><th>FSM for alerts</th><th class="c">In CRM</th><th class="c">Night manager</th><th class="c">Also known as</th></tr></thead>
+<tbody id="rows"><tr><td colspan="5"><div class="skel"></div><div class="skel" style="width:70%"></div><div class="skel" style="width:85%"></div></td></tr></tbody>
+</table></div>
+<button class="btn more hidden" id="more" type="button">Show more</button>
+</div>
+</div>
+
+</main>
+
+<footer class="foot"><div class="fin">
+<b>City Wide Facility Solutions</b> &middot; Admin Hub &middot; Internal use only &middot; Something missing? Tell TJ. &middot; <a href="https://www.gocitywide.com" target="_blank" rel="noopener">GoCityWide.com</a>
+<span class="fr">Las Vegas<span>&bull;</span>Reno</span>
+</div></footer>
+</div><!-- /app -->
+
+<script src="https://citywidelv.github.io/cw-ops-desk/cw-auth.js"></script>
+<script src="nav.js"></script>
+<script src="https://citywidelv.github.io/cw-ops-desk/cw-nav.js"></script>
+<script src="admin-shared.js"></script>
+<script>
+var XLSX_URL = "https://citywidelv.github.io/cw-ops-desk/xlsx.full.min-0.18.5.js";
+var CACHE = "cwAcctFsmFull";
+var S = { accts:null, roster:[], last:{}, sheet:"", mk:"", flag:"", fsm:"", q:"", limit:150, parsed:null, file:"" };
+function $(id){ return document.getElementById(id); }
+var esc = ADMIN.esc;
+function by(){ return ($("who").value || "").trim(); }
+function needBy(){
+  if(by()) return by();
+  $("who").focus(); ADMIN.toast("Type your name in Editing as first, so the log shows who changed it.", "err");
+  return "";
+}
+function fsmName(k){ var f = S.roster.filter(function(x){ return x.key === k; })[0]; return f ? f.name : ""; }
+function srcPill(a){
+  if(!a.fsm) return '<span class="src none">No FSM</span>';
+  if(a.src === "hub") return '<span class="src hub" title="Set on the hub' + (a.by ? ' by ' + esc(a.by) : '') + '. Stays until CRM changes this account.">Set on hub</span>';
+  if(a.src === "zip guess") return '<span class="src guess" title="CRM has no FSM. Picked from the other accounts in the same ZIP code.">Guess by ZIP</span>';
+  if(a.src === "doo") return '<span class="src guess" title="CRM has no FSM. Sent to the DOO.">DOO, no FSM</span>';
+  return '<span class="src crm">From CRM</span>';
+}
+
+/* ---------- list ---------- */
+function paintLast(){
+  var parts = Object.keys(S.last || {}).map(function(rg){
+    var l = S.last[rg]; return '<b>' + esc(rg) + '</b> ' + esc(ADMIN.fmtDate(l.when)) + ' ' + esc(String(l.when || "").slice(11)) + (l.by ? ' by ' + esc(l.by) : '') + ' (' + l.rows + ' accounts)';
+  });
+  $("lastup").innerHTML = parts.length ? 'Last CRM upload: ' + parts.join(' &middot; ') + (S.sheet ? ' &middot; <a href="' + esc(S.sheet) + '" target="_blank" rel="noopener">Sheet</a>' : '') : 'No CRM upload yet. Start with the file below.';
+}
+function load(){
+  ADMIN.api({ kind:"alerts_acct_list" }).then(function(r){
+    if(!r || !r.ok){ if(!S.accts) $("rows").innerHTML = '<tr><td colspan="5" class="empty">Could not load the list. ' + esc((r && r.error) || "") + '</td></tr>'; return; }
+    S.accts = r.accounts || []; S.roster = r.roster || []; S.last = r.last || {}; S.sheet = r.sheet_url || "";
+    try{ localStorage.setItem(CACHE, JSON.stringify({ t:Date.now(), a:S.accts, roster:S.roster, last:S.last, sheet:S.sheet })); }catch(e){}
+    paintAll();
+  }).catch(function(){ if(!S.accts) $("rows").innerHTML = '<tr><td colspan="5" class="empty">Could not reach the server. Reload to try again.</td></tr>'; });
+}
+function paintAll(){ paintLast(); paintFilters(); paintRows(); }
+function paintFilters(){
+  var cur = $("ffsm").value;
+  $("ffsm").innerHTML = '<option value="">Every FSM</option>' + S.roster.map(function(f){ return '<option value="' + esc(f.key) + '">' + esc(f.name) + '</option>'; }).join('') + '<option value="-">No FSM</option>';
+  $("ffsm").value = cur;
+  var mk = [["", "Both markets"], ["Las Vegas", "Las Vegas"], ["Northern Nevada", "Northern Nevada"]];
+  $("mk").innerHTML = mk.map(function(m){ return '<button type="button" class="chip' + (S.mk === m[0] ? ' on' : '') + '" data-mk="' + esc(m[0]) + '">' + esc(m[1]) + '</button>'; }).join('');
+  var a = S.accts || [];
+  var n = { guess:0, hub:0, none:0, gone:0, alias:0 };
+  a.forEach(function(x){
+    if(!x.fsm) n.none++;
+    if(x.src === "zip guess" || x.src === "doo") n.guess++;
+    if(x.src === "hub") n.hub++;
+    if(!x.in_last) n.gone++;
+    if(x.aliases && x.aliases.length) n.alias++;
+  });
+  var fl = [["", "All"], ["guess", "Guessed, please confirm (" + n.guess + ")"], ["none", "No FSM (" + n.none + ")"], ["hub", "Set on the hub (" + n.hub + ")"], ["alias", "Learned names (" + n.alias + ")"], ["gone", "No longer in CRM (" + n.gone + ")"]];
+  $("flags").innerHTML = fl.map(function(f){ return '<button type="button" class="chip' + (S.flag === f[0] ? ' on' : '') + '" data-flag="' + f[0] + '">' + esc(f[1]) + '</button>'; }).join('');
+  $("acount").textContent = a.length + " accounts";
+}
+function filtered(){
+  var words = S.q.toLowerCase().split(/\s+/).filter(Boolean);
+  return (S.accts || []).filter(function(x){
+    if(S.mk && x.region !== S.mk) return false;
+    if(S.fsm === "-" ? !!x.fsm : (S.fsm && x.fsm !== S.fsm)) return false;
+    if(S.flag === "guess" && !(x.src === "zip guess" || x.src === "doo")) return false;
+    if(S.flag === "none" && x.fsm) return false;
+    if(S.flag === "hub" && x.src !== "hub") return false;
+    if(S.flag === "alias" && !(x.aliases && x.aliases.length)) return false;
+    if(S.flag === "gone" && x.in_last) return false;
+    if(words.length){
+      var hay = (x.name + " " + x.addr + " " + x.city + " " + x.zip + " " + x.bc + " " + (x.aliases || []).join(" ")).toLowerCase();
+      if(!words.every(function(w){ return hay.indexOf(w) >= 0; })) return false;
+    }
+    return true;
+  }).sort(function(a, b){ return a.name.localeCompare(b.name); });
+}
+function paintRows(){
+  if(!S.accts){ return; }
+  var list = filtered();
+  $("shown").textContent = list.length === (S.accts || []).length ? "" : list.length + " shown";
+  if(!S.accts.length){ $("rows").innerHTML = '<tr><td colspan="5" class="empty">No accounts yet. Upload the CRM export above.</td></tr>'; $("more").classList.add("hidden"); return; }
+  if(!list.length){ $("rows").innerHTML = '<tr><td colspan="5" class="empty">Nothing matches.</td></tr>'; $("more").classList.add("hidden"); return; }
+  var opts = S.roster.map(function(f){ return [f.key, f.name]; });
+  $("rows").innerHTML = list.slice(0, S.limit).map(function(x){
+    var sel = '<select data-fsm="' + esc(x.id) + '" aria-label="FSM for ' + esc(x.name) + '"><option value="">' + (x.crm_fsm ? 'Back to CRM (' + esc(x.crm_fsm) + ')' : 'No FSM') + '</option>' +
+      opts.map(function(o){ return '<option value="' + esc(o[0]) + '"' + (o[0] === x.fsm ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select>';
+    var crm = x.crm_fsm ? esc(x.crm_fsm) : '<span class="crmnote">Blank in CRM</span>';
+    if(x.src === "hub" && x.crm_fsm) crm += '<div class="crmnote">Change CRM to match, or the hub choice holds until CRM changes.</div>';
+    var al = (x.aliases || []).map(function(a){ return '<span class="al">' + esc(a) + '<button type="button" title="Forget this name" data-unal="' + esc(x.id) + '" data-al="' + esc(a) + '">&times;</button></span>'; }).join('');
+    return '<tr' + (x.in_last ? '' : ' class="gone"') + '><td class="n"><b>' + esc(x.name) + '</b><small>' + esc([x.addr, x.city, x.zip].filter(Boolean).join(', ')) + '</small><small>' + esc(x.region) + (x.bc ? ' &middot; BC ' + esc(x.bc) : '') + (x.in_last ? '' : ' &middot; not in the last CRM upload') + '</small></td>' +
+      '<td>' + sel + '<br>' + srcPill(x) + ((x.src === 'zip guess' || x.src === 'doo') && x.fsm ? ' <button type="button" class="chip" data-confirm="' + esc(x.id) + '" data-cfsm="' + esc(x.fsm) + '">Confirm</button>' : '') + '</td><td class="c">' + crm + '</td><td class="c">' + esc(x.nm) + '</td><td class="c">' + (al || '<span class="crmnote">None</span>') + '</td></tr>';
+  }).join('');
+  $("more").classList.toggle("hidden", list.length <= S.limit);
+  $("more").textContent = "Show " + Math.min(150, list.length - S.limit) + " more of " + (list.length - S.limit);
+}
+function saveFsm(sel, forceVal){
+  var id = sel.getAttribute("data-fsm"), who = needBy();
+  if(forceVal !== undefined) sel.value = forceVal;
+  var a = (S.accts || []).filter(function(x){ return x.id === id; })[0];
+  if(!who){ sel.value = a ? a.fsm : ""; return; }
+  sel.classList.add("saving"); sel.disabled = true;
+  ADMIN.api({ kind:"alerts_acct_set", crm_id:id, fsm:sel.value, by:who }).then(function(r){
+    sel.classList.remove("saving"); sel.disabled = false;
+    if(!r || !r.ok){ ADMIN.toast("Not saved. " + ((r && r.error) || ""), "err"); if(a) sel.value = a.fsm; return; }
+    if(a){ a.fsm = r.account.fsm; a.src = r.account.src; a.by = r.account.by; }
+    cacheWrite(); paintFilters(); paintRows();
+    ADMIN.toast(r.account.name + " is with " + (fsmName(r.account.fsm) || "nobody") + " now.");
+  }).catch(function(){ sel.classList.remove("saving"); sel.disabled = false; ADMIN.toast("Could not reach the server.", "err"); });
+}
+function unAlias(btn){
+  var id = btn.getAttribute("data-unal"), al = btn.getAttribute("data-al"), who = needBy();
+  if(!who) return;
+  btn.disabled = true;
+  ADMIN.api({ kind:"alerts_acct_set", crm_id:id, remove_alias:al, by:who }).then(function(r){
+    if(!r || !r.ok){ btn.disabled = false; ADMIN.toast("Not saved. " + ((r && r.error) || ""), "err"); return; }
+    var a = (S.accts || []).filter(function(x){ return x.id === id; })[0];
+    if(a) a.aliases = r.account.aliases;
+    cacheWrite(); paintFilters(); paintRows();
+    ADMIN.toast("Reports that say \"" + al + "\" will no longer go to " + r.account.name + ".");
+  });
+}
+function cacheWrite(){ try{ localStorage.setItem(CACHE, JSON.stringify({ t:Date.now(), a:S.accts, roster:S.roster, last:S.last, sheet:S.sheet })); }catch(e){} }
+
+/* ---------- intake ---------- */
+/*PARSE-START*/
+/* Reads the Dynamics "Active Customers" Excel export. Columns are found by their header
+text, so a reordered or wider view still works as long as these headers are present. */
+var CRM_COLS = {
+  crm_id: ["(do not modify) account"],
+  crm_modified: ["(do not modify) modified on"],
+  name: ["account name"],
+  bc_no: ["bc customer no", "bc customer number"],
+  rel_js: ["relationship type js", "relationship type"],
+  rel_os: ["relationship type os"],
+  address1: ["address 1: street 1", "street 1"],
+  address2: ["address 1: street 2", "street 2"],
+  city: ["address 1: city", "city"],
+  state: ["state/province", "address 1: state/province"],
+  zip: ["zip/postal code", "address 1: zip/postal code"],
+  night_manager: ["night manager"],
+  fsm: ["fsm"],
+  doo: ["doo"],
+  industry: ["industry"]
+};
+function crmParse(wb, X){
+  var names = wb.SheetNames.filter(function(n, i){
+    var meta = wb.Workbook && wb.Workbook.Sheets && wb.Workbook.Sheets[i];
+    return !(meta && meta.Hidden) && !/^hiddensheet$/i.test(n);
+  });
+  if(!names.length) return { error: "The workbook has no visible sheet." };
+  var grid = X.utils.sheet_to_json(wb.Sheets[names[0]], { header:1, raw:true, defval:"" });
+  var hr = -1;
+  for(var i = 0; i < Math.min(grid.length, 10); i++){
+    if(grid[i].some(function(c){ return String(c).trim().toLowerCase() === "account name"; })){ hr = i; break; }
+  }
+  if(hr < 0) return { error: "Could not find an \"Account Name\" column. Export the Active Customers view from CRM with Export to Excel and upload that file as it is." };
+  var head = grid[hr].map(function(c){ return String(c).replace(/\s+/g, " ").trim().toLowerCase(); });
+  var at = {};
+  Object.keys(CRM_COLS).forEach(function(k){
+    for(var j = 0; j < CRM_COLS[k].length; j++){ var p = head.indexOf(CRM_COLS[k][j]); if(p >= 0){ at[k] = p; break; } }
+  });
+  var missing = ["crm_id", "name", "fsm"].filter(function(k){ return at[k] === undefined; });
+  if(missing.length) return { error: "The file is missing the " + missing.map(function(k){ return { crm_id:"(Do Not Modify) Account", name:"Account Name", fsm:"FSM" }[k]; }).join(", ") + " column. Use Export to Excel on the Active Customers view, and do not delete the hidden first columns." };
+  var rows = [];
+  for(var r = hr + 1; r < grid.length; r++){
+    var g = grid[r], o = {}, any = false;
+    Object.keys(at).forEach(function(k){
+      var v = g[at[k]];
+      if(v instanceof Date) v = isNaN(v) ? "" : v.toISOString().slice(0, 16).replace("T", " ");
+      v = (v === null || v === undefined) ? "" : String(v).trim();
+      if(v) any = true;
+      o[k] = v;
+    });
+    if(any) rows.push(o);
+  }
+  var noFsm = rows.filter(function(x){ return !x.fsm; }).length;
+  return { rows: rows, sheet: names[0], cols: Object.keys(at), noFsm: noFsm };
+}
+/*PARSE-END*/
+function loadXlsx(){
+  if(window.XLSX) return Promise.resolve(window.XLSX);
+  return new Promise(function(ok, no){
+    var s = document.createElement("script"); s.src = XLSX_URL;
+    s.onload = function(){ ok(window.XLSX); }; s.onerror = function(){ no(new Error("Could not load the Excel reader. Check the connection and try again.")); };
+    document.head.appendChild(s);
+  });
+}
+function upErr(m){ $("uperr").textContent = m || ""; $("uperr").classList.toggle("hidden", !m); }
+function takeFile(f){
+  if(!f) return;
+  upErr(""); $("prev").classList.add("hidden");
+  if(!/\.xlsx?$/i.test(f.name)){ upErr("That is not an Excel file. Use Export to Excel in CRM and drop the .xlsx here."); return; }
+  S.file = f.name;
+  $("drop").innerHTML = '<b>Reading ' + esc(f.name) + '...</b>';
+  loadXlsx().then(function(X){
+    return f.arrayBuffer().then(function(buf){ return crmParse(X.read(buf, { type:"array", cellDates:true }), X); });
+  }).then(function(p){
+    resetDrop();
+    if(p.error){ upErr(p.error); return; }
+    if(!p.rows.length){ upErr("The file has no account rows."); return; }
+    S.parsed = p;
+    preview();
+  }).catch(function(e){ resetDrop(); upErr(String(e && e.message || e)); });
+}
+function resetDrop(){
+  $("drop").innerHTML = '<b>Drop the CRM export (.xlsx) here</b><br>or click to choose it<input type="file" id="file" accept=".xlsx,.xls">';
+  $("file").addEventListener("change", function(){ takeFile(this.files[0]); });
+}
+function li(list, fn, max){
+  return '<ul>' + list.slice(0, max || 400).map(function(x){ return '<li>' + fn(x) + '</li>'; }).join('') + (list.length > (max || 400) ? '<li><small>and ' + (list.length - (max || 400)) + ' more</small></li>' : '') + '</ul>';
+}
+function detail(title, list, fn, open){
+  if(!list || !list.length) return '';
+  return '<details class="dl"' + (open ? ' open' : '') + '><summary>' + esc(title) + ' (' + list.length + ')</summary>' + li(list, fn) + '</details>';
+}
+function summaryHtml(s, applied){
+  var mk = Object.keys(s.regions || {}).map(function(k){ return k + ' ' + s.regions[k]; }).join(', ');
+  var h = '<div class="sumgrid">' +
+    '<div class="stat"><b>' + s.total + '</b><span>accounts in the file (' + esc(mk) + ')</span></div>' +
+    '<div class="stat"><b>' + s.added.length + '</b><span>new to the list</span></div>' +
+    '<div class="stat' + (s.fsm_changes.length ? ' warn' : '') + '"><b>' + s.fsm_changes.length + '</b><span>FSM changes</span></div>' +
+    '<div class="stat' + (s.guessed.length ? ' warn' : '') + '"><b>' + s.guessed.length + '</b><span>no FSM in CRM, best guess</span></div>' +
+    '<div class="stat' + (s.no_fsm.length ? ' warn' : '') + '"><b>' + s.no_fsm.length + '</b><span>no FSM, no guess</span></div>' +
+    '<div class="stat"><b>' + s.kept_overrides.length + '</b><span>hub choices kept</span></div>' +
+    '<div class="stat"><b>' + s.dropped.length + '</b><span>no longer in this CRM view</span></div></div>';
+  h += detail('FSM changes', s.fsm_changes, function(x){ return esc(x.name) + ' <small>' + esc(x.from) + ' &rarr; ' + esc(x.to) + (x.was_src === 'hub' ? ' (CRM changed it, so the hub choice is replaced)' : '') + '</small>'; }, true);
+  h += detail('No FSM in CRM, best guess. Confirm these below', s.guessed, function(x){ return esc(x.name) + ' <small>&rarr; ' + esc(x.fsm) + ', ' + esc(x.how) + '</small>'; }, true);
+  h += detail('No FSM and no guess. Set these below', s.no_fsm, function(x){ return esc(x.name) + ' <small>' + esc(x.region) + (x.zip ? ', ' + esc(x.zip) : '') + '</small>'; }, true);
+  h += detail('Hub choices kept, CRM still says otherwise', s.kept_overrides, function(x){ return esc(x.name) + ' <small>hub ' + esc(x.fsm) + ', CRM ' + esc(x.crm_fsm) + '</small>'; });
+  h += detail('FSM names CRM uses that the hub does not know', s.unknown_fsm, function(x){ return esc(x.name) + ' <small>' + esc(x.crm_fsm) + '</small>'; }, true);
+  h += detail('No longer in this CRM view. Kept, and still matched', s.dropped, function(x){ return esc(x.name) + ' <small>' + esc(x.fsm || '') + '</small>'; });
+  h += detail('New to the list', s.added, function(x){ return esc(x.name) + ' <small>' + esc(x.fsm || 'No FSM') + '</small>'; });
+  h += detail('Renamed in CRM. The old name keeps matching', s.renamed, function(x){ return esc(x.from) + ' <small>&rarr; ' + esc(x.to) + '</small>'; });
+  h += detail('Rows skipped', s.skipped, function(x){ return esc(x); }, true);
+  return h;
+}
+function preview(){
+  var p = S.parsed;
+  $("prev").classList.remove("hidden");
+  $("prev").innerHTML = '<div class="help" style="margin-top:14px"><b>' + esc(S.file) + '</b>: ' + p.rows.length + ' accounts read. Checking them against the list...</div><div class="skel"></div>';
+  ADMIN.api({ kind:"alerts_acct_import", rows:p.rows, dry:true, by:by() || "preview", file:S.file }).then(function(r){
+    if(!r || !r.ok){ $("prev").classList.add("hidden"); upErr("The preview failed. " + ((r && r.error) || "")); return; }
+    var s = r.summary;
+    var nothing = !s.added.length && !s.fsm_changes.length && !s.dropped.length && !s.renamed.length && !s.guessed.length;
+    $("prev").innerHTML = '<div class="help" style="margin-top:14px"><b>Preview of ' + esc(S.file) + '.</b> Nothing has changed yet.</div>' + summaryHtml(s) +
+      '<div class="acts"><button class="btn solid" id="apply" type="button">Apply' + (nothing ? ' (refreshes addresses and names only)' : '') + '</button><button class="btn" id="cancel" type="button">Cancel</button></div>';
+    $("apply").addEventListener("click", apply);
+    $("cancel").addEventListener("click", function(){ S.parsed = null; $("prev").classList.add("hidden"); });
+  }).catch(function(){ $("prev").classList.add("hidden"); upErr("Could not reach the server. Try again."); });
+}
+function apply(){
+  var who = needBy();
+  if(!who) return;
+  var b = $("apply"); b.classList.add("busy"); b.textContent = "Applying...";
+  ADMIN.api({ kind:"alerts_acct_import", rows:S.parsed.rows, dry:false, by:who, file:S.file }).then(function(r){
+    if(!r || !r.ok){ b.classList.remove("busy"); b.textContent = "Apply"; upErr("Not applied. " + ((r && r.error) || "")); return; }
+    $("prev").innerHTML = '<div class="help" style="margin-top:14px"><b>Done.</b> ' + esc(S.file) + ' is applied. New supply reports and shop orders route by it from the next alerts refresh.</div>' + summaryHtml(r.summary);
+    S.parsed = null;
+    ADMIN.toast("CRM upload applied.");
+    load();
+  }).catch(function(){ b.classList.remove("busy"); b.textContent = "Apply"; upErr("Could not reach the server. It may still have applied. Reload and check the last upload time before trying again."); });
+}
+
+/* ---------- wiring ---------- */
+ADMIN.init({ page:"emails", onReady:function(){
+  $("who").value = ADMIN.who();
+  $("who").addEventListener("change", function(){ ADMIN.setWho($("who").value.trim()); });
+  resetDrop();
+  var d = $("drop");
+  ["dragenter", "dragover"].forEach(function(ev){ d.addEventListener(ev, function(e){ e.preventDefault(); d.classList.add("on"); }); });
+  ["dragleave", "drop"].forEach(function(ev){ d.addEventListener(ev, function(e){ e.preventDefault(); d.classList.remove("on"); }); });
+  d.addEventListener("drop", function(e){ takeFile(e.dataTransfer.files[0]); });
+  $("q").addEventListener("input", function(){ S.q = this.value; S.limit = 150; paintRows(); });
+  $("ffsm").addEventListener("change", function(){ S.fsm = this.value; S.limit = 150; paintRows(); });
+  $("mk").addEventListener("click", function(e){ var t = e.target.closest("[data-mk]"); if(!t) return; S.mk = t.getAttribute("data-mk"); S.limit = 150; paintFilters(); paintRows(); });
+  $("flags").addEventListener("click", function(e){ var t = e.target.closest("[data-flag]"); if(!t) return; S.flag = t.getAttribute("data-flag"); S.limit = 150; paintFilters(); paintRows(); });
+  $("rows").addEventListener("change", function(e){ if(e.target.hasAttribute("data-fsm")) saveFsm(e.target); });
+  $("rows").addEventListener("click", function(e){
+    var t = e.target.closest("[data-unal]"); if(t){ unAlias(t); return; }
+    var c = e.target.closest("[data-confirm]");
+    if(c){ var sel = document.querySelector('select[data-fsm="' + c.getAttribute("data-confirm") + '"]'); if(sel) saveFsm(sel, c.getAttribute("data-cfsm")); }
+  });
+  $("more").addEventListener("click", function(){ S.limit += 150; paintRows(); });
+  var f = new URLSearchParams(location.search).get("f");
+  if(f) S.flag = f;
+  try{ var c = JSON.parse(localStorage.getItem(CACHE) || "null"); if(c && c.a){ S.accts = c.a; S.roster = c.roster || []; S.last = c.last || {}; S.sheet = c.sheet || ""; paintAll(); } }catch(e){}
+  setTimeout(load, 0);
+}});
+</script>
+</body>
+</html>
