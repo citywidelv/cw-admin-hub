@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Vendor Profile | CW Admin Hub</title>
-<!-- build 2026-09-23c (email bounced flag: directory columns email_status / email_note + do not email list, no new backend).
+<!-- build 2026-09-23d (status colour theme + status control in the head, tinted section heads, Activation checklist in two stages with the accounting hand-off banner; no new backend, same kinds).
+Prior: build 2026-09-23c (email bounced flag: directory columns email_status / email_note + do not email list, no new backend).
 Prior: build 2026-09-23a (Contacts card + vendor self-service activity, VendorSelf.gs vs_admin_* kinds).
 Prior: build 2026-09-22b (four parallel loads, index cache). One vendor, everything, one page.
 Backend: VendorProfile.gs (kinds vp_index, vp_get) on the CW Solicitations script, read only.
@@ -164,7 +165,94 @@ table.lst td a{color:var(--red);text-decoration:none;font-weight:700}
 .vdet div{font-size:12.5px;padding:4px 0}
 .vdet label{display:block;font-size:10.5px;font-weight:700;color:var(--grey);letter-spacing:.04em}
 .mailbtn{margin-top:6px}
-@media(max-width:900px){.fgrid{grid-template-columns:1fr}.addrow{grid-template-columns:1fr 1fr}.jump{top:56px}.phead .acts{margin-left:0}}
+/* ---- build 23d: status theme, section separation, activation checklist ---- */
+:root{--st:#636466;--st-bg:#F5F5F5;--st-ink:#2D2A26}
+#pheadcard{border-top:6px solid var(--st);background:linear-gradient(180deg,var(--st-bg) 0,#fff 120px)}
+.stbox{flex:none;min-width:230px;border:2px solid var(--st);border-radius:14px;background:#fff;padding:10px 14px 12px;box-shadow:0 2px 0 var(--st)}
+.stbox label{display:block;font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--grey);margin-bottom:6px}
+.stbox .stsel{position:relative;display:block}
+.stbox select{width:100%;appearance:none;-webkit-appearance:none;font:inherit;font-size:16px;font-weight:700;color:#fff;background:var(--st);border:none;border-radius:10px;padding:10px 40px 10px 14px;min-height:46px;cursor:pointer}
+.stbox .stsel::after{content:"";position:absolute;right:15px;top:18px;width:9px;height:9px;border-right:2.5px solid #fff;border-bottom:2.5px solid #fff;transform:rotate(45deg);pointer-events:none}
+.stbox .stx{font-size:12px;color:var(--grey);margin-top:7px;line-height:1.45}
+.stbox .stx b{color:var(--st-ink)}
+.stbox.busy{opacity:.6;pointer-events:none}
+.phead .pills .pill{font-size:11px;padding:4px 11px}
+.phead .pill.stpill{background:var(--st);color:#fff}
+.facts label{font-size:11px}
+.facts .v{font-size:14.5px;font-weight:600}
+/* section separation */
+.card{margin-top:22px;overflow:hidden}
+.card .chead{background:var(--light);padding:14px 18px 12px;border-left:5px solid var(--red);gap:12px}
+.card .chead h3{font-size:16px;letter-spacing:.01em}
+.card .chead .mini{font-size:12px}
+.card#c_onb .chead{background:var(--red-bg);border-left-color:var(--red)}
+.card#c_onb .chead h3{color:var(--red)}
+.card#c_contacts .chead,.card#c_details .chead{border-left-color:var(--black)}
+.card#c_bc .chead,.card#c_comp .chead{border-left-color:var(--amber)}
+.card#c_eval .chead,.card#c_resp .chead{border-left-color:var(--blue)}
+.card#c_notices .chead,.card#c_act .chead{border-left-color:var(--grey)}
+.card .cbody{padding:18px 20px 20px}
+.jump{gap:8px;padding:12px 0 10px}
+.jump a{font-size:12.5px;padding:8px 13px;min-height:38px}
+.jump a.hot{background:var(--red);border-color:var(--red);color:#fff}
+.jump a.hot .n{background:#fff;color:var(--red)}
+.sec h4{font-size:12px;color:var(--black);background:var(--light);margin:0 -20px;padding:10px 20px;border-top:none}
+.sec:first-child h4{padding-top:10px}
+.f label{font-size:11.5px}
+.f .v{font-size:14px}
+.help{font-size:13px}
+/* activation checklist */
+.prog{display:flex;align-items:center;gap:14px;margin:4px 0 16px;flex-wrap:wrap}
+.prog .bar{flex:1;min-width:180px;height:14px;background:var(--light);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.prog .bar i{display:block;height:100%;background:var(--green);border-radius:8px;transition:width .3s}
+.prog .bar i.part{background:var(--amber)}
+.prog b{font-size:15px;white-space:nowrap}
+.prog b.ok{color:var(--green)}
+.stage{border:2px solid var(--border);border-radius:14px;margin-top:16px;overflow:hidden}
+.stage.done{border-color:var(--green)}
+.stage.next{border-color:var(--border)}
+.stage .sh{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--light);flex-wrap:wrap}
+.stage.done .sh{background:var(--green-bg)}
+.stage .num{flex:none;width:38px;height:38px;border-radius:50%;background:var(--black);color:#fff;font-size:17px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.stage.done .num{background:var(--green)}
+.stage.done .num::before{content:"\2713"}
+.stage.done .num span{display:none}
+.stage .sh h4{font-size:16px;margin:0}
+.stage .sh p{font-size:12.5px;color:var(--grey);margin:1px 0 0;line-height:1.4}
+.stage .sh .sc{margin-left:auto;font-size:13px;font-weight:700;white-space:nowrap}
+.stage .sh .sc.ok{color:var(--green)}
+.stage .sh .sc.wait{color:var(--grey);font-weight:400}
+.stage .grp{border:none;border-radius:0;margin:0;border-top:1px solid var(--border)}
+.stage .grp .gh{background:#fff;padding:10px 16px 4px;font-size:11.5px}
+.stage .item{padding:10px 16px;border-top:none;align-items:center}
+.stage .item>div:nth-child(2){flex:1;min-width:220px}
+.stage .item:hover{background:#fcfcfc}
+.stage .item .lb{font-size:14.5px;font-weight:600;line-height:1.35}
+.stage .item.done .lb{color:var(--green)}
+.stage .item.fix .lb{color:var(--red)}
+.stage .item .st{font-size:12px;margin-top:3px}
+.cb{flex:none;width:30px;height:30px;border:2.5px solid #9a9a9a;border-radius:8px;background:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;color:#fff;padding:0;line-height:1}
+.cb:hover{border-color:var(--black)}
+.cb.ver{background:var(--green);border-color:var(--green)}
+.cb.ver::before{content:"\2713"}
+.cb.rec{background:#fff;border-color:var(--amber);color:var(--amber)}
+.cb.rec::before{content:"";width:14px;height:14px;border-radius:50%;background:var(--amber)}
+.cb.fix{background:var(--red);border-color:var(--red)}
+.cb.fix::before{content:"!"}
+.item .alt{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.item .alt button{border:1.5px solid var(--border);background:#fff;font:inherit;font-size:11px;font-weight:700;color:var(--grey);border-radius:7px;padding:5px 9px;cursor:pointer;min-height:30px}
+.item .alt button:hover{border-color:var(--black);color:var(--black)}
+.item .alt button.on{background:var(--amber);border-color:var(--amber);color:#fff}
+.item .alt button.on.fixb{background:var(--red);border-color:var(--red)}
+.alldone{margin:18px 0 6px;border-radius:14px;padding:20px 22px;background:var(--red);color:#fff;display:flex;gap:16px;align-items:center;flex-wrap:wrap;box-shadow:0 6px 18px rgba(210,39,48,.25)}
+.alldone.sent{background:var(--green);box-shadow:0 6px 18px rgba(30,142,90,.25)}
+.alldone .big{flex:1;min-width:240px;font-size:18px;font-weight:700;line-height:1.35}
+.alldone .big small{display:block;font-size:13px;font-weight:400;opacity:.92;margin-top:4px}
+.alldone .btn{background:#fff;border-color:#fff;color:var(--red);font-size:13px;padding:11px 18px}
+.alldone .btn:hover{background:#fff;color:var(--red-dark)}
+.alldone.sent .btn{color:var(--green)}
+.obnotes{margin-top:16px;border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+@media(max-width:900px){.fgrid{grid-template-columns:1fr}.addrow{grid-template-columns:1fr 1fr}.jump{top:56px}.phead .acts{margin-left:0}.stbox{min-width:0;width:100%}.sec h4{margin:0 -20px}.card .cbody{padding:14px 16px 16px}.stage .item .lb{font-size:14px}}
 </style>
 <link rel="stylesheet" href="https://citywidelv.github.io/cw-base.css">
 </head>
@@ -208,14 +296,14 @@ table.lst td a{color:var(--red);text-decoration:none;font-weight:700}
 
 <nav class="jump" id="jump"></nav>
 
+<div class="card" id="c_onb"><div class="chead"><span class="bar-accent"></span><h3>Activation checklist</h3><div class="tools"><span class="mini" id="o_sub"></span></div></div>
+<div class="cbody" id="o_body"></div></div>
+
 <div class="card" id="c_details"><div class="chead"><span class="bar-accent"></span><h3>Details</h3><div class="tools"><span class="mini" id="d_sub"></span><a class="btn sm" id="d_sheet" href="#" target="_blank" rel="noopener">This row in the Sheet</a><button class="btn sm dark" id="d_edit" type="button">Edit</button><button class="btn sm hidden" id="d_cancel" type="button">Cancel</button><button class="btn sm solid hidden" id="d_save" type="button">Save changes</button></div></div>
 <div class="cbody" id="d_body"></div></div>
 
 <div class="card" id="c_contacts"><div class="chead"><span class="bar-accent"></span><h3>Contacts and self-service</h3><div class="tools"><span class="mini" id="ct_sub"></span><button class="btn sm" id="ct_link" type="button">Send profile link</button><button class="btn sm dark" id="ct_add" type="button">Add contact</button></div></div>
 <div class="cbody" id="ct_body"></div></div>
-
-<div class="card" id="c_onb"><div class="chead"><span class="bar-accent"></span><h3>Onboarding</h3><div class="tools"><span class="mini" id="o_sub"></span></div></div>
-<div class="cbody" id="o_body"></div></div>
 
 <div class="card" id="c_bc"><div class="chead"><span class="bar-accent"></span><h3>Crew background checks</h3><div class="tools"><span class="mini" id="b_sub"></span></div></div>
 <div class="cbody" id="b_body"></div></div>
@@ -350,12 +438,35 @@ function reloadCore(part){ return loadPart(S.vid, part || "head"); }
 function ready(){ return S.core && S.core.summary; }
 
 /* ---------- head ---------- */
+/* Status drives the colour of the whole head card. Active is City Wide red; every other
+   status gets its own colour so the difference is obvious at a glance. */
+var STATUS_THEME = {
+  "Active":              { c:"#D22730", bg:"#FBE9EA", ink:"#B01F27", what:"Live vendor. Gets opportunity emails and can be scheduled." },
+  "Waiting for Account": { c:"#2F6FD6", bg:"#EAF1FD", ink:"#1F4FA0", what:"Paperwork done. Waiting on accounting to activate them in Business Central." },
+  "In Progress":         { c:"#B5780A", bg:"#FFF4D6", ink:"#8A5A05", what:"Onboarding under way. Not on the schedule yet." },
+  "Prospect":            { c:"#636466", bg:"#F5F5F5", ink:"#2D2A26", what:"Not onboarded. Gets recruiting emails only." },
+  "Do Not Contact":      { c:"#2D2A26", bg:"#EDEBE8", ink:"#2D2A26", what:"Do not email, call or schedule." }
+};
+function statusTheme(st){ return STATUS_THEME[st] || { c:"#636466", bg:"#F5F5F5", ink:"#2D2A26", what:"No status on the directory row. Pick one." }; }
+function applyTheme(st){
+  var t = statusTheme(st), card = $("pheadcard");
+  card.style.setProperty("--st", t.c); card.style.setProperty("--st-bg", t.bg); card.style.setProperty("--st-ink", t.ink);
+}
+function statusField(){ var r = rec(); return r ? r.fields.filter(function(f){ return f.name === "status"; })[0] : null; }
 function renderHead(){
-  var c = S.core, s = c.summary || {};
-  var h = '<div class="top"><div><h2>' + esc(s.dba_name) + '</h2>' + (s.legal_name && s.legal_name !== s.dba_name ? '<div class="legal">' + esc(s.legal_name) + '</div>' : "") +
-    '<div class="pills">' + pill(s.status || "No status", s.live ? "pass" : s.prospect ? "grey" : "pend") + pill(s.region, s.market === "nnv" ? "nnv" : "lv") + (s.both ? pill("Both markets", "lv") : "") + pill(s.vendor_id, "std") + (s.ic_type ? pill(s.ic_type, "grey") : "") +
-    (s.types || []).map(function(t){ return pill(t.name, t.slug === "janitorial" ? "todo" : "grey"); }).join("") + '</div></div>' +
-    '<div class="acts"><a class="btn sm solid" href="' + OPS + 'vendor-email.html?vendor=' + encodeURIComponent(s.vendor_id) + '">Email this vendor</a><a class="btn sm" href="onboarding.html" target="_blank" rel="noopener">Onboarding desk</a></div></div>';
+  var c = S.core, s = c.summary || {}, st = s.status || "", t = statusTheme(st), sf = statusField();
+  applyTheme(st);
+  var opts = (sf && sf.options && sf.options.length ? sf.options : ["Active", "Waiting for Account", "In Progress", "Prospect", "Do Not Contact"]).slice();
+  if(st && opts.indexOf(st) < 0) opts.unshift(st);
+  if(!st) opts.unshift("");
+  var stbox = '<div class="stbox" id="stbox"><label>Vendor status</label>' +
+    (sf && !sf.readonly ? '<span class="stsel"><select id="st_sel" aria-label="Vendor status">' + opts.map(function(o){ return '<option value="' + esc(o) + '"' + (o === st ? " selected" : "") + '>' + esc(o || "No status") + '</option>'; }).join("") + '</select></span>' : '<div style="font-size:16px;font-weight:700;color:#fff;background:var(--st);border-radius:10px;padding:10px 14px">' + esc(st || "No status") + '</div>') +
+    '<div class="stx">' + esc(t.what) + (sf && !sf.readonly ? ' <b>Change it here and it saves right away.</b>' : "") + '</div></div>';
+  var h = '<div class="top"><div style="flex:1;min-width:240px"><h2>' + esc(s.dba_name) + '</h2>' + (s.legal_name && s.legal_name !== s.dba_name ? '<div class="legal">' + esc(s.legal_name) + '</div>' : "") +
+    '<div class="pills">' + '<span class="pill stpill">' + esc(st || "No status") + '</span>' + pill(s.region, s.market === "nnv" ? "nnv" : "lv") + (s.both ? pill("Both markets", "lv") : "") + pill(s.vendor_id, "std") + (s.ic_type ? pill(s.ic_type, "grey") : "") +
+    (s.types || []).map(function(t){ return pill(t.name, t.slug === "janitorial" ? "todo" : "grey"); }).join("") + '</div>' +
+    '<div class="acts" style="margin-left:0;margin-top:12px"><a class="btn sm solid" href="' + OPS + 'vendor-email.html?vendor=' + encodeURIComponent(s.vendor_id) + '">Email this vendor</a><a class="btn sm" href="#c_onb">Activation checklist</a><a class="btn sm" href="onboarding.html" target="_blank" rel="noopener">Onboarding desk</a></div></div>' +
+    stbox + '</div>';
   h += '<div class="facts">' +
     fact("Owner / contact", s.contact_name) + fact("Email", s.email ? '<a href="mailto:' + esc(s.email) + '">' + esc(s.email) + '</a>' : "", true) +
     fact("Phone", s.phone ? '<a href="tel:' + esc(s.phone) + '">' + esc(s.phone) + '</a>' : "", true) + fact("Vendor number", s.bc_vendor_no) +
@@ -372,9 +483,41 @@ function renderHead(){
   if(flags.length) h += '<div class="flags">' + flags.join("") + '</div>';
   $("phead").innerHTML = h;
   document.title = s.dba_name + " | Vendor Profile";
-  var jumps = [["c_details","Details"],["c_contacts","Contacts"],["c_onb","Onboarding"],["c_bc","Background checks"],["c_eval","Evaluation"],["c_resp","Interest letters"],["c_comp","Compliance"],["c_notices","Notices"],["c_act","Activity"]];
-  if(!$("jump").innerHTML) $("jump").innerHTML = jumps.map(function(j){ return '<a href="#' + j[0] + '" data-j="' + j[0] + '">' + j[1] + '<span class="n hidden"></span></a>'; }).join("");
+  var jumps = [["c_onb","Activation checklist"],["c_details","Details"],["c_contacts","Contacts"],["c_bc","Background checks"],["c_eval","Evaluation"],["c_resp","Interest letters"],["c_comp","Compliance"],["c_notices","Notices"],["c_act","Activity"]];
+  if(!$("jump").innerHTML) $("jump").innerHTML = jumps.map(function(j){ return '<a href="#' + j[0] + '" data-j="' + j[0] + '"' + (j[0] === "c_onb" ? ' class="hot"' : "") + '>' + j[1] + '<span class="n hidden"></span></a>'; }).join("");
   renderCompliance();
+}
+/* Status change from the head card: one adr_save on the directory row, same log and undo
+   as every other directory edit. Setting Active with paperwork still open asks first. */
+$("phead").addEventListener("change", function(e){
+  var sel = e.target.closest("#st_sel"); if(!sel) return;
+  var r = rec(), s = S.core.summary || {}, was = (r && r.rec.status) || "", next = sel.value;
+  if(!r){ toast("The directory row is not loaded yet.", "err"); sel.value = was; return; }
+  if(next === was) return;
+  if(!needWho()){ sel.value = was; return; }
+  if(S.editing){ toast("Finish or cancel the Details edit first.", "err"); sel.value = was; return; }
+  if(next === "Active"){
+    var left = openItems();
+    if(left.length && !confirm("Set " + s.dba_name + " to Active with " + left.length + " checklist item" + (left.length === 1 ? "" : "s") + " still not verified?\n\n" + left.slice(0, 6).join("\n") + (left.length > 6 ? "\n..." : "") + "\n\nActive vendors can be scheduled and get opportunity emails.")){ sel.value = was; return; }
+  }
+  if(next === "Do Not Contact" && !confirm("Set " + s.dba_name + " to Do Not Contact? They drop out of every picker and email.")){ sel.value = was; return; }
+  $("stbox").classList.add("busy");
+  post({ kind:"adr_save", surface:r.surface, row:r.row, id:r.id, changes:{ status:{ old:was, "new":next } } }).then(function(x){
+    $("stbox").classList.remove("busy");
+    if(!x || x.ok === false) throw new Error((x && x.error) || "Save failed");
+    if(x.stale && x.stale.length) throw new Error("Someone changed the status on the Sheet since you opened this. Reloading.");
+    r.rec.status = next; s.status = next; applyTheme(next);
+    toast("Status: " + (next || "blank"), "ok");
+    try{ sessionStorage.removeItem(IDX_KEY); S.idx = null; S.idxFresh = true; }catch(e){}
+    reloadCore("head");
+  }).catch(function(err){ $("stbox").classList.remove("busy"); sel.value = was; toast("Not saved: " + err.message, "err"); reloadCore("head"); });
+});
+/* Required checklist items not yet verified, across every onboarding row, as labels. */
+function openItems(){
+  var ob = S.core.onboarding; if(!ob || !ob.rows || !ob.rows.length) return ["No onboarding record started"];
+  var out = [];
+  ob.rows.forEach(function(o){ calcOb(o).left.forEach(function(i){ if(out.indexOf(i.label) < 0) out.push(i.label); }); });
+  return out;
 }
 function fact(label, v, raw){ return '<div><label>' + esc(label) + '</label><div class="v">' + (v ? (raw ? v : esc(v)) : '<span style="color:#aaa">none</span>') + '</div></div>'; }
 function count(id, n){ var el = $("jump").querySelector('[data-j="' + id + '"] .n'); if(!el) return; if(n){ el.textContent = n; el.classList.remove("hidden"); } else el.classList.add("hidden"); }
@@ -479,8 +622,11 @@ $("d_edit").addEventListener("click", startEdit); $("d_cancel").addEventListener
 
 /* ---------- onboarding (ob_*) ---------- */
 function docLabel(s){ return s === "fix" ? "Needs a fix" : s === "received" ? "Received" : s === "verified" ? "Verified" : ""; }
-function stateBtns(key, d){ var s = d.s || ""; return '<div class="res" data-key="' + esc(key) + '"><button class="rec' + (s === "received" ? " on" : "") + '" data-s="received" title="It came in">Received</button><button class="ver' + (s === "verified" ? " on" : "") + '" data-s="verified" title="Checked and correct">Verified</button><button class="fix' + (s === "fix" ? " on" : "") + '" data-s="fix" title="Came in wrong, needs a correction">Fix</button></div>'; }
 function itemsFor(o){ return (S.core.onboarding.checklist || []).filter(function(c){ return c.track === "Both" || c.track === o.track; }); }
+/* Which checklist groups are Stage 2 (accounts) and which item is the hand-off to accounting.
+   Read from the live Onboarding Checklist tab, so renaming an item there does not break this. */
+function isStage2(groupName){ return /crm|account/i.test(groupName || ""); }
+function acctItem(o){ var its = itemsFor(o); return its.filter(function(i){ return i.key === "accounting"; })[0] || its.filter(function(i){ return /accounting/i.test(i.label) && /sent|share|activation/i.test(i.label); })[0] || null; }
 function calcOb(o){ var items = itemsFor(o), req = items.filter(function(i){ return i.required; }), ver = req.filter(function(i){ return (o.docs[i.key] || {}).s === "verified"; }).length, left = req.filter(function(i){ return (o.docs[i.key] || {}).s !== "verified"; }); return { req:req.length, ver:ver, left:left }; }
 function renderOnboarding(){
   var ob = S.core.onboarding, s = S.core.summary, h = "";
@@ -489,31 +635,57 @@ function renderOnboarding(){
   $("o_sub").textContent = rows.length ? rows.map(function(o){ return (o.track === "JS" ? "Janitorial" : "Other services") + ": " + o.stage; }).join(" · ") : "not started";
   count("c_onb", rows.length ? rows.reduce(function(n, o){ return n + calcOb(o).left.length; }, 0) : 0);
   if(!rows.length){
-    h += '<p class="help">No onboarding record yet. Starting one puts this vendor on the <a href="onboarding.html">Onboarding desk</a> with the checklist for their track.</p>' +
+    h += '<p class="help">No activation checklist started for this vendor yet. Start one and the two-stage checklist appears here; it also puts them on the <a href="onboarding.html">Onboarding desk</a>.</p>' +
       '<div class="ctrls" style="margin-top:10px;max-width:520px"><div><label>Track</label><select id="ob_track"><option value="JS"' + (s.janitorial ? " selected" : "") + '>Janitorial (JS)</option><option value="OS"' + (!s.janitorial ? " selected" : "") + '>Other services (OS)</option></select></div><div><label>Stage</label><select id="ob_stage">' + (ob.stages || []).filter(function(x){ return x !== "Invited"; }).map(function(x){ return '<option' + (x === "New" ? " selected" : "") + '>' + esc(x) + '</option>'; }).join("") + '</select></div><div><label>&nbsp;</label><button class="btn sm solid" type="button" id="ob_start" style="min-height:40px">Start onboarding</button></div></div>';
   }
   rows.forEach(function(o){
     var c = calcOb(o), groups = [];
     itemsFor(o).forEach(function(it){ var g = groups.filter(function(x){ return x.name === it.group; })[0]; if(!g){ g = { name: it.group, items: [] }; groups.push(g); } g.items.push(it); });
+    // Two stages. Stage 1 is the paperwork (evaluation, PandaDoc packet, W-9, COI, waiver,
+    // background check). Stage 2 is the accounts (CRM client account, IC vendor account).
+    // The "sent to accounting" item is the last step and lives in the banner, not the list.
+    var acct = acctItem(o), st1 = [], st2 = [];
+    groups.forEach(function(g){ var gg = { name:g.name, items:g.items.filter(function(it){ return !acct || it.key !== acct.key; }) }; if(!gg.items.length) return; (isStage2(g.name) ? st2 : st1).push(gg); });
+    function reqLeft(gs){ var n = 0; gs.forEach(function(g){ g.items.forEach(function(it){ if(it.required && (o.docs[it.key] || {}).s !== "verified") n++; }); }); return n; }
+    function reqAll(gs){ var n = 0; gs.forEach(function(g){ g.items.forEach(function(it){ if(it.required) n++; }); }); return n; }
+    var l1 = reqLeft(st1), l2 = reqLeft(st2), a1 = reqAll(st1), a2 = reqAll(st2), acctD = acct ? (o.docs[acct.key] || {}) : {}, acctDone = acctD.s === "verified";
+    var allChecked = !l1 && !l2 && (a1 + a2) > 0;
+    var reqN = a1 + a2, verN = reqN - l1 - l2, pct = reqN ? Math.round((verN / reqN) * 100) : 0;
     h += '<div class="obrec" data-ob="' + esc(o.ob_id) + '">';
-    if(rows.length > 1) h += '<h4 style="font-size:12px;margin:14px 0 8px">' + (o.track === "JS" ? "Janitorial track" : "Other services track") + ' <span class="mini">' + esc(o.ob_id) + '</span></h4>';
+    if(rows.length > 1) h += '<h4 style="font-size:14px;margin:18px 0 8px">' + (o.track === "JS" ? "Janitorial track" : "Other services track") + ' <span class="mini">' + esc(o.ob_id) + '</span></h4>';
+    h += '<div class="prog"><b class="' + (allChecked ? "ok" : "") + '">' + (allChecked ? "All " + reqN + " checked" : verN + " of " + reqN + " checked") + '</b><div class="bar"><i class="' + (allChecked ? "" : "part") + '" style="width:' + pct + '%"></i></div>' +
+      '<span class="mini">Click the box to check an item off (Verified). Use <b>Received</b> when it came in but you have not checked it yet, <b>Fix</b> when it came in wrong.</span></div>';
     h += '<div class="ctrls">' +
       '<div><label>Stage</label><select data-f="stage">' + (ob.stages || []).filter(function(x){ return x !== "Invited"; }).map(function(x){ return '<option' + (x === o.stage ? " selected" : "") + '>' + esc(x) + '</option>'; }).join("") + '</select></div>' +
       '<div><label>Track</label><select data-f="track"><option value="JS"' + (o.track === "JS" ? " selected" : "") + '>Janitorial (JS)</option><option value="OS"' + (o.track === "OS" ? " selected" : "") + '>Other services (OS)</option></select></div>' +
       '<div><label>Assigned to</label><input data-f="assignee" value="' + esc(o.assignee || "") + '" placeholder="Name"></div>' +
-      '<div><label>Priority</label><select data-f="priority"><option value="">None</option>' + ["High","Medium","Low"].map(function(p){ return '<option' + (p === o.priority ? " selected" : "") + '>' + p + '</option>'; }).join("") + '</select></div>' +
-      '<div><label>Progress</label><div style="font-size:13px;font-weight:700;min-height:40px;display:flex;align-items:center">' + (c.left.length ? c.ver + " of " + c.req + " verified, " + c.left.length + " left" : '<span style="color:var(--green)">Ready: everything verified</span>') + '</div></div></div>';
-    groups.forEach(function(g){
-      var done = g.items.filter(function(it){ return (o.docs[it.key] || {}).s === "verified"; }).length, isPacket = /packet/i.test(g.name);
-      h += '<div class="grp"><div class="gh"><span>' + esc(g.name) + '</span><span class="gc">' + done + ' of ' + g.items.length + '</span>' + (isPacket ? '<button class="bulk" data-bulk="received">Mark the whole packet received</button><button class="bulk" data-bulk="verified" style="margin-left:10px">Verify all</button>' : "") + '</div>';
-      g.items.forEach(function(it){
-        var d = o.docs[it.key] || {};
-        h += '<div class="item' + (d.s === "verified" ? " done" : "") + '" data-key="' + esc(it.key) + '"><div><div class="lb">' + esc(it.label) + (it.required ? "" : ' <span class="req">optional</span>') + (it.auto ? ' <span class="auto" title="Fills itself from the Vendor Hub">auto</span>' : "") + '</div>' +
-          '<div class="st">' + (d.s ? '<b>' + esc(docLabel(d.s)) + '</b> ' + esc(d.d || "") + (d.by ? " by " + esc(d.by) : "") : '<span>Not in yet</span>') + (d.n ? ' <span class="nt">' + esc(d.n) + '</span>' : "") + (it.hint && !d.s ? ' <span>' + esc(it.hint) + '</span>' : "") + '<button data-note="' + esc(it.key) + '">' + (d.n ? "edit note" : "note") + '</button></div></div>' + stateBtns(it.key, d) + '</div>';
+      '<div><label>Priority</label><select data-f="priority"><option value="">None</option>' + ["High","Medium","Low"].map(function(p){ return '<option' + (p === o.priority ? " selected" : "") + '>' + p + '</option>'; }).join("") + '</select></div></div>';
+    function stageHtml(n, title, sub, gs, left, all, locked){
+      var x = '<div class="stage' + (!left && all ? " done" : locked ? " next" : "") + '"><div class="sh"><span class="num"><span>' + n + '</span></span><div><h4>' + esc(title) + '</h4><p>' + esc(sub) + '</p></div>' +
+        '<span class="sc ' + (!left && all ? "ok" : locked ? "wait" : "") + '">' + (!all ? "Nothing on this list for this track" : !left ? "Complete" : locked ? "Starts when Stage 1 is complete (" + left + " to go)" : left + " of " + all + " to go") + '</span></div>';
+      gs.forEach(function(g){
+        var done = g.items.filter(function(it){ return (o.docs[it.key] || {}).s === "verified"; }).length, isPacket = /packet/i.test(g.name);
+        x += '<div class="grp"><div class="gh"><span>' + esc(g.name) + '</span><span class="gc">' + done + ' of ' + g.items.length + '</span>' + (isPacket ? '<button class="bulk" data-bulk="received">Mark the whole packet received</button><button class="bulk" data-bulk="verified" style="margin-left:10px">Verify all</button>' : "") + '</div>';
+        g.items.forEach(function(it){
+          var d = o.docs[it.key] || {}, cls = d.s === "verified" ? "ver" : d.s === "received" ? "rec" : d.s === "fix" ? "fix" : "";
+          x += '<div class="item' + (d.s === "verified" ? " done" : d.s === "fix" ? " fix" : "") + '" data-key="' + esc(it.key) + '">' +
+            '<button type="button" class="cb ' + cls + '" data-cb="1" title="' + (d.s === "verified" ? "Checked. Click to clear." : "Click to check off as verified") + '" aria-label="' + esc(it.label) + '"></button>' +
+            '<div><div class="lb">' + esc(it.label) + (it.required ? "" : ' <span class="req">optional</span>') + (it.auto ? ' <span class="auto" title="Fills itself from the Vendor Hub">auto</span>' : "") + '</div>' +
+            '<div class="st">' + (d.s ? '<b>' + esc(docLabel(d.s)) + '</b> ' + esc(d.d || "") + (d.by ? " by " + esc(d.by) : "") : '<span>Not in yet</span>') + (d.n ? ' <span class="nt">' + esc(d.n) + '</span>' : "") + (it.hint && !d.s ? ' <span>' + esc(it.hint) + '</span>' : "") + '<button data-note="' + esc(it.key) + '">' + (d.n ? "edit note" : "note") + '</button></div></div>' +
+            '<div class="alt">' + (d.s === "verified" ? "" : '<button type="button" data-s="received" class="' + (d.s === "received" ? "on" : "") + '" title="It came in, not checked yet">Received</button>') + '<button type="button" data-s="fix" class="fixb' + (d.s === "fix" ? " on" : "") + '" title="Came in wrong, needs a correction">Fix</button></div></div>';
+        });
+        x += '</div>';
       });
-      h += '</div>';
-    });
-    h += '<div class="notes" style="margin-top:12px"><h5 style="font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);margin:0 0 6px">Onboarding notes</h5><textarea data-note-for="' + esc(o.ob_id) + '" placeholder="W-9 needs the legal name corrected, COI names the wrong entity, called and left a message..."></textarea><div style="display:flex;gap:8px;align-items:center;margin-top:6px"><button class="btn sm solid" type="button" data-noteadd="' + esc(o.ob_id) + '">Add note</button><span class="mini">Newest first. Notes also live on the Onboarding tab.</span></div>' +
+      return x + '</div>';
+    }
+    h += stageHtml(1, "Paperwork", "Vendor evaluation, the PandaDoc packet (agreement and compliance packet), W-9, certificates of insurance and the notarized waiver.", st1, l1, a1, false);
+    h += stageHtml(2, "Accounts", "CRM client account and the IC vendor account, so we can sell to them and pay them as a vendor or independent contractor.", st2, l2, a2, !!l1);
+    if(allChecked){
+      h += '<div class="alldone' + (acctDone ? " sent" : "") + '">' + (acctDone ?
+        '<div class="big">Sent to accounting' + (acctD.d ? " " + esc(niceDate(acctD.d)) : "") + (acctD.by ? " by " + esc(acctD.by) : "") + '.<small>' + (s.status === "Active" ? "Status is Active. Nothing left to do here." : "Once accounting confirms they are set up in Business Central, set the status at the top of this page to Active.") + '</small></div>' + (s.status !== "Active" ? '<button class="btn" type="button" data-setactive="1">Set status to Active</button>' : "") :
+        '<div class="big">Everything is checked. Please make sure to share all of this with accounting.<small>Accounting activates the vendor in Business Central. Nothing gets paid until they do.</small></div>' + (acct ? '<button class="btn" type="button" data-acct="' + esc(acct.key) + '">Mark sent to accounting</button>' : "")) + '</div>';
+    }
+    h += '<div class="obnotes"><h5 style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);margin:0 0 8px">Onboarding notes</h5><textarea data-note-for="' + esc(o.ob_id) + '" placeholder="W-9 needs the legal name corrected, COI names the wrong entity, called and left a message..." style="width:100%;font:inherit;font-size:13px;border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;min-height:60px;resize:vertical"></textarea><div style="display:flex;gap:8px;align-items:center;margin-top:6px"><button class="btn sm solid" type="button" data-noteadd="' + esc(o.ob_id) + '">Add note</button><span class="mini">Newest first. Notes also live on the Onboarding tab.</span></div>' +
       '<div class="nlist">' + (o.notes ? esc(o.notes) : '<span class="mini">No notes yet.</span>') + '</div></div>';
     h += '</div>';
   });
@@ -550,10 +722,27 @@ $("o_body").addEventListener("click", function(e){
     var payload = items.length === 1 ? { kind:"ob_doc", ob_id:obId, key:items[0].key, state:items[0].state, note:items[0].note } : { kind:"ob_docs", ob_id:obId, items:items };
     post(payload).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Save failed"); o.docs = r.docs; toast(label || "Saved", "ok"); renderOnboarding(); }).catch(function(err){ toast("Not saved: " + err.message, "err"); renderOnboarding(); });
   }
+  if(b.dataset.cb){
+    var ck = b.closest(".item").dataset.key, cs = (o.docs[ck] || {}).s || "";
+    if(cs === "verified" && !confirm("Clear the check on this item? It goes back to not verified.")) return;
+    setDoc([{ key:ck, state:cs === "verified" ? "" : "verified" }], cs === "verified" ? "Cleared" : "Checked off");
+    return;
+  }
   if(b.dataset.s){
-    var key = b.closest(".res").dataset.key, cur = (o.docs[key] || {}).s || "", next = cur === b.dataset.s ? "" : b.dataset.s, note;
+    var key = b.closest(".item").dataset.key, cur = (o.docs[key] || {}).s || "", next = cur === b.dataset.s ? "" : b.dataset.s, note;
     if(next === "fix"){ note = prompt("What needs fixing?", (o.docs[key] || {}).n || ""); if(note === null) return; }
     setDoc([{ key:key, state:next, note:note }], next ? (next === "fix" ? "Marked: needs a fix" : next === "verified" ? "Verified" : "Received") : "Cleared");
+    return;
+  }
+  if(b.dataset.acct){
+    if(!confirm("Mark this vendor's profile as sent to accounting? Only do this after you have actually sent it.")) return;
+    setDoc([{ key:b.dataset.acct, state:"verified" }], "Marked sent to accounting");
+    return;
+  }
+  if(b.dataset.setactive){
+    var sel = $("st_sel"); if(!sel){ toast("The status field is not editable on this row.", "err"); return; }
+    sel.value = "Active"; sel.dispatchEvent(new Event("change", { bubbles:true }));
+    window.scrollTo({ top:0, behavior:"smooth" });
     return;
   }
   if(b.dataset.note){
