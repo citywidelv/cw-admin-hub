@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Vendor Profile | CW Admin Hub</title>
-<!-- build 2026-09-23a (Contacts card + vendor self-service activity, VendorSelf.gs vs_admin_* kinds).
+<!-- build 2026-09-23c (email bounced flag: directory columns email_status / email_note + do not email list, no new backend).
+Prior: build 2026-09-23a (Contacts card + vendor self-service activity, VendorSelf.gs vs_admin_* kinds).
 Prior: build 2026-09-22b (four parallel loads, index cache). One vendor, everything, one page.
 Backend: VendorProfile.gs (kinds vp_index, vp_get) on the CW Solicitations script, read only.
 Every edit goes through the kind that already owns that data, so the same logs and the
@@ -339,7 +340,7 @@ function loadPart(vid, part){
     if(part === "more"){ S.more = r; renderMore(); return; }
     Object.keys(r).forEach(function(k){ if(k !== "ok" && k !== "part" && k !== "errors" && k !== "timing") S.core[k] = r[k]; });
     Object.keys(r.errors || {}).forEach(function(k){ toast("Could not load " + k + ": " + r.errors[k], "err"); });
-    if(part === "head"){ renderHead(); renderDetails(); renderOnboarding(); renderCrew(); renderEval(); renderActivity(); }
+    if(part === "head"){ renderHead(); renderDetails(); renderOnboarding(); renderCrew(); renderEval(); renderActivity(); renderCompliance(); }
     if(part === "onboarding"){ renderOnboarding(); renderActivity(); renderCrew(); }
     if(part === "crew"){ renderCrew(); renderEval(); renderActivity(); }
     if(part !== "head") renderCompliance();
@@ -361,6 +362,8 @@ function renderHead(){
     fact("Started with City Wide", s.cw_start_date ? niceDate(s.cw_start_date) : "") + fact("City", s.city_state) +
     fact("Source", s.source) + fact("Last updated", s.updated ? niceDate(s.updated) : "") + '</div>';
   var flags = [];
+  var erec = (S.core.record && S.core.record.rec) || {};
+  if(/bounce|invalid/i.test(erec.email_status || "")) flags.push('<span class="flag bad">Email ' + esc(String(erec.email_status).toLowerCase()) + (erec.email_note ? ': ' + esc(erec.email_note) : '') + '</span>');
   if(s.dne) flags.push('<span class="flag bad">On the do not email list</span>');
   if(s.hide) flags.push('<span class="flag warn">Hidden from pickers</span>');
   if(s.invited) flags.push('<span class="flag warn">Invited, evaluation not in yet</span>');
@@ -689,7 +692,11 @@ function renderCompliance(){
   else au.slice(0, 6).forEach(function(a){ h += '<div class="act"><b>' + esc(niceDate(a.audit_date)) + '</b> ' + pill(a.result || "?", /pass/i.test(a.result) ? "pass" : "fail") + (a.pdf_url ? ' <a href="' + esc(a.pdf_url) + '" target="_blank" rel="noopener" style="color:var(--red);font-weight:700;text-decoration:none">PDF</a>' : "") + '<div class="t">' + esc(a.submitted_by || "") + (a.accounts_audited ? " · " + esc(a.accounts_audited) + " accounts" : "") + (a.next_due ? " · next due " + esc(niceDate(a.next_due)) : "") + (a.fail_reasons ? " · " + esc(a.fail_reasons) : "") + '</div></div>'; });
   h += '</div>';
   // email standing
+  var er = (S.core.record && S.core.record.rec) || {}, hasEmailCols = S.core.record && ("email_status" in er);
+  var bounced = /bounce|invalid/i.test(er.email_status || "");
   h += '<div class="box"><h5>Email standing</h5>' +
+    (bounced ? '<p style="font-size:13px"><b style="color:var(--red)">Email ' + esc(String(er.email_status).toLowerCase()) + '.</b> ' + esc(er.email_note || "") + ' Fix the address on Details, then click below.</p><p class="mailbtn"><button class="btn sm" type="button" id="em_ok">Email works again</button></p>'
+             : (hasEmailCols ? '<p class="mailbtn"><button class="btn sm" type="button" id="em_bad">Email bounced (mark invalid)</button> <span class="mini">marks the row, puts the address on the do not email list</span></p>' : '')) +
     (s.dne ? '<p style="font-size:13px"><b style="color:var(--red)">On the do not email list.</b> Gets no opportunity or vendor messages. Notices, COI and background check emails still go.</p><p class="mailbtn"><button class="btn sm" type="button" id="dne_lift">Take them off the list</button></p>' :
       '<p style="font-size:13px">Gets vendor emails' + (s.email ? "" : " (no email address on file)") + '.</p><p class="mailbtn"><button class="btn sm" type="button" id="dne_add">Put on the do not email list</button></p>') +
     '<p style="font-size:13px;margin-top:8px">' + (s.hide ? '<b style="color:var(--amber)">Hidden</b> from every picker (opportunity emails, violations, messages).' : 'Shown in the pickers.') + '</p><p class="mailbtn"><button class="btn sm" type="button" id="hide_tog">' + (s.hide ? "Show in pickers again" : "Hide from pickers") + '</button> <a class="btn sm" href="' + OPS + 'vendor-dne.html?from=admin" target="_blank" rel="noopener">Do Not Email page</a></p></div>';
@@ -713,6 +720,21 @@ $("k_body").addEventListener("click", function(e){
     if(!confirm("Take " + s.dba_name + " off the do not email list? They start getting vendor emails again.")) return;
     b.classList.add("busy");
     post({ kind:"dne_remove", email:s.email }).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Not saved"); toast("Off the list", "ok"); return reloadCore("head"); }).catch(function(err){ b.classList.remove("busy"); toast(err.message, "err"); });
+  } else if(b.id === "em_bad" || b.id === "em_ok"){
+    var rr = S.core.record; if(!rr || !("email_status" in rr.rec)){ toast("The email_status column is missing on this tab", "err"); return; }
+    var bad = b.id === "em_bad", today = new Date().toISOString().slice(0, 10);
+    var note = bad ? "Bounced " + today + ", marked by " + who() : "";
+    b.classList.add("busy");
+    post({ kind:"adr_save", surface:rr.surface, row:rr.row, id:rr.id, changes:{ email_status:{ old:rr.rec.email_status || "", "new": bad ? "Bounced" : "" }, email_note:{ old:rr.rec.email_note || "", "new": note } } })
+      .then(function(x){
+        if(!x || x.ok === false) throw new Error((x && x.error) || "Not saved");
+        if(x.stale && x.stale.length) throw new Error("Changed by someone else since you opened it. Reload and try again.");
+        if(bad && s.email && !s.dne) return post({ kind:"dne_add", reason:"Email bounced (undeliverable) " + today, vendor_ids:[S.vid], emails:[] });
+        if(!bad && s.dne && s.email) return post({ kind:"dne_remove", email:s.email });
+        return { ok:true };
+      })
+      .then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Row saved, but the do not email list did not update"); toast(bad ? "Marked bounced and blocked from vendor emails" : "Email cleared and unblocked", "ok"); return reloadCore("head"); })
+      .catch(function(err){ b.classList.remove("busy"); toast(err.message, "err"); });
   } else if(b.id === "hide_tog"){
     var hide = !s.hide, reason2 = hide ? prompt("Why hide them?", "") : ""; if(reason2 === null) return;
     b.classList.add("busy");
