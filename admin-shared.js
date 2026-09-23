@@ -103,6 +103,7 @@ var MENU = [
   ]},
   { label:"Vendors", icon:"clip", page:"vendors", items:[
     {label:"Vendor Profile (everything about one vendor)", href:"vendor-profile.html", tag:"Hub"},
+    {label:"Vendor Activity (what vendors sent or changed)", href:"vendor-activity.html", tag:"Hub"},
     {label:"Vendor Email (one place to send)", href:OPS + "vendor-email.html?from=admin", tag:"Ops Hub"},
     {sub:"Onboarding", items:[
       {label:"Vendor Onboarding desk", href:"onboarding.html", tag:"Hub"},

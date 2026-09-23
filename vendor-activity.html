@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Vendor Activity | CW Admin Hub</title>
+<!-- build 2026-09-23a. One feed of everything vendors send or change: evaluations, profile
+     edits from the Vendor Hub self-service page, contact changes, profile change requests,
+     uploads, background check requests, cleaner roster changes, interest letters, audits.
+     Backend: VendorSelf.gs (kinds vs_feed {source}, vs_feed_set). Eight sources load in
+     parallel after the gate and paint as they arrive. Last result is cached in localStorage
+     so the page paints at once on the next visit, then refreshes. -->
+<link rel="stylesheet" href="admin.css">
+<link rel="icon" href="https://citywidelv.github.io/cw-ops-desk/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="https://citywidelv.github.io/cw-ops-desk/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://citywidelv.github.io/cw-ops-desk/apple-touch-icon.png">
+<style>
+.topbar{position:relative;z-index:5;margin-top:-46px}
+.topbar .qcard{padding:14px 18px 12px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.topbar .qcard .qhead{margin:0}
+.topbar .who{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--grey)}
+.topbar .who input{font-size:11.5px;border:1px solid var(--border);border-radius:6px;padding:5px 8px;width:150px}
+.topbar .sp{flex:1}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 12px}
+.stat{background:#fff;border:1px solid var(--border);border-radius:12px;padding:10px 14px;min-width:120px;cursor:pointer}
+.stat.on{border-color:var(--red);box-shadow:0 0 0 3px rgba(210,39,48,.1)}
+.stat .n{font-size:22px;font-weight:700;line-height:1.1}
+.stat .l{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--grey);margin-top:2px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 18px;border-bottom:1px solid var(--border)}
+.seg{display:inline-flex;border:1.5px solid var(--border);border-radius:9px;overflow:hidden;background:#fff}
+.seg button{border:none;background:none;font-size:11.5px;font-weight:700;padding:7px 11px;cursor:pointer;color:var(--grey);white-space:nowrap}
+.seg button.on{background:var(--black);color:#fff}
+.seg button:hover:not(.on){background:var(--light);color:var(--black)}
+.filters .chk{font-size:11.5px;color:var(--grey);display:inline-flex;align-items:center;gap:5px}
+.filters .srch{position:relative;margin-left:auto;min-width:220px}
+.filters .srch input{width:100%;font-size:12.5px;border:1.5px solid var(--border);border-radius:16px;padding:8px 12px;background:var(--light);outline:none}
+.filters .srch input:focus{border-color:var(--red);background:#fff}
+.types{display:flex;gap:6px;flex-wrap:wrap;padding:10px 18px;border-bottom:1px solid var(--light)}
+.types label{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;border:1.5px solid var(--border);border-radius:999px;padding:4px 10px;cursor:pointer;color:var(--grey);background:#fff}
+.types label.on{border-color:var(--black);color:var(--black)}
+.types input{display:none}
+.showing{font-size:11.5px;color:var(--grey);padding:8px 18px;border-bottom:1px solid var(--light);display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.showing b{color:var(--black)}
+.showing .src{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.showing .src span{font-size:10px;padding:1px 7px;border-radius:9px;border:1px solid var(--border);color:var(--grey)}
+.showing .src span.ok{border-color:#bfe6e7;color:#0A7F82}
+.showing .src span.bad{border-color:#f3c4c7;color:var(--red)}
+.day{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--grey);padding:16px 18px 4px;border-bottom:1px solid var(--light)}
+.it{display:flex;gap:12px;padding:11px 18px;border-bottom:1px solid var(--light);align-items:flex-start}
+.it:hover{background:#fffbf2}
+.it.done{opacity:.6}
+.it .tp{flex:none;width:118px;padding-top:2px}
+.it .main{flex:1;min-width:0}
+.it .sum{font-size:13.5px;font-weight:700;overflow-wrap:anywhere}
+.it .sum a{color:var(--black);text-decoration:none}
+.it .sum a:hover{color:var(--red)}
+.it .meta{font-size:11.5px;color:var(--grey);margin-top:2px}
+.it .meta a{color:var(--red);text-decoration:none;font-weight:700}
+.it .det{display:none;margin-top:8px;background:var(--light);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;line-height:1.6}
+.it.open .det{display:block}
+.it .det div b{color:var(--grey);font-weight:700;margin-right:6px}
+.it .acts{flex:none;display:flex;flex-direction:column;gap:5px;align-items:flex-end}
+.it .acts .btn{white-space:nowrap}
+.it .acts .st{font-size:11px;color:var(--green);font-weight:700;text-align:right}
+.it .acts .st small{display:block;font-weight:400;color:var(--grey)}
+.it .acts .undo{font-size:10.5px;color:var(--grey);background:none;border:none;cursor:pointer;text-decoration:underline;padding:0}
+.it .more{font-size:11px;color:var(--red);background:none;border:none;cursor:pointer;padding:0;font-weight:700;margin-top:2px}
+.pill.eval{background:var(--red-bg);color:var(--red)}
+.pill.intake{background:var(--red-bg);color:var(--red)}
+.pill.profile_edit{background:#EAF6F6;color:#0A7F82}
+.pill.contact{background:#EAF6F6;color:#0A7F82}
+.pill.details{background:#EAF6F6;color:#0A7F82}
+.pill.request{background:var(--amber-bg);color:var(--amber)}
+.pill.upload{background:var(--blue-bg);color:var(--blue)}
+.pill.bc{background:var(--blue-bg);color:var(--blue)}
+.pill.cleaner{background:var(--blue-bg);color:var(--blue)}
+.pill.audit{background:var(--green-bg);color:var(--green)}
+.pill.response{background:var(--gold-bg,#fff6d6);color:var(--amber)}
+.pill.link{background:var(--light);color:var(--grey)}
+.loading{color:var(--grey);font-size:12.5px;padding:18px}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:sp .8s linear infinite;vertical-align:middle;margin-right:8px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.empty{padding:28px 18px;color:var(--grey);font-size:13px;text-align:center}
+.legend{font-size:11.5px;color:var(--grey);padding:12px 18px;border-top:1px solid var(--border);line-height:1.9}
+@media(max-width:700px){.it{flex-wrap:wrap}.it .tp{width:auto}.it .acts{flex-direction:row;align-items:center;width:100%;justify-content:flex-start}}
+</style>
+<link rel="stylesheet" href="https://citywidelv.github.io/cw-base.css">
+</head>
+<body>
+<div id="gate" class="gate"></div>
+<div id="app" class="hidden">
+<header class="head" id="adminhead"></header>
+
+<section class="hero slim">
+<div class="bg" style="background-image:url('https://citywidelv.github.io/cw-ops-desk/images/fsm-team.jpg')"></div>
+<div class="wrap">
+<div class="htext">
+<div class="kick">Vendors</div>
+<h1>Vendor Activity</h1>
+<p>Everything vendors send or change, in one list. New evaluations, edits they make to their own profile, contacts they add, documents they upload, background check and cleaner requests. Open the item, do what it needs, mark it handled.</p>
+</div>
+</div>
+</section>
+
+<div class="wrap topbar">
+<div class="qcard">
+<div class="qhead"><span class="bar-accent"></span><h2>Last 45 days</h2></div>
+<span class="who">Working as <input id="who" placeholder="Your name"></span>
+<span class="sp"></span>
+<a class="btn sm" href="vendor-profile.html">Vendor profile</a>
+<a class="btn sm" href="onboarding.html">Onboarding desk</a>
+<button class="btn sm dark" id="refresh" type="button">Refresh</button>
+</div>
+</div>
+
+<main class="wrap" style="padding-top:6px">
+<div class="stats" id="stats"></div>
+<div class="card">
+<div class="filters">
+<div class="seg" id="mk"><button data-mk="" class="on" type="button">All markets</button><button data-mk="LV" type="button">Las Vegas</button><button data-mk="NNV" type="button">Northern Nevada</button></div>
+<div class="seg" id="st"><button data-st="open" class="on" type="button">Needs attention</button><button data-st="all" type="button">Everything</button></div>
+<div class="srch"><input type="search" id="q" placeholder="Search vendor, person, email" autocomplete="off"></div>
+</div>
+<div class="types" id="types"></div>
+<div class="showing" id="showing"></div>
+<div id="list"><div class="loading"><span class="spin"></span>Loading vendor activity...</div></div>
+<div class="legend"><b>Profile edits</b> update the Vendor Directory only. CRM, Business Central and emfluence still need the same change by hand; mark the item <b>Synced to other systems</b> when that is done. <b>Evaluations</b> and <b>intake</b> are new or returning vendors. <b>Requests</b> are the pending profile change requests (name, email, banking) that a person verifies first. Handled items drop off after 7 days.</div>
+</div>
+</main>
+
+<footer class="foot"><div class="fin">
+<b>City Wide Facility Solutions</b> &middot; Admin Hub &middot; Internal use only &middot; Something missing? Tell TJ. &middot; <a href="https://www.gocitywide.com" target="_blank" rel="noopener">GoCityWide.com</a>
+<span class="fr">Las Vegas<span>&bull;</span>Reno</span>
+</div></footer>
+</div><!-- /app -->
+
+<script src="https://citywidelv.github.io/cw-ops-desk/cw-auth.js"></script>
+<script src="nav.js"></script>
+<script src="https://citywidelv.github.io/cw-ops-desk/cw-nav.js"></script>
+<script src="admin-shared.js"></script>
+<script>
+(function(){
+"use strict";
+var esc = ADMIN.esc, toast = ADMIN.toast;
+function $(id){ return document.getElementById(id); }
+var SOURCES = ["self", "intake", "requests", "uploads", "bc", "cleaners", "responses", "audits"];
+var TYPES = [["eval","Evaluations"],["intake","Intake"],["profile_edit","Profile edits"],["contact","Contacts"],["details","Details"],["request","Change requests"],["upload","Uploads"],["bc","Background checks"],["cleaner","Cleaner roster"],["response","Interest letters"],["audit","Audits"],["link","Link requests"]];
+var TYPE_LABEL = {}; TYPES.forEach(function(t){ TYPE_LABEL[t[0]] = t[1]; });
+var CACHE = "cwVendorActivity";
+var S = { items:{}, statuses:{}, src:{}, mk:"", st:"open", q:"", types:{}, open:{} };
+TYPES.forEach(function(t){ S.types[t[0]] = t[0] !== "link" && t[0] !== "response" && t[0] !== "audit"; });
+
+function post(p){ p.who = ADMIN.who() || ""; return ADMIN.api(p); }
+function niceWhen(s){
+  s = String(s || ""); var m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?: (\d{2}):(\d{2}))?/);
+  if(!m) return s;
+  var d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4] || 0), Number(m[5] || 0));
+  var t = m[4] ? d.toLocaleTimeString([], { hour:"numeric", minute:"2-digit" }) : "";
+  return d.toLocaleDateString([], { month:"short", day:"numeric" }) + (t ? " " + t : "");
+}
+function dayOf(s){ return String(s || "").slice(0, 10); }
+function dayLabel(d){
+  var today = new Date(), t = today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, "0") + "-" + String(today.getDate()).padStart(2, "0");
+  var y = new Date(today.getTime() - 86400000), yy = y.getFullYear() + "-" + String(y.getMonth() + 1).padStart(2, "0") + "-" + String(y.getDate()).padStart(2, "0");
+  if(d === t) return "Today"; if(d === yy) return "Yesterday";
+  var m = d.match(/^(\d{4})-(\d{2})-(\d{2})/); if(!m) return d || "Undated";
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).toLocaleDateString([], { weekday:"long", month:"long", day:"numeric" });
+}
+
+/* ---------- load ---------- */
+function cacheRead(){ try { var c = JSON.parse(localStorage.getItem(CACHE) || "null"); if(c && c.items) return c; } catch(e){} return null; }
+function cacheWrite(){ try { localStorage.setItem(CACHE, JSON.stringify({ items:S.items, statuses:S.statuses, at:Date.now() })); } catch(e){} }
+function load(){
+  S.src = {};
+  SOURCES.forEach(function(src){ S.src[src] = "loading"; });
+  renderShowing();
+  SOURCES.forEach(function(src){
+    post({ kind:"vs_feed", source:src }).then(function(r){
+      if(!r || r.ok === false){ S.src[src] = "bad"; toast("Could not load " + src + ": " + ((r && r.error) || "no reply"), "err"); render(); return; }
+      S.items[src] = r.items || []; S.statuses = r.statuses || S.statuses; S.src[src] = "ok"; cacheWrite(); render();
+    }).catch(function(){ S.src[src] = "bad"; render(); });
+  });
+}
+
+/* ---------- render ---------- */
+function all(){ var out = []; SOURCES.forEach(function(s){ (S.items[s] || []).forEach(function(it){ out.push(it); }); }); return out; }
+function visible(){
+  var q = S.q.toLowerCase();
+  return all().filter(function(it){
+    if(!S.types[it.type]) return false;
+    if(S.mk && it.market !== S.mk) return false;
+    if(S.st === "open" && it.status) return false;
+    if(q){ var hay = [it.vendor, it.summary, it.actor, it.actor_email, it.vendor_id].join(" ").toLowerCase(); if(hay.indexOf(q) < 0) return false; }
+    return true;
+  }).sort(function(a, b){ return a.when < b.when ? 1 : a.when > b.when ? -1 : 0; });
+}
+function renderStats(){
+  var counts = {}, open = 0, items = all();
+  items.forEach(function(it){ if(!it.status && it.type !== "link"){ open++; counts[it.type] = (counts[it.type] || 0) + 1; } });
+  var top = [["eval","New evaluations"],["profile_edit","Profile edits"],["contact","Contact changes"],["request","Change requests"],["upload","Uploads"],["bc","BC requests"],["cleaner","Cleaner changes"]];
+  $("stats").innerHTML = '<div class="stat' + (Object.keys(S.types).every(function(k){ return S.types[k] === (k !== "link" && k !== "response" && k !== "audit"); }) ? " on" : "") + '" data-all="1"><div class="n">' + open + '</div><div class="l">Needs attention</div></div>' +
+    top.map(function(t){ return '<div class="stat" data-type="' + t[0] + '"><div class="n">' + (counts[t[0]] || 0) + '</div><div class="l">' + esc(t[1]) + '</div></div>'; }).join("");
+  Array.prototype.forEach.call($("stats").querySelectorAll(".stat"), function(el){
+    el.addEventListener("click", function(){
+      if(el.getAttribute("data-all")){ TYPES.forEach(function(t){ S.types[t[0]] = t[0] !== "link" && t[0] !== "response" && t[0] !== "audit"; }); }
+      else { var ty = el.getAttribute("data-type"); TYPES.forEach(function(t){ S.types[t[0]] = t[0] === ty; }); }
+      S.st = "open"; Array.prototype.forEach.call($("st").querySelectorAll("button"), function(b){ b.classList.toggle("on", b.getAttribute("data-st") === "open"); });
+      render();
+    });
+  });
+}
+function renderTypes(){
+  $("types").innerHTML = TYPES.map(function(t){ return '<label class="' + (S.types[t[0]] ? "on" : "") + '"><input type="checkbox" data-type="' + t[0] + '"' + (S.types[t[0]] ? " checked" : "") + '> ' + esc(t[1]) + '</label>'; }).join("");
+  Array.prototype.forEach.call($("types").querySelectorAll("input"), function(cb){ cb.addEventListener("change", function(){ S.types[cb.getAttribute("data-type")] = cb.checked; render(); }); });
+}
+function renderShowing(){
+  var v = visible();
+  $("showing").innerHTML = 'Showing <b>' + v.length + '</b> of ' + all().length + ' items' +
+    '<span class="src">' + SOURCES.map(function(s){ return '<span class="' + (S.src[s] === "ok" ? "ok" : S.src[s] === "bad" ? "bad" : "") + '" title="' + esc(s) + '">' + esc(s) + (S.src[s] === "loading" ? "…" : "") + '</span>'; }).join("") + '</span>';
+}
+function detailHtml(d){
+  if(!d) return "";
+  if(Array.isArray(d)) return d.filter(function(x){ return Array.isArray(x) ? (x[1] || x[2]) : x; }).map(function(x){
+    if(Array.isArray(x)) return '<div><b>' + esc(x[0]) + '</b>' + (x.length > 2 ? (x[1] ? esc(x[1]) + ' &rarr; ' : '') + esc(x[2]) : esc(x[1])) + '</div>';
+    return '<div>' + esc(String(x)) + '</div>';
+  }).join("");
+  if(typeof d === "object") return Object.keys(d).filter(function(k){ return d[k] && k.charAt(0) !== "_"; }).map(function(k){ return '<div><b>' + esc(k.replace(/_/g, " ")) + '</b>' + esc(String(d[k])) + '</div>'; }).join("");
+  return '<div>' + esc(String(d)) + '</div>';
+}
+function render(){
+  renderStats(); renderShowing();
+  var v = visible();
+  if(!v.length){ $("list").innerHTML = '<div class="empty">' + (Object.keys(S.items).length ? "Nothing here. Change the filters, or you are caught up." : "Loading...") + '</div>'; return; }
+  var h = "", day = "";
+  v.forEach(function(it){
+    var d = dayOf(it.when);
+    if(d !== day){ day = d; h += '<div class="day">' + esc(dayLabel(d)) + '</div>'; }
+    var opts = (S.statuses[it.type] || ["Reviewed"]);
+    var acts = it.status ? '<div class="st">' + esc(it.status) + '<small>' + esc(it.by || "") + ' &middot; ' + esc(niceWhen(it.at)) + '</small></div><button class="undo" type="button" data-undo="' + esc(it.key) + '">Undo</button>'
+                         : opts.map(function(s, i){ return '<button class="btn sm' + (i === 0 ? " solid" : "") + '" type="button" data-key="' + esc(it.key) + '" data-status="' + esc(s) + '">' + esc(s) + '</button>'; }).join("");
+    var det = detailHtml(it.detail);
+    h += '<div class="it' + (it.status ? " done" : "") + (S.open[it.key] ? " open" : "") + '" data-item="' + esc(it.key) + '">' +
+      '<div class="tp"><span class="pill ' + esc(it.type) + '">' + esc(TYPE_LABEL[it.type] || it.type) + '</span></div>' +
+      '<div class="main"><div class="sum">' + (it.link ? '<a href="' + esc(it.link) + '">' + esc(it.summary) + '</a>' : esc(it.summary)) + '</div>' +
+      '<div class="meta">' + esc(niceWhen(it.when)) + (it.market ? ' &middot; <span class="pill ' + (it.market === "NNV" ? "nnv" : "lv") + '">' + esc(it.market) + '</span>' : "") + (it.actor ? ' &middot; ' + esc(it.actor) : "") + (it.actor_email ? ' &middot; <a href="mailto:' + esc(it.actor_email) + '">' + esc(it.actor_email) + '</a>' : "") +
+      (it.vendor_id ? ' &middot; <a href="vendor-profile.html?id=' + esc(it.vendor_id) + '">' + esc(it.vendor_id) + '</a>' : (it.vendor ? ' &middot; <a href="vendor-profile.html?q=' + encodeURIComponent(it.vendor) + '">find profile</a>' : "")) + '</div>' +
+      (det ? '<button class="more" type="button" data-more="' + esc(it.key) + '">' + (S.open[it.key] ? "Hide details" : "Details") + '</button><div class="det">' + det + '</div>' : "") +
+      '</div><div class="acts">' + acts + '</div></div>';
+  });
+  $("list").innerHTML = h;
+}
+$("list").addEventListener("click", function(ev){
+  var t = ev.target.closest("button"); if(!t) return;
+  if(t.hasAttribute("data-more")){ var k = t.getAttribute("data-more"); S.open[k] = !S.open[k]; render(); return; }
+  if(t.hasAttribute("data-key")) mark(t.getAttribute("data-key"), t.getAttribute("data-status"), t);
+  if(t.hasAttribute("data-undo")) mark(t.getAttribute("data-undo"), "", t);
+});
+function find(key){ var hit = null; all().some(function(it){ if(it.key === key){ hit = it; return true; } return false; }); return hit; }
+function mark(key, status, btn){
+  var it = find(key); if(!it) return;
+  if(!ADMIN.who()){ toast("Type your name at the top first.", "err"); $("who").focus(); return; }
+  btn.disabled = true;
+  post({ kind:"vs_feed_set", keys:[key], type:it.type, status:status, summary:it.summary }).then(function(r){
+    btn.disabled = false;
+    if(!r || !r.ok || !(r.saved || []).length){ toast((r && r.error) || "Could not save.", "err"); return; }
+    var s = r.saved[0]; it.status = s.status; it.by = s.by; it.at = s.at; cacheWrite(); render();
+  }).catch(function(){ btn.disabled = false; toast("Could not reach the script.", "err"); });
+}
+Array.prototype.forEach.call($("mk").querySelectorAll("button"), function(b){ b.addEventListener("click", function(){ S.mk = b.getAttribute("data-mk"); Array.prototype.forEach.call($("mk").querySelectorAll("button"), function(x){ x.classList.toggle("on", x === b); }); render(); }); });
+Array.prototype.forEach.call($("st").querySelectorAll("button"), function(b){ b.addEventListener("click", function(){ S.st = b.getAttribute("data-st"); Array.prototype.forEach.call($("st").querySelectorAll("button"), function(x){ x.classList.toggle("on", x === b); }); render(); }); });
+$("q").addEventListener("input", function(){ S.q = this.value.trim(); render(); });
+$("refresh").addEventListener("click", load);
+
+/* ---------- boot ---------- */
+ADMIN.init({ page:"vendors", onReady:function(){
+  $("who").value = ADMIN.who() || "";
+  $("who").addEventListener("change", function(){ ADMIN.setWho(this.value.trim()); });
+  renderTypes();
+  var c = cacheRead();
+  if(c){ S.items = c.items || {}; S.statuses = c.statuses || {}; render(); }
+  load();
+}});
+})();
+</script>
+</body>
+</html>

@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Vendor Profile | CW Admin Hub</title>
-<!-- build 2026-09-22b (four parallel loads, index cache). One vendor, everything, one page.
+<!-- build 2026-09-23a (Contacts card + vendor self-service activity, VendorSelf.gs vs_admin_* kinds).
+Prior: build 2026-09-22b (four parallel loads, index cache). One vendor, everything, one page.
 Backend: VendorProfile.gs (kinds vp_index, vp_get) on the CW Solicitations script, read only.
 Every edit goes through the kind that already owns that data, so the same logs and the
 same undo apply: adr_save (directory fields), ob_save / ob_doc / ob_docs / ob_note
@@ -144,6 +145,23 @@ table.lst td a{color:var(--red);text-decoration:none;font-weight:700}
 .coi div.expired{background:var(--red-bg);color:var(--red)}
 .act{font-size:12.5px;padding:7px 0;border-bottom:1px solid var(--light)}
 .act .t{font-size:11px;color:var(--grey)}
+.act.vend{border-left:3px solid var(--red);padding-left:8px}
+.clist{display:grid;gap:8px}
+.cbox{border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.cbox .cm{flex:1;min-width:200px;font-size:13px}
+.cbox .cm b{font-size:14px}
+.cbox .cm .r{font-size:11px;color:var(--grey);margin-left:6px}
+.cbox .cm .l{margin-top:2px;overflow-wrap:anywhere}
+.cbox .cm .u{font-size:11.5px;color:var(--grey);margin-top:2px}
+.cform{border:2px dashed var(--border);border-radius:10px;padding:12px 14px;margin-top:10px}
+.cform .fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px 12px}
+.cform label{display:block;font-size:10.5px;font-weight:700;color:var(--grey);letter-spacing:.04em}
+.cform input,.cform select{width:100%;font:inherit;font-size:13px;border:1.5px solid var(--border);border-radius:8px;padding:7px 9px;min-height:36px;margin-top:3px}
+.cform .uses{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;margin-top:4px}
+.cform .uses label{display:flex;align-items:center;gap:5px;font-weight:400;color:var(--black);font-size:12px;text-transform:none;letter-spacing:0}
+.vdet{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:6px 18px;margin-top:10px;padding-top:10px;border-top:1px solid var(--light)}
+.vdet div{font-size:12.5px;padding:4px 0}
+.vdet label{display:block;font-size:10.5px;font-weight:700;color:var(--grey);letter-spacing:.04em}
 .mailbtn{margin-top:6px}
 @media(max-width:900px){.fgrid{grid-template-columns:1fr}.addrow{grid-template-columns:1fr 1fr}.jump{top:56px}.phead .acts{margin-left:0}}
 </style>
@@ -191,6 +209,9 @@ table.lst td a{color:var(--red);text-decoration:none;font-weight:700}
 
 <div class="card" id="c_details"><div class="chead"><span class="bar-accent"></span><h3>Details</h3><div class="tools"><span class="mini" id="d_sub"></span><a class="btn sm" id="d_sheet" href="#" target="_blank" rel="noopener">This row in the Sheet</a><button class="btn sm dark" id="d_edit" type="button">Edit</button><button class="btn sm hidden" id="d_cancel" type="button">Cancel</button><button class="btn sm solid hidden" id="d_save" type="button">Save changes</button></div></div>
 <div class="cbody" id="d_body"></div></div>
+
+<div class="card" id="c_contacts"><div class="chead"><span class="bar-accent"></span><h3>Contacts and self-service</h3><div class="tools"><span class="mini" id="ct_sub"></span><button class="btn sm" id="ct_link" type="button">Send profile link</button><button class="btn sm dark" id="ct_add" type="button">Add contact</button></div></div>
+<div class="cbody" id="ct_body"></div></div>
 
 <div class="card" id="c_onb"><div class="chead"><span class="bar-accent"></span><h3>Onboarding</h3><div class="tools"><span class="mini" id="o_sub"></span></div></div>
 <div class="cbody" id="o_body"></div></div>
@@ -295,15 +316,16 @@ document.addEventListener("click", function(e){ if(!e.target.closest(".srch")) $
 var PARTS = ["head", "onboarding", "crew", "more"];
 function open(vid){
   if(S.editing && !confirm("You have unsaved changes on Details. Leave without saving?")) return;
-  S.vid = vid; S.core = {}; S.more = null; S.editing = false; setUrl();
+  S.vid = vid; S.core = {}; S.more = null; S.self = null; S.editing = false; setUrl();
   $("start").classList.add("hidden"); $("prof").classList.remove("hidden");
   $("phead").innerHTML = '<div class="skel" style="width:40%"></div><div class="skel" style="width:70%"></div>';
-  ["d_body","o_body","b_body","e_body","k_body","a_body"].forEach(function(id){ $(id).innerHTML = '<div class="skel" style="width:60%"></div><div class="skel" style="width:35%"></div>'; });
+  ["d_body","ct_body","o_body","b_body","e_body","k_body","a_body"].forEach(function(id){ $(id).innerHTML = '<div class="skel" style="width:60%"></div><div class="skel" style="width:35%"></div>'; });
   $("r_body").innerHTML = '<div class="skel" style="width:60%"></div>'; $("n_body").innerHTML = '<div class="skel" style="width:50%"></div>';
-  ["d_sub","o_sub","b_sub","e_sub","r_sub","k_sub","n_sub","a_sub"].forEach(function(id){ $(id).textContent = ""; });
+  ["d_sub","ct_sub","o_sub","b_sub","e_sub","r_sub","k_sub","n_sub","a_sub"].forEach(function(id){ $(id).textContent = ""; });
   $("jump").innerHTML = "";
   window.scrollTo({ top: 0 });
   PARTS.forEach(function(part){ loadPart(vid, part); });
+  loadSelf(vid);
 }
 function loadPart(vid, part){
   return post({ kind:"vp_get", vendor_id:vid, part:part }).then(function(r){
@@ -347,7 +369,7 @@ function renderHead(){
   if(flags.length) h += '<div class="flags">' + flags.join("") + '</div>';
   $("phead").innerHTML = h;
   document.title = s.dba_name + " | Vendor Profile";
-  var jumps = [["c_details","Details"],["c_onb","Onboarding"],["c_bc","Background checks"],["c_eval","Evaluation"],["c_resp","Interest letters"],["c_comp","Compliance"],["c_notices","Notices"],["c_act","Activity"]];
+  var jumps = [["c_details","Details"],["c_contacts","Contacts"],["c_onb","Onboarding"],["c_bc","Background checks"],["c_eval","Evaluation"],["c_resp","Interest letters"],["c_comp","Compliance"],["c_notices","Notices"],["c_act","Activity"]];
   if(!$("jump").innerHTML) $("jump").innerHTML = jumps.map(function(j){ return '<a href="#' + j[0] + '" data-j="' + j[0] + '">' + j[1] + '<span class="n hidden"></span></a>'; }).join("");
   renderCompliance();
 }
@@ -754,11 +776,90 @@ function renderActivity(){
     var what = l.action === "doc" ? esc(l.item) + " &rarr; " + (l.to ? esc(docLabel(l.to) || l.to) : "cleared") + (l.note ? " (" + esc(String(l.note).slice(0, 80)) + ")" : "") : l.action === "note" ? "note: " + esc(String(l.note).slice(0, 120)) : esc(l.action) + (l.item ? " " + esc(l.item) : "") + (l.to ? " &rarr; " + esc(l.to) : "") + (l.note ? " · " + esc(String(l.note).slice(0, 80)) : "");
     items.push({ when:l.when, html:what + '<div class="t">' + esc(l.who || "") + ' &middot; ' + esc(niceDate(l.when || "")) + '</div>' });
   });
+  ((S.self && S.self.activity) || []).forEach(function(e){
+    var det = Array.isArray(e.detail) ? e.detail.map(function(d){ return Array.isArray(d) ? esc(d[0]) + ": " + (d[1] ? esc(d[1]) + " &rarr; " : "") + esc(d[2] === undefined ? "" : d[2]) : esc(String(d)); }).join(" · ") : "";
+    items.push({ when:e.when, cls:"vend", html:'<b>Vendor: ' + esc(e.summary) + '</b><div class="t">' + esc(e.actor || "") + (e.actor_email ? " (" + esc(e.actor_email) + ")" : "") + ' &middot; ' + esc(niceDate(e.when || "")) + (det ? '<br>' + det : '') + '</div>' });
+  });
   if(s.outreach) items.push({ when:"", html:'<b>Outreach notes on the directory</b><div class="t" style="white-space:pre-wrap">' + esc(s.outreach.slice(0, 600)) + '</div>' });
   items.sort(function(a, b){ return String(b.when) < String(a.when) ? -1 : String(b.when) > String(a.when) ? 1 : 0; });
   $("a_sub").textContent = items.length ? items.length + " entries" : "nothing yet";
-  $("a_body").innerHTML = items.length ? items.slice(0, 80).map(function(i){ return '<div class="act">' + i.html + '</div>'; }).join("") : '<p class="help">Nothing logged for this vendor yet. Evaluation submissions, invites, onboarding changes and notes show here.</p>';
+  $("a_body").innerHTML = items.length ? items.slice(0, 80).map(function(i){ return '<div class="act' + (i.cls ? " " + i.cls : "") + '">' + i.html + '</div>'; }).join("") : '<p class="help">Nothing logged for this vendor yet. Evaluation submissions, invites, onboarding changes, notes and the vendor\'s own edits show here.</p>';
 }
+
+/* ---------- contacts + self-service (VendorSelf.gs) ---------- */
+function loadSelf(vid){
+  return post({ kind:"vs_admin_contacts", vendor_id:vid }).then(function(r){
+    if(vid !== S.vid) return;
+    if(!r || r.ok === false){ $("ct_body").innerHTML = '<p class="help">' + esc((r && r.error) || "Could not load contacts.") + (r && /Unknown vs kind|Unknown kind/i.test(r.error || "") ? " VendorSelf.gs is not deployed yet." : "") + '</p>'; return; }
+    S.self = r; renderContacts(); renderActivity();
+  }).catch(function(){ if(vid === S.vid) $("ct_body").innerHTML = '<p class="help">Could not reach the script for contacts.</p>'; });
+}
+function renderContacts(){
+  var r = S.self; if(!r) return;
+  var cs = r.contacts || [], d = r.details || {}, ln = r.links || [];
+  var h = "";
+  if(cs.length){
+    h += '<div class="clist">' + cs.map(function(c){
+      return '<div class="cbox"><div class="cm"><b>' + esc(c.name) + '</b><span class="r">' + esc(c.role) + (c.title ? " · " + esc(c.title) : "") + '</span>' +
+        '<div class="l">' + [c.email ? '<a href="mailto:' + esc(c.email) + '">' + esc(c.email) + '</a>' : "", c.mobile ? "Mobile " + esc(c.mobile) : "", c.phone ? "Phone " + esc(c.phone) : ""].filter(Boolean).join(" &middot; ") + '</div>' +
+        (c.use_for ? '<div class="u">Use for: ' + esc(c.use_for) + '</div>' : "") + (c.can_edit ? '<div class="u">May request a profile link</div>' : "") + (c.notes ? '<div class="u">' + esc(c.notes) + '</div>' : "") +
+        '<div class="u">Added ' + esc(c.added || "") + (c.updated ? " · updated " + esc(c.updated) : "") + '</div></div>' +
+        '<div style="display:flex;gap:6px"><button class="btn sm" data-cedit="' + esc(c.contact_id) + '" type="button">Edit</button><button class="btn sm" data-cremove="' + esc(c.contact_id) + '" type="button">Remove</button></div></div>';
+    }).join("") + '</div>';
+  } else h += '<p class="help">No contacts listed. The vendor can add owners, managers and supervisors from the Vendor Hub profile page, or add them here.</p>';
+  var keys = [["capacity","Capacity"],["capacity_notes","Capacity notes"],["preferred_language","Preferred language"],["crew_languages","Crew languages"],["after_hours_phone","After-hours phone"],["emergency_name","Emergency contact"],["emergency_phone","Emergency phone"],["equipment","Equipment"],["certifications","Certifications"],["notes_for_cw","Notes for City Wide"]];
+  var have = keys.filter(function(k){ return d[k[0]]; });
+  if(have.length) h += '<div class="vdet">' + have.map(function(k){ return '<div><label>' + esc(k[1]) + '</label>' + esc(d[k[0]]) + '</div>'; }).join("") + '<div><label>Updated</label>' + esc(d.updated || "") + (d.updated_by ? " by " + esc(d.updated_by) : "") + '</div></div>';
+  else h += '<p class="help" style="margin-top:8px">The vendor has not filled in availability or capabilities yet.</p>';
+  if(ln.length) h += '<p class="help" style="margin-top:10px">Profile links: ' + ln.slice(0, 3).map(function(l){ return esc(l.email) + " " + esc(l.created) + (l.opened ? " (opened)" : " (not opened)") + (l.revoked ? " revoked" : ""); }).join(" · ") + '</p>';
+  h += '<div id="ct_form" class="cform hidden"></div>';
+  $("ct_body").innerHTML = h;
+  $("ct_sub").textContent = cs.length ? cs.length + (cs.length === 1 ? " contact" : " contacts") : "";
+  $("ct_body").querySelectorAll("[data-cedit]").forEach(function(b){ b.addEventListener("click", function(){ contactForm(cs.filter(function(c){ return c.contact_id === b.getAttribute("data-cedit"); })[0]); }); });
+  $("ct_body").querySelectorAll("[data-cremove]").forEach(function(b){ b.addEventListener("click", function(){
+    if(!needWho()) return;
+    if(!confirm("Remove this contact from the vendor's profile?")) return;
+    post({ kind:"vs_admin_contact_remove", vendor_id:S.vid, contact_id:b.getAttribute("data-cremove") }).then(function(r){
+      if(!r || !r.ok){ toast((r && r.error) || "Could not remove.", "err"); return; }
+      S.self.contacts = r.contacts || []; renderContacts(); toast("Contact removed.", "ok"); loadSelf(S.vid);
+    });
+  }); });
+}
+function contactForm(c){
+  c = c || {};
+  var L = (S.self && S.self.lists) || { roles:["Owner","Manager","Supervisor","Office / Billing","Other"], use_for:[] };
+  var f = $("ct_form"); f.classList.remove("hidden");
+  var uses = String(c.use_for || "").split(",").map(function(x){ return x.trim(); });
+  f.innerHTML = '<div class="fg"><div><label>Name</label><input id="cf_name" value="' + esc(c.name || "") + '"></div><div><label>Role</label><select id="cf_role">' + (L.roles || []).map(function(r){ return '<option' + (r === c.role ? " selected" : "") + '>' + esc(r) + '</option>'; }).join("") + '</select></div>' +
+    '<div><label>Title</label><input id="cf_title" value="' + esc(c.title || "") + '"></div><div><label>Email</label><input id="cf_email" value="' + esc(c.email || "") + '"></div><div><label>Mobile</label><input id="cf_mobile" value="' + esc(c.mobile || "") + '"></div><div><label>Phone</label><input id="cf_phone" value="' + esc(c.phone || "") + '"></div>' +
+    '<div style="grid-column:1/-1"><label>Use for</label><div class="uses">' + (L.use_for || []).map(function(u){ return '<label><input type="checkbox" class="cf_use" value="' + esc(u) + '"' + (uses.indexOf(u) >= 0 ? " checked" : "") + '> ' + esc(u) + '</label>'; }).join("") + '<label><input type="checkbox" id="cf_edit"' + (c.contact_id ? (c.can_edit ? " checked" : "") : " checked") + '> May request a profile link (needs an email)</label></div></div>' +
+    '<div style="grid-column:1/-1"><label>Notes</label><input id="cf_notes" value="' + esc(c.notes || "") + '"></div></div>' +
+    '<div style="display:flex;gap:8px;margin-top:10px"><button class="btn sm solid" type="button" id="cf_save">Save contact</button><button class="btn sm" type="button" id="cf_cancel">Cancel</button></div>';
+  $("cf_cancel").addEventListener("click", function(){ f.classList.add("hidden"); f.innerHTML = ""; });
+  $("cf_save").addEventListener("click", function(){
+    if(!needWho()) return;
+    var body = { kind:"vs_admin_contact", vendor_id:S.vid, contact:{ contact_id:c.contact_id || "", name:$("cf_name").value.trim(), role:$("cf_role").value, title:$("cf_title").value.trim(), email:$("cf_email").value.trim(), mobile:$("cf_mobile").value.trim(), phone:$("cf_phone").value.trim(), use_for:Array.prototype.slice.call(document.querySelectorAll(".cf_use:checked")).map(function(x){ return x.value; }), can_edit:$("cf_edit").checked, notes:$("cf_notes").value.trim() } };
+    if(!body.contact.name){ toast("The contact needs a name.", "err"); return; }
+    $("cf_save").disabled = true;
+    post(body).then(function(r){
+      $("cf_save").disabled = false;
+      if(!r || !r.ok){ toast((r && r.error) || "Could not save.", "err"); return; }
+      S.self.contacts = r.contacts || []; renderContacts(); toast("Contact saved.", "ok"); loadSelf(S.vid);
+    });
+  });
+  f.scrollIntoView({ behavior:"smooth", block:"center" }); $("cf_name").focus();
+}
+$("ct_add").addEventListener("click", function(){ if(S.self) contactForm(null); });
+$("ct_link").addEventListener("click", function(){
+  if(!needWho()) return;
+  var s = S.core.summary || {};
+  var email = prompt("Send the vendor a link to view and update their own profile. Email it to:", s.email || "");
+  if(!email) return;
+  post({ kind:"vs_admin_link", vendor_id:S.vid, email:email.trim() }).then(function(r){
+    if(!r || !r.ok){ toast((r && r.error) || "Could not send.", "err"); return; }
+    toast("Profile link sent to " + r.sent_to + ". It works for 24 hours.", "ok"); loadSelf(S.vid);
+  });
+});
 
 /* ---------- boot ---------- */
 ADMIN.init({ page:"vendors", onReady:function(){
