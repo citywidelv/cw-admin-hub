@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Uniform Orders | CW Admin Hub</title>
-<!-- build 2026-09-24. One list of every uniform that still has to be ordered: the uniform lines
+<!-- build 2026-09-24b (need-by date always shown short). One list of every uniform that still has to be ordered: the uniform lines
      from vendor shop orders (chemicals and supplies on the same order are left out) and every
      employee uniform request from the storefront. One big check marks it ordered; the same box
      the Ops Admin Desk and the Ops Hub alerts card read is what gets ticked.
@@ -201,7 +201,7 @@ function needBy(o){
   var today = new Date(); today.setHours(0,0,0,0);
   var diff = Math.round((d - today) / 86400000);
   var cls = o.ordered ? "" : diff < 0 ? "late" : diff <= 7 ? "soon" : "";
-  var when = ADMIN.fmtDate(o.need_by) || o.need_by;
+  var when = ADMIN.fmtDate(m ? m[0] : (d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2)));
   var tail = o.ordered ? "" : diff < 0 ? " (" + (-diff) + " days late)" : diff === 0 ? " (today)" : diff <= 7 ? " (in " + diff + " days)" : "";
   return '<span class="' + cls + '">Needed by ' + esc(when) + esc(tail) + '</span>';
 }
