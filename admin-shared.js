@@ -1,4 +1,4 @@
-/* CW Admin Hub shared script. Build 2026-09-21 (Shop Codes & Certificates under Vendor of the Month). 2026-09-19b (Vendor Onboarding desk: onboarding.html; Asana onboarding boards and the Asana background check form retired from the menus). 2026-09-19 (Ops Admin Desk: desk.html, records.html, sheet.html under Team & Admin). 2026-09-13 (Site Admin: MENU below is the fallback, nav.js is live; cascade submenus; Vendor of the Month).
+/* CW Admin Hub shared script. Build 2026-09-24 (Team & Admin rebuilt as side cascades, Uniform Orders page; group headings in any tall dropdown open to the side and every panel is kept on screen via CWNav.place). 2026-09-21 (Shop Codes & Certificates under Vendor of the Month). 2026-09-19b (Vendor Onboarding desk: onboarding.html; Asana onboarding boards and the Asana background check form retired from the menus). 2026-09-19 (Ops Admin Desk: desk.html, records.html, sheet.html under Team & Admin). 2026-09-13 (Site Admin: MENU below is the fallback, nav.js is live; cascade submenus; Vendor of the Month).
    Gate, header, cascading nav, webhook helper, Asana project registry.
    Every page: <link admin.css> ... <div id="gate"> + <div id="app" class="hidden">, then
    this file, then ADMIN.init({page:'...'}). Data lives in Google Sheets through the
@@ -147,9 +147,11 @@ var MENU = [
     {label:"Office Management board", href:asanaUrl("1211522761691094"), tag:"Asana"}
   ]},
   { label:"Team & Admin", icon:"home", page:"emails", items:[
-    {ghead:"Ops Admin Desk"},
-    {label:"Desk home (records, one per page)", href:"desk.html", tag:"Hub"},
-    {label:"Account FSM (CRM upload, who owns each account)", href:"account-fsm.html", tag:"Hub"},
+    {label:"Uniform Orders", href:"uniform-orders.html", tag:"Hub"},
+    {sub:"Ops Admin Desk", items:[
+      {label:"Desk home (records, one per page)", href:"desk.html", tag:"Hub"},
+      {label:"Account FSM (CRM upload, who owns each account)", href:"account-fsm.html", tag:"Hub"}
+    ]},
     {sub:"Edit records", items:[
       {ghead:"Opportunity Wall"},
       {label:"Opportunity postings", href:"records.html?s=postings", tag:"Hub"},
@@ -164,30 +166,34 @@ var MENU = [
       {label:"Vendors, Northern Nevada", href:"records.html?s=vendors_nnv", tag:"Hub"},
       {label:"Team roster", href:"records.html?s=staff", tag:"Hub"}
     ]},
-    {ghead:"Site"},
-    {label:"Site Admin (menus, lists, switches)", href:"site-admin.html", tag:"Hub"},
-    {ghead:"Power BI"},
-    {label:"Reports and targets", href:"powerbi.html", tag:"Hub"},
-    {label:"FSM and Director", href:OPS + "powerbi.html", tag:"Ops Hub"},
-    {label:"Sales", href:"https://citywidelv.github.io/sales-hub/powerbi.html", tag:"Sales Hub"},
+    {sub:"Power BI", items:[
+      {label:"Reports and targets", href:"powerbi.html", tag:"Hub"},
+      {label:"FSM and Director", href:OPS + "powerbi.html", tag:"Ops Hub"},
+      {label:"Sales", href:"https://citywidelv.github.io/sales-hub/powerbi.html", tag:"Sales Hub"}
+    ]},
     {label:"Team Emails by Position", href:"team-emails.html", tag:"Hub"},
-    {ghead:"Hubs"},
-    {label:"Nevada Team Portal", href:PORTAL},
-    {label:"Ops Hub", href:OPS},
-    {label:"Vendor Hub", href:VS},
-    {label:"Sales Hub", href:"https://citywidelv.github.io/sales-hub/"},
-    {ghead:"Admin"},
-    {label:"ADP TotalSource", href:"https://workforcenow.adp.com/"},
-    {label:"CW Sales CRM", href:"https://gocitywide.crm.dynamics.com/main.aspx"},
-    {label:"Employee Uniforms", href:OPS + "uniforms.html", tag:"Ops Hub"},
-    {label:"Order CW Merch", href:"https://cwlv.printful.me/"},
-    {ghead:"Team Apps"},
-    {label:"Microsoft Bookings", href:"https://bookings.cloud.microsoft/bookings/homepage"},
-    {label:"Slack", href:"https://slack.com/signin"},
-    {label:"Jotform", href:"https://www.jotform.com/myforms/"},
-    {ghead:"Ordering"},
-    {label:"Amazon Business", href:"https://www.amazon.com/business"},
-    {label:"City Wide Company Store", href:"https://shopcitywide.mybrightsites.com/"}
+    {label:"Site Admin (menus, lists, switches)", href:"site-admin.html", tag:"Hub"},
+    {sub:"Hubs", items:[
+      {label:"Nevada Team Portal", href:PORTAL},
+      {label:"Ops Hub", href:OPS},
+      {label:"Vendor Hub", href:VS},
+      {label:"Sales Hub", href:"https://citywidelv.github.io/sales-hub/"}
+    ]},
+    {sub:"HR and Systems", items:[
+      {label:"ADP TotalSource", href:"https://workforcenow.adp.com/"},
+      {label:"CW Sales CRM", href:"https://gocitywide.crm.dynamics.com/main.aspx"},
+      {label:"Employee Uniforms (request page)", href:OPS + "uniforms.html", tag:"Ops Hub"},
+      {label:"Order CW Merch", href:"https://cwlv.printful.me/"}
+    ]},
+    {sub:"Team Apps", items:[
+      {label:"Microsoft Bookings", href:"https://bookings.cloud.microsoft/bookings/homepage"},
+      {label:"Slack", href:"https://slack.com/signin"},
+      {label:"Jotform", href:"https://www.jotform.com/myforms/"}
+    ]},
+    {sub:"Ordering", items:[
+      {label:"Amazon Business", href:"https://www.amazon.com/business"},
+      {label:"City Wide Company Store", href:"https://shopcitywide.mybrightsites.com/"}
+    ]}
   ]}
 ];
 
@@ -199,11 +205,12 @@ function menuLink(it){
   var tgt = isExternal(it.href) ? ' target="_blank" rel="noopener"' : '';
   return '<a href="' + esc(it.href) + '"' + tgt + '>' + esc(it.label) + (it.tag ? '<span class="tag">' + esc(it.tag) + '</span>' : '') + '</a>';
 }
-function menuItems(list){
+function menuItems(list, depth){
   var out = "";
+  depth = depth || 0;
   list.forEach(function(it){
     if(it.ghead) out += '<div class="ghead">' + esc(it.ghead) + '</div>';
-    else if(it.sub) out += '<div class="nsub"><a class="subbtn" href="#">' + esc(it.sub) + '</a><div class="nsubmenu">' + menuItems(it.items) + '</div></div>';
+    else if(it.sub) out += '<div class="nsub"><a class="subbtn" href="#">' + esc(it.sub) + '</a><div class="nsubmenu">' + menuItems(it.items, depth + 1) + '</div></div>';
     else out += menuLink(it);
   });
   return out;
@@ -215,8 +222,10 @@ function renderHeader(page){
   MENU.forEach(function(m, mi){
     if(m.hidden) return;                       // hidden:true hides a whole menu without deleting it
     var here = !!page && m.page === page;
-    var items = "";
-    items = menuItems(m.items);
+    /* Sep 24 2026: a tall dropdown lists its section names and each section opens to the
+       side, so nothing runs off the bottom of the screen. Short menus keep inline headings. */
+    var tree = (window.CWNav && CWNav.cascadeGroups && !m.flat) ? CWNav.cascadeGroups(m.items) : m.items;
+    var items = menuItems(tree, 0);
     nav += '<div class="nitem"><button class="nbtn' + (here ? ' here' : '') + '" data-dd="' + mi + '">' + icon(m.icon, 14) + esc(m.label) +
       ' <span class="caret">&#9660;</span></button><div class="nmenu" id="dd-' + mi + '">' + items + '</div></div>';
   });
@@ -229,6 +238,7 @@ function renderHeader(page){
     '<a class="out" id="adminsignout" href="#">Sign out</a></div>' +
     '<nav class="mainnav"><div class="nav-in" id="mainnav"><a class="nbtn" href="index.html">' + icon("board", 14) + 'Home</a>' + nav + '</div></nav>';
   var host = document.getElementById("mainnav");
+  if(window.CWNav && CWNav.bind) CWNav.bind(host);   // keeps every open panel on screen (flip left, shift up, scroll)
   host.onclick = function(e){
     var btn = e.target.closest ? e.target.closest(".nbtn[data-dd]") : null;
     if(!btn) return;
@@ -269,11 +279,11 @@ function renderHeader(page){
 }
 function closeMenus(){
   document.querySelectorAll(".nmenu.show").forEach(function(d){
-    d.classList.remove("show"); d.style.top = "";
+    d.classList.remove("show"); d.style.top = ""; d.style.maxHeight = ""; d.classList.remove("flip", "scroll");
     if(d._home && d.parentElement !== d._home) d._home.appendChild(d);
     d.classList.remove("portal");
   });
-  document.querySelectorAll(".nsubmenu.show").forEach(function(d){ d.classList.remove("show"); });
+  document.querySelectorAll(".nsubmenu.show").forEach(function(d){ d.classList.remove("show"); d.style.top = ""; d.style.maxHeight = ""; d.style.left = ""; d.classList.remove("flip", "scroll"); });
   document.querySelectorAll(".nbtn.open").forEach(function(b){ b.classList.remove("open"); });
 }
 

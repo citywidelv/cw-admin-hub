@@ -1,4 +1,4 @@
-/* CW Admin Hub shared styles. Build 2026-09-05b (12px floor, one-row mobile nav, 44px targets, GoCityWide footer). 2026-09-04a.
+/* CW Admin Hub shared styles. Build 2026-09-24 (cascade flip and scroll states). 2026-09-05b (12px floor, one-row mobile nav, 44px targets, GoCityWide footer). 2026-09-04a.
    Same brand system as the Ops Hub (cw-ops-desk): Verdana, red #D22730, black #2D2A26,
    grey #636466, gold #E5B423. No em dashes anywhere in copy. */
 :root{--red:#D22730;--red-dark:#B01F27;--black:#2D2A26;--grey:#636466;--light:#F5F5F5;
@@ -51,6 +51,12 @@ border:1px solid var(--border);border-radius:8px;padding:1px 7px}
 .nsubmenu{display:none;position:absolute;left:100%;top:-7px;min-width:250px;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-lift);padding:6px 0;z-index:80}
 .nsubmenu.show{display:block}
 @media(hover:hover){.nitem:hover>.nmenu{display:block}.nsub:hover>.nsubmenu{display:block}}
+/* Sep 24 2026: panels are kept on screen by CWNav.place. flip = open to the left instead of the right (or hug the right edge for a top dropdown); scroll = taller than the screen. */
+.nmenu.flip{left:auto;right:0}
+.nsubmenu.flip{left:auto;right:100%}
+.nsub.flip>a.subbtn::after{content:"\25C2"}
+.nmenu.scroll,.nsubmenu.scroll{overflow-y:auto;overscroll-behavior:contain}
+.nsubmenu .ghead{padding-top:8px}
 
 /* ---------- hero ---------- */
 .hero{position:relative;color:#fff;background:linear-gradient(180deg,#26231f 0%,var(--black) 70%);overflow:hidden}

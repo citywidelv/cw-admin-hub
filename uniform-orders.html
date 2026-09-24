@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Uniform Orders | CW Admin Hub</title>
+<!-- build 2026-09-24. One list of every uniform that still has to be ordered: the uniform lines
+     from vendor shop orders (chemicals and supplies on the same order are left out) and every
+     employee uniform request from the storefront. One big check marks it ordered; the same box
+     the Ops Admin Desk and the Ops Hub alerts card read is what gets ticked.
+     Backend: UniformOrders.gs on CW Solicitations (kinds uo_list, uo_set). One call after the
+     gate; the last result is cached in localStorage so the page paints at once next visit. -->
+<link rel="stylesheet" href="admin.css">
+<link rel="icon" href="https://citywidelv.github.io/cw-ops-desk/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="https://citywidelv.github.io/cw-ops-desk/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://citywidelv.github.io/cw-ops-desk/apple-touch-icon.png">
+<style>
+.topbar{position:relative;z-index:5;margin-top:-46px}
+.topbar .qcard{padding:14px 18px 12px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.topbar .qcard .qhead{margin:0}
+.topbar .who{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--grey)}
+.topbar .who input{font-size:11.5px;border:1px solid var(--border);border-radius:6px;padding:5px 8px;width:150px}
+.topbar .sp{flex:1}
+.runbox{display:inline-flex;align-items:center;gap:8px;background:var(--light);border:1px solid var(--border);border-radius:10px;padding:6px 12px;font-size:12px;color:var(--grey)}
+.runbox b{color:var(--black)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:16px 0 12px}
+.stat{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 14px;cursor:pointer;text-align:left;font-family:inherit;transition:box-shadow .15s,border-color .15s}
+.stat:hover{border-color:var(--black)}
+.stat.on{border-color:var(--red);box-shadow:0 0 0 3px rgba(210,39,48,.1)}
+.stat .n{font-size:26px;font-weight:700;line-height:1.1;letter-spacing:-.01em}
+.stat .n small{font-size:12px;font-weight:700;color:var(--grey);margin-left:4px;letter-spacing:0}
+.stat .l{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--grey);margin-top:3px}
+.stat.hot .n{color:var(--red)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 18px;border-bottom:1px solid var(--border)}
+.seg{display:inline-flex;border:1.5px solid var(--border);border-radius:9px;overflow:hidden;background:#fff}
+.seg button{border:none;background:none;font-size:11.5px;font-weight:700;padding:8px 12px;cursor:pointer;color:var(--grey);white-space:nowrap;font-family:inherit;min-height:36px}
+.seg button.on{background:var(--black);color:#fff}
+.seg button:hover:not(.on){background:var(--light);color:var(--black)}
+.filters .chk{font-size:11.5px;color:var(--grey);display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+.filters .srch{position:relative;margin-left:auto;min-width:220px}
+.filters .srch input{width:100%;font-size:12.5px;border:1.5px solid var(--border);border-radius:16px;padding:8px 12px;background:var(--light);outline:none}
+.filters .srch input:focus{border-color:var(--red);background:#fff}
+.showing{font-size:11.5px;color:var(--grey);padding:8px 18px;border-bottom:1px solid var(--light);display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.showing b{color:var(--black)}
+.showing .src{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.showing .src span{font-size:10px;padding:1px 7px;border-radius:9px;border:1px solid var(--border);color:var(--grey)}
+.showing .src span.ok{border-color:#bfe6e7;color:#0A7F82}
+.showing .src span.bad{border-color:#f3c4c7;color:var(--red)}
+.grp{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--grey);padding:18px 18px 6px;border-bottom:1px solid var(--light);display:flex;align-items:center;gap:10px}
+.grp .cnt{background:var(--red);color:#fff;border-radius:9px;padding:1px 8px;font-size:10px}
+.grp.done .cnt{background:var(--green)}
+.ord{display:flex;gap:16px;padding:16px 18px;border-bottom:1px solid var(--border);align-items:flex-start;transition:background .2s,opacity .2s}
+.ord:hover{background:#fffbf2}
+.ord.done{background:#fff}
+.ord.done:hover{background:var(--green-bg)}
+.ord.hidden{display:none}
+.ord.busy{opacity:.55;pointer-events:none}
+.ord .ck{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;width:76px}
+.ord .ckbtn{width:52px;height:52px;border-radius:50%;border:3px solid var(--border);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:transparent;transition:all .15s;padding:0}
+.ord .ckbtn:hover{border-color:var(--red);transform:scale(1.04)}
+.ord .ckbtn:focus-visible{outline:3px solid rgba(210,39,48,.35);outline-offset:2px}
+.ord.done .ckbtn{background:var(--green);border-color:var(--green);color:#fff}
+.ord .ck .lbl{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--grey);text-align:center}
+.ord.done .ck .lbl{color:var(--green)}
+.ord .main{flex:1;min-width:0}
+.ord .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ord .whoName{font-size:15px;font-weight:700}
+.ord .co{font-size:13px;color:var(--grey)}
+.ord .badge{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:9px;padding:2px 9px;white-space:nowrap;border:1.5px solid}
+.ord .badge.shop{color:var(--red);border-color:var(--red);background:#fff}
+.ord .badge.emp{color:#fff;border-color:var(--black);background:var(--black)}
+.ord .badge.test{color:var(--amber);border-color:var(--amber);background:var(--amber-bg)}
+.ord .meta{font-size:11.5px;color:var(--grey);margin-top:3px;display:flex;gap:14px;flex-wrap:wrap}
+.ord .meta b{color:var(--black);font-weight:700}
+.ord .meta .late{color:var(--red);font-weight:700}
+.ord .meta .soon{color:var(--amber);font-weight:700}
+.lines{margin-top:10px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#fff}
+.line{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--light)}
+.line:last-child{border-bottom:none}
+.line .qty{font-size:16px;font-weight:700;text-align:center;background:var(--light);border-radius:8px;padding:6px 0;line-height:1}
+.line .nm{font-size:13px;font-weight:700;line-height:1.35}
+.line .chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
+.line .chip{font-size:10.5px;font-weight:700;border-radius:7px;padding:2px 7px;background:var(--light);color:var(--black);border:1px solid var(--border)}
+.line .chip.logo{background:var(--red-bg);color:var(--red);border-color:#f3c4c7}
+.line .chip.stock{background:var(--amber-bg);color:var(--amber);border-color:#f0dcaa}
+.line .sku{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:var(--grey);text-align:right;white-space:nowrap}
+.line .sku b{display:block;color:var(--black);font-size:12px}
+.ord .foot{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:11.5px;color:var(--grey)}
+.ord .foot .tot b{color:var(--black)}
+.ord .foot .oth{font-style:normal}
+.ord .foot .sp{flex:1}
+.ord .foot .pick{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--grey);cursor:pointer;border:1.5px solid var(--border);border-radius:16px;padding:5px 11px;background:#fff;font-family:inherit;min-height:32px}
+.ord .foot .pick:hover{border-color:var(--black);color:var(--black)}
+.ord .foot .pick.on{border-color:var(--green);color:var(--green);background:var(--green-bg)}
+.ord .foot a{color:var(--red);font-weight:700;text-decoration:none}
+.ord .note{margin-top:6px;font-size:12px;color:var(--black);background:var(--light);border-radius:8px;padding:6px 10px;display:inline-block}
+.empty{padding:40px 18px;text-align:center;color:var(--grey);font-size:13px}
+.empty b{display:block;color:var(--black);font-size:16px;margin-bottom:6px}
+.loading{padding:30px 18px;color:var(--grey);font-size:13px;display:flex;align-items:center;gap:10px}
+.spin{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:sp .8s linear infinite;display:inline-block}
+@keyframes sp{to{transform:rotate(360deg)}}
+.legend{padding:12px 18px 16px;font-size:11.5px;color:var(--grey);line-height:1.6;border-top:1px solid var(--light)}
+.legend b{color:var(--black)}
+.err{margin:10px 18px;padding:10px 14px;border-radius:10px;background:var(--red-bg);color:var(--red);font-size:12px;font-weight:700}
+@media(max-width:700px){
+.ord{gap:12px;padding:14px}
+.ord .ck{width:60px}
+.ord .ckbtn{width:46px;height:46px}
+.line{grid-template-columns:38px minmax(0,1fr)}
+.line .sku{grid-column:2;text-align:left}
+.line .sku b{display:inline;margin-right:6px}
+.filters .srch{margin-left:0;width:100%}
+}
+</style>
+<link rel="stylesheet" href="https://citywidelv.github.io/cw-base.css">
+</head>
+<body>
+<div id="gate" class="gate"></div>
+<div id="app" class="hidden">
+<header class="head" id="adminhead"></header>
+
+<section class="hero slim">
+<div class="bg" style="background-image:url('https://citywidelv.github.io/cw-ops-desk/images/fsm-uniform-hallway.jpg')"></div>
+<div class="wrap">
+<div class="htext">
+<div class="kick">Team &amp; Admin</div>
+<h1>Uniform Orders</h1>
+<p>Every uniform waiting to be ordered, in one list. Uniform lines from vendor shop orders (supplies on the same order are left out) and every employee uniform request. Tick the circle when it has been placed with Bennett.</p>
+</div>
+</div>
+</section>
+
+<div class="wrap topbar">
+<div class="qcard">
+<div class="qhead"><span class="bar-accent"></span><h2>Order queue</h2></div>
+<span class="runbox" id="runbox">Next order run <b id="nextrun"></b></span>
+<span class="who">Working as <input id="who" placeholder="Your name"></span>
+<span class="sp"></span>
+<button class="btn sm" id="copy" type="button" title="Copies every unordered uniform line, grouped by item, ready to paste into an email or the Bennett order">Copy order list</button>
+<a class="btn sm" href="https://citywide.bennettuniform.com" target="_blank" rel="noopener">Bennett store</a>
+<button class="btn sm dark" id="refresh" type="button">Refresh</button>
+</div>
+</div>
+
+<main class="wrap" style="padding-top:6px">
+<div class="stats" id="stats"></div>
+<div class="card">
+<div class="filters">
+<div class="seg" id="st"><button data-st="open" class="on" type="button">To order</button><button data-st="done" type="button">Ordered</button><button data-st="all" type="button">Everything</button></div>
+<div class="seg" id="src"><button data-src="" class="on" type="button">Both sources</button><button data-src="shop" type="button">Vendor shop</button><button data-src="emp" type="button">Employees</button></div>
+<label class="chk"><input type="checkbox" id="showtest"> Show test orders</label>
+<div class="srch"><input type="search" id="q" placeholder="Search name, company, item, size" autocomplete="off"></div>
+</div>
+<div class="showing" id="showing"></div>
+<div id="errbox"></div>
+<div id="list"><div class="loading"><span class="spin"></span>Loading uniform orders...</div></div>
+<div class="legend"><b>Vendor shop</b> lines come from the shop's Orders tab; ticking the circle sets its Order Placed box, the same one the Ops Admin Desk and the Ops Hub alerts read, and <b>Picked up</b> sets Picked Up. <b>Employee</b> requests come from the storefront's Requests tab; ticking sets the status to Ordered. <b>Office stock</b> marks vests and aprons, which are handed out from the office while supplies last. Ordered items stay here for 120 days.</div>
+</div>
+</main>
+
+<footer class="foot"><div class="fin">
+<b>City Wide Facility Solutions</b> &middot; Admin Hub &middot; Internal use only &middot; Something missing? Tell TJ. &middot; <a href="https://www.gocitywide.com" target="_blank" rel="noopener">GoCityWide.com</a>
+<span class="fr">Las Vegas<span>&bull;</span>Reno</span>
+</div></footer>
+</div><!-- /app -->
+
+<script src="https://citywidelv.github.io/cw-ops-desk/cw-auth.js"></script>
+<script src="nav.js"></script>
+<script src="https://citywidelv.github.io/cw-ops-desk/cw-nav.js"></script>
+<script src="admin-shared.js"></script>
+<script>
+(function(){
+"use strict";
+var $ = function(id){ return document.getElementById(id); };
+var esc = ADMIN.esc, toast = ADMIN.toast;
+var CACHE = "cwUniformOrders";
+var DATA = { shop: [], emp: [], at: "", errors: [] };
+var view = { st: "open", src: "", q: "", test: false };
+
+function post(p){ p.who = ADMIN.who() || ""; return ADMIN.api(p); }
+function money(n){ n = Number(n) || 0; return "$" + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+function all(){ return DATA.shop.concat(DATA.emp); }
+function pieces(list){ return list.reduce(function(a, o){ return a + o.lines.reduce(function(b, l){ return b + (Number(l.qty) || 0); }, 0); }, 0); }
+
+/* Custom uniform orders go to Bennett on the 1st and the 15th. */
+function nextRun(){
+  var d = new Date(), y = d.getFullYear(), m = d.getMonth(), day = d.getDate();
+  var n = day < 15 ? new Date(y, m, 15) : new Date(y, m + 1, 1);
+  if(day === 1 || day === 15) n = d;
+  var names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var days = Math.round((new Date(n.getFullYear(), n.getMonth(), n.getDate()) - new Date(y, m, day)) / 86400000);
+  return names[n.getMonth()] + " " + n.getDate() + (days === 0 ? " (today)" : days === 1 ? " (tomorrow)" : " (in " + days + " days)");
+}
+
+function needBy(o){
+  if(!o.need_by) return "";
+  var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(o.need_by);
+  var d = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(o.need_by);
+  if(isNaN(d.getTime())) return '<span>Needed by <b>' + esc(o.need_by) + '</b></span>';
+  var today = new Date(); today.setHours(0,0,0,0);
+  var diff = Math.round((d - today) / 86400000);
+  var cls = o.ordered ? "" : diff < 0 ? "late" : diff <= 7 ? "soon" : "";
+  var when = ADMIN.fmtDate(o.need_by) || o.need_by;
+  var tail = o.ordered ? "" : diff < 0 ? " (" + (-diff) + " days late)" : diff === 0 ? " (today)" : diff <= 7 ? " (in " + diff + " days)" : "";
+  return '<span class="' + cls + '">Needed by ' + esc(when) + esc(tail) + '</span>';
+}
+
+function lineHtml(l){
+  var chips = "";
+  if(l.spec) l.spec.split(/\s*\/\s*/).filter(Boolean).forEach(function(s){
+    var isLogo = /logo|contractor|facility solutions|embroider/i.test(s);
+    chips += '<span class="chip' + (isLogo ? ' logo' : '') + '">' + esc(s) + '</span>';
+  });
+  if(l.logo && !/contractor/i.test(l.spec || "")) chips += '<span class="chip logo">' + esc(l.logo) + ' logo</span>';
+  if(l.stock) chips += '<span class="chip stock">Office stock</span>';
+  return '<div class="line"><div class="qty">' + esc(l.qty) + '</div>' +
+    '<div><div class="nm">' + esc(l.name) + '</div>' + (chips ? '<div class="chips">' + chips + '</div>' : '') + '</div>' +
+    '<div class="sku">' + (l.bennett ? '<b>' + esc(l.bennett) + '</b>' : '') + (l.sku && l.sku !== l.bennett ? esc(l.sku) : '') + (l.unit ? '<br>' + money(l.unit) + ' ea' : '') + '</div></div>';
+}
+
+function cardHtml(o){
+  var isShop = o.source === "shop";
+  var id = o.source + ":" + o.key;
+  var html = '<div class="ord' + (o.ordered ? ' done' : '') + '" data-id="' + esc(id) + '" data-src="' + esc(o.source) + '">';
+  html += '<div class="ck"><button class="ckbtn" type="button" data-act="ordered" aria-pressed="' + (o.ordered ? 'true' : 'false') + '" title="' + (o.ordered ? 'Ordered. Click to undo.' : 'Mark as ordered') + '">' +
+    '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></button>' +
+    '<span class="lbl">' + (o.ordered ? 'Ordered' : 'Not yet') + '</span></div>';
+  html += '<div class="main"><div class="top"><span class="whoName">' + esc(o.name || "(no name)") + '</span>';
+  if(isShop && o.company) html += '<span class="co">' + esc(o.company) + '</span>';
+  html += '<span class="badge ' + (isShop ? 'shop' : 'emp') + '">' + (isShop ? 'Vendor shop' : 'Employee') + '</span>';
+  if(o.test) html += '<span class="badge test">Test</span>';
+  html += '</div>';
+  html += '<div class="meta"><span>' + esc(o.when_nice || "") + '</span>';
+  if(isShop && o.account) html += '<span>Account <b>' + esc(o.account) + '</b></span>';
+  if(!isShop) html += needBy(o);
+  if(o.email) html += '<span><a href="mailto:' + esc(o.email) + '" style="color:inherit">' + esc(o.email) + '</a></span>';
+  html += '</div>';
+  html += '<div class="lines">' + o.lines.map(lineHtml).join("") + '</div>';
+  html += '<div class="foot"><span class="tot">Uniforms <b>' + money(o.uniform_total) + '</b>' + (isShop && o.total && Math.abs(o.total - o.uniform_total) > 0.005 ? ' of ' + money(o.total) + ' order' : '') + '</span>';
+  if(o.other) html += '<span class="oth">plus ' + o.other + ' supply item' + (o.other === 1 ? '' : 's') + ' on this order, not uniforms</span>';
+  if(!isShop && o.reason) html += '<span>Reason: ' + esc(o.reason) + '</span>';
+  html += '<span class="sp"></span>';
+  if(isShop) html += '<button class="pick' + (o.picked ? ' on' : '') + '" type="button" data-act="picked" aria-pressed="' + (o.picked ? 'true' : 'false') + '">' +
+    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>' + (o.picked ? 'Picked up' : 'Mark picked up') + '</button>';
+  html += isShop ? '<a href="records.html?s=shop&row=' + esc(o.row) + '">Open the order</a>' : '<a href="https://citywide.bennettuniform.com" target="_blank" rel="noopener">Bennett store</a>';
+  html += '</div>';
+  if(o.notes) html += '<div class="note">' + esc(o.notes) + '</div>';
+  html += '</div></div>';
+  return html;
+}
+
+function matches(o){
+  if(view.src && o.source !== view.src) return false;
+  if(view.st === "open" && o.ordered) return false;
+  if(view.st === "done" && !o.ordered) return false;
+  if(!view.test && o.test) return false;
+  if(view.q){
+    var hay = (o.name + " " + (o.company || "") + " " + (o.account || "") + " " + (o.email || "") + " " + (o.reason || "") + " " + o.lines.map(function(l){ return l.name + " " + l.spec + " " + l.sku + " " + l.bennett; }).join(" ")).toLowerCase();
+    var words = view.q.toLowerCase().split(/\s+/).filter(Boolean);
+    if(!words.every(function(w){ return hay.indexOf(w) >= 0; })) return false;
+  }
+  return true;
+}
+
+function render(){
+  var list = all().filter(matches);
+  var open = list.filter(function(o){ return !o.ordered; }), done = list.filter(function(o){ return o.ordered; });
+  var html = "";
+  if(!list.length){
+    html = '<div class="empty"><b>' + (view.st === "open" ? "Nothing waiting to be ordered" : "Nothing here") + '</b>' +
+      (view.q ? 'No uniform orders match your search.' : view.st === "open" ? 'Every uniform on the vendor shop and every employee request has been placed.' : 'Change the filters above to see more.') + '</div>';
+  } else {
+    if(open.length) html += '<div class="grp">To order <span class="cnt">' + open.length + '</span><span style="font-weight:400;letter-spacing:0;text-transform:none">' + pieces(open) + ' pieces</span></div>' + open.map(cardHtml).join("");
+    if(done.length) html += '<div class="grp done">Ordered <span class="cnt">' + done.length + '</span></div>' + done.map(cardHtml).join("");
+  }
+  $("list").innerHTML = html;
+  var at = DATA.at ? new Date(DATA.at) : null;
+  $("showing").innerHTML = 'Showing <b>' + list.length + '</b> order' + (list.length === 1 ? '' : 's') + (open.length ? ', <b>' + pieces(open) + '</b> pieces to order' : '') +
+    (at ? '<span style="margin-left:auto">Read ' + esc(ADMIN.ago(at.toISOString())) + '</span>' : '');
+  renderStats();
+}
+
+function renderStats(){
+  var vis = all().filter(function(o){ return view.test || !o.test; });
+  var open = vis.filter(function(o){ return !o.ordered; });
+  var shop = open.filter(function(o){ return o.source === "shop"; }), emp = open.filter(function(o){ return o.source === "emp"; });
+  var done = vis.filter(function(o){ return o.ordered; });
+  var late = emp.filter(function(o){ var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(o.need_by || ""); if(!m) return false; var d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])); var t = new Date(); t.setHours(0,0,0,0); return d < t; }).length;
+  function tile(n, sub, l, on, hot, act){ return '<button class="stat' + (on ? ' on' : '') + (hot ? ' hot' : '') + '" type="button" data-set="' + act + '"><div class="n">' + n + (sub ? '<small>' + sub + '</small>' : '') + '</div><div class="l">' + l + '</div></button>'; }
+  $("stats").innerHTML =
+    tile(open.length, pieces(open) + " pieces", "To order", view.st === "open" && !view.src, open.length > 0, "open|") +
+    tile(shop.length, "", "Vendor shop, to order", view.st === "open" && view.src === "shop", false, "open|shop") +
+    tile(emp.length, late ? late + " past need-by" : "", "Employees, to order", view.st === "open" && view.src === "emp", late > 0, "open|emp") +
+    tile(done.length, "", "Ordered, last 120 days", view.st === "done" && !view.src, false, "done|");
+}
+
+function syncSeg(){
+  document.querySelectorAll("#st button").forEach(function(b){ b.classList.toggle("on", b.getAttribute("data-st") === view.st); });
+  document.querySelectorAll("#src button").forEach(function(b){ b.classList.toggle("on", b.getAttribute("data-src") === view.src); });
+}
+
+function load(fresh){
+  var r = post({ kind: "uo_list" });
+  $("refresh").disabled = true;
+  return r.then(function(res){
+    $("refresh").disabled = false;
+    if(!res || res.ok === false){ showErr((res && res.error) || "Could not read the uniform orders."); return; }
+    DATA = { shop: res.shop || [], emp: res.emp || [], at: res.at || new Date().toISOString(), errors: res.errors || [] };
+    try{ localStorage.setItem(CACHE, JSON.stringify(DATA)); }catch(e){}
+    showErr(DATA.errors.length ? "One source did not load: " + DATA.errors.join("; ") : "");
+    render();
+  }).catch(function(e){ $("refresh").disabled = false; showErr("Could not reach the hub service. " + e); });
+}
+function showErr(msg){ $("errbox").innerHTML = msg ? '<div class="err">' + esc(msg) + '</div>' : ""; }
+
+function find(id){ return all().filter(function(o){ return o.source + ":" + o.key === id; })[0]; }
+
+function setFlag(card, field, value){
+  var id = card.getAttribute("data-id"), o = find(id);
+  if(!o) return;
+  if(!ADMIN.who()){ toast("Type your name at the top first, so the log shows who ordered it.", "err"); $("who").focus(); return; }
+  card.classList.add("busy");
+  post({ kind: "uo_set", source: o.source, row: o.row, key: o.key, field: field, value: value }).then(function(res){
+    card.classList.remove("busy");
+    if(!res || res.ok === false){ toast((res && res.error) || "Could not save that.", "err"); return; }
+    o.ordered = !!res.ordered; o.picked = !!res.picked; if(res.status) o.status = res.status; if(res.row) o.row = res.row;
+    try{ localStorage.setItem(CACHE, JSON.stringify(DATA)); }catch(e){}
+    toast(field === "ordered" ? (value ? "Marked ordered." : "Back in the queue.") : (value ? "Marked picked up." : "Picked up cleared."));
+    render();
+  }).catch(function(e){ card.classList.remove("busy"); toast("Could not reach the hub service. " + e, "err"); });
+}
+
+function copyList(){
+  var open = all().filter(function(o){ return !o.ordered && (view.test || !o.test) && (!view.src || o.source === view.src); });
+  if(!open.length){ toast("Nothing waiting to be ordered.", "err"); return; }
+  var by = {};
+  open.forEach(function(o){ o.lines.forEach(function(l){
+    var k = (l.bennett || l.sku || l.name) + "|" + l.name;
+    by[k] = by[k] || { name: l.name, code: l.bennett || l.sku, specs: {}, qty: 0 };
+    by[k].qty += Number(l.qty) || 0;
+    var s = l.spec || "no size given";
+    by[k].specs[s] = (by[k].specs[s] || 0) + (Number(l.qty) || 0);
+  }); });
+  var out = ["City Wide uniform order, " + new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }), ""];
+  Object.keys(by).sort().forEach(function(k){
+    var b = by[k];
+    out.push(b.qty + " x " + b.name + (b.code ? " (" + b.code + ")" : ""));
+    Object.keys(b.specs).forEach(function(s){ out.push("    " + b.specs[s] + "  " + s); });
+  });
+  out.push("", "For:");
+  open.forEach(function(o){ out.push("  " + (o.source === "shop" ? "Vendor " : "Employee ") + o.name + (o.company ? " (" + o.company + ")" : "") + ": " + o.lines.map(function(l){ return l.qty + " x " + l.name + (l.spec ? " [" + l.spec + "]" : ""); }).join("; ")); });
+  var text = out.join("\n");
+  function done(){ toast("Order list copied. Paste it into the Bennett order or an email."); }
+  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function(){ fallback(text); done(); });
+  else { fallback(text); done(); }
+  function fallback(t){ var ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try{ document.execCommand("copy"); }catch(e){} document.body.removeChild(ta); }
+}
+
+ADMIN.init({ page: "emails", onReady: function(){
+  $("who").value = ADMIN.who() || "";
+  $("who").addEventListener("change", function(){ ADMIN.setWho(this.value.trim()); });
+  $("nextrun").textContent = nextRun();
+  try{ var c = JSON.parse(localStorage.getItem(CACHE) || "null"); if(c && c.shop){ DATA = c; render(); } }catch(e){}
+  $("refresh").addEventListener("click", function(){ load(true); });
+  $("copy").addEventListener("click", copyList);
+  $("q").addEventListener("input", function(){ view.q = this.value.trim(); render(); });
+  $("showtest").addEventListener("change", function(){ view.test = this.checked; render(); });
+  $("st").addEventListener("click", function(e){ var b = e.target.closest("button"); if(!b) return; view.st = b.getAttribute("data-st"); syncSeg(); render(); });
+  $("src").addEventListener("click", function(e){ var b = e.target.closest("button"); if(!b) return; view.src = b.getAttribute("data-src"); syncSeg(); render(); });
+  $("stats").addEventListener("click", function(e){ var b = e.target.closest("[data-set]"); if(!b) return; var p = b.getAttribute("data-set").split("|"); view.st = p[0]; view.src = p[1]; syncSeg(); render(); });
+  $("list").addEventListener("click", function(e){
+    var b = e.target.closest("[data-act]"); if(!b) return;
+    var card = b.closest(".ord"), o = find(card.getAttribute("data-id")); if(!o) return;
+    var act = b.getAttribute("data-act");
+    if(act === "ordered") setFlag(card, "ordered", !o.ordered);
+    if(act === "picked") setFlag(card, "picked", !o.picked);
+  });
+  load(false);
+}});
+})();
+</script>
+</body>
+</html>

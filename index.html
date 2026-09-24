@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>CW Admin Hub | Business Operations Management</title>
-<!-- build 2026-09-22a (Vendor Profile feature card and quick link). 2026-09-19b (Vendor Onboarding desk replaces the Asana boards on this page; old boards demoted to a footer link, no Asana calls on load). 2026-09-19 (Ops Admin Desk feature card). 2026-09-11b: retired the vendor packet, walkthrough email and Exhibit A request Asana forms; the Ops Hub does all three itself now (vendor-invite.html, postings.html, create-exhibit-a.html). 2026-09-11 (renamed Admin Hub, Vendor of the Month card). 2026-09-05b (Team Emails quick link; gate via cw-auth.js in admin-shared.js). 2026-09-05a (COI request card + quick link). The Business Operations Manager's front door, a sibling of the
+<!-- build 2026-09-24 (Uniform Orders feature card). 2026-09-22a (Vendor Profile feature card and quick link). 2026-09-19b (Vendor Onboarding desk replaces the Asana boards on this page; old boards demoted to a footer link, no Asana calls on load). 2026-09-19 (Ops Admin Desk feature card). 2026-09-11b: retired the vendor packet, walkthrough email and Exhibit A request Asana forms; the Ops Hub does all three itself now (vendor-invite.html, postings.html, create-exhibit-a.html). 2026-09-11 (renamed Admin Hub, Vendor of the Month card). 2026-09-05b (Team Emails quick link; gate via cw-auth.js in admin-shared.js). 2026-09-05a (COI request card + quick link). The Business Operations Manager's front door, a sibling of the
 Ops Hub (cw-ops-desk) on the Nevada Team Portal. Passcode gate checked server-side
 (kind vd_bom_auth in VendorDirectory.gs; the Ops Hub team passcode also unlocks it).
 Background check roster and Asana boards are read live; nothing on this page is
@@ -105,6 +105,18 @@ hardcoded data except the menu tree and the Asana project registry in admin-shar
 
 <div class="wrap feature" style="margin-top:12px">
 <div class="fcard">
+<span class="ficon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.4 6.5L16 4l-1.5 2.5h-5L8 4 3.6 6.5 5 11l2-.7V20h10v-9.7l2 .7z"/></svg></span>
+<div class="ftext"><h3>Uniform Orders</h3>
+<p>Every uniform waiting to go to Bennett, in one list: the uniform lines from vendor shop orders (chemicals and supplies left out) and every employee uniform request. One tick marks it ordered. Custom orders go in on the 1st and the 15th.</p></div>
+<div class="fbtns">
+<a class="btn solid" href="uniform-orders.html">Open Uniform Orders</a>
+<a class="btn" href="https://citywidelv.github.io/cw-ops-desk/uniforms.html">Employee request page</a>
+</div>
+</div>
+</div>
+
+<div class="wrap feature" style="margin-top:12px">
+<div class="fcard">
 <span class="ficon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
 <div class="ftext"><h3>Vendor Profile</h3>
 <p>One vendor, everything, one page: their record, evaluation, onboarding checklist, crew background checks, interest letters, uploads, insurance and notices. Search by company, owner, email or vendor number, and change what needs changing without opening a Sheet.</p></div>
@@ -185,7 +197,7 @@ hardcoded data except the menu tree and the Asana project registry in admin-shar
 <li><span>COI Requests</span> &nbsp;customer certificates, broker checklist, status</li>
 <li><span>Vendors</span> &nbsp;onboarding desk, new vendor invites, Vendor of the Month</li>
 <li><span>Asana Boards</span> &nbsp;Exhibit A requests and office management only</li>
-<li><span>Team &amp; Admin</span> &nbsp;portal, hubs, ADP, CRM</li>
+<li><span>Team &amp; Admin</span> &nbsp;uniform orders, the Ops Admin Desk, portal, hubs, ADP, CRM</li>
 </ul>
 </div>
 <div class="card">

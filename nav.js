@@ -1,6 +1,7 @@
 /* nav.js for the Admin Hub. Seeded from the page menu on 2026-09-13 by Claude.
    The Site Admin hub (cw-admin-hub/site-admin.html) republishes this file; do not edit by hand.
-   The page keeps its own MENU as a fallback if this file is missing or malformed. */
+   The page keeps its own MENU as a fallback if this file is missing or malformed.
+   Edited by hand 2026-09-24 (Team & Admin rebuilt as side cascades, Uniform Orders added): before the next Site Admin publish, click Import live menu. */
 window.CW_NAV = {
  "hub": "admin",
  "label": "Admin Hub",
@@ -342,17 +343,24 @@ window.CW_NAV = {
    "page": "emails",
    "items": [
     {
-     "ghead": "Ops Admin Desk"
-    },
-    {
-     "label": "Desk home (records, one per page)",
-     "href": "desk.html",
+     "label": "Uniform Orders",
+     "href": "uniform-orders.html",
      "tag": "Hub"
     },
     {
-     "label": "Account FSM (CRM upload, who owns each account)",
-     "href": "account-fsm.html",
-     "tag": "Hub"
+     "sub": "Ops Admin Desk",
+     "items": [
+      {
+       "label": "Desk home (records, one per page)",
+       "href": "desk.html",
+       "tag": "Hub"
+      },
+      {
+       "label": "Account FSM (CRM upload, who owns each account)",
+       "href": "account-fsm.html",
+       "tag": "Hub"
+      }
+     ]
     },
     {
      "sub": "Edit records",
@@ -414,30 +422,24 @@ window.CW_NAV = {
      ]
     },
     {
-     "ghead": "Site"
-    },
-    {
-     "label": "Site Admin (menus, lists, switches)",
-     "href": "site-admin.html",
-     "tag": "Hub"
-    },
-    {
-     "ghead": "Power BI"
-    },
-    {
-     "label": "Reports and targets",
-     "href": "powerbi.html",
-     "tag": "Hub"
-    },
-    {
-     "label": "FSM and Director",
-     "href": "https://citywidelv.github.io/cw-ops-desk/powerbi.html",
-     "tag": "Ops Hub"
-    },
-    {
-     "label": "Sales",
-     "href": "https://citywidelv.github.io/sales-hub/powerbi.html",
-     "tag": "Sales Hub"
+     "sub": "Power BI",
+     "items": [
+      {
+       "label": "Reports and targets",
+       "href": "powerbi.html",
+       "tag": "Hub"
+      },
+      {
+       "label": "FSM and Director",
+       "href": "https://citywidelv.github.io/cw-ops-desk/powerbi.html",
+       "tag": "Ops Hub"
+      },
+      {
+       "label": "Sales",
+       "href": "https://citywidelv.github.io/sales-hub/powerbi.html",
+       "tag": "Sales Hub"
+      }
+     ]
     },
     {
      "label": "Team Emails by Position",
@@ -445,69 +447,82 @@ window.CW_NAV = {
      "tag": "Hub"
     },
     {
-     "ghead": "Hubs"
+     "label": "Site Admin (menus, lists, switches)",
+     "href": "site-admin.html",
+     "tag": "Hub"
     },
     {
-     "label": "Nevada Team Portal",
-     "href": "https://citywidelv.github.io/"
+     "sub": "Hubs",
+     "items": [
+      {
+       "label": "Nevada Team Portal",
+       "href": "https://citywidelv.github.io/"
+      },
+      {
+       "label": "Ops Hub",
+       "href": "https://citywidelv.github.io/cw-ops-desk/"
+      },
+      {
+       "label": "Vendor Hub",
+       "href": "https://citywidelv.github.io/cw-vendor-hub/"
+      },
+      {
+       "label": "Sales Hub",
+       "href": "https://citywidelv.github.io/sales-hub/"
+      }
+     ]
     },
     {
-     "label": "Ops Hub",
-     "href": "https://citywidelv.github.io/cw-ops-desk/"
+     "sub": "HR and Systems",
+     "items": [
+      {
+       "label": "ADP TotalSource",
+       "href": "https://workforcenow.adp.com/"
+      },
+      {
+       "label": "CW Sales CRM",
+       "href": "https://gocitywide.crm.dynamics.com/main.aspx"
+      },
+      {
+       "label": "Employee Uniforms (request page)",
+       "href": "https://citywidelv.github.io/cw-ops-desk/uniforms.html",
+       "tag": "Ops Hub"
+      },
+      {
+       "label": "Order CW Merch",
+       "href": "https://cwlv.printful.me/"
+      }
+     ]
     },
     {
-     "label": "Vendor Hub",
-     "href": "https://citywidelv.github.io/cw-vendor-hub/"
+     "sub": "Team Apps",
+     "items": [
+      {
+       "label": "Microsoft Bookings",
+       "href": "https://bookings.cloud.microsoft/bookings/homepage"
+      },
+      {
+       "label": "Slack",
+       "href": "https://slack.com/signin"
+      },
+      {
+       "label": "Jotform",
+       "href": "https://www.jotform.com/myforms/"
+      }
+     ]
     },
     {
-     "label": "Sales Hub",
-     "href": "https://citywidelv.github.io/sales-hub/"
-    },
-    {
-     "ghead": "Admin"
-    },
-    {
-     "label": "ADP TotalSource",
-     "href": "https://workforcenow.adp.com/"
-    },
-    {
-     "label": "CW Sales CRM",
-     "href": "https://gocitywide.crm.dynamics.com/main.aspx"
-    },
-    {
-     "label": "Employee Uniforms",
-     "href": "https://citywidelv.github.io/cw-ops-desk/uniforms.html",
-     "tag": "Ops Hub"
-    },
-    {
-     "label": "Order CW Merch",
-     "href": "https://cwlv.printful.me/"
-    },
-    {
-     "ghead": "Team Apps"
-    },
-    {
-     "label": "Microsoft Bookings",
-     "href": "https://bookings.cloud.microsoft/bookings/homepage"
-    },
-    {
-     "label": "Slack",
-     "href": "https://slack.com/signin"
-    },
-    {
-     "label": "Jotform",
-     "href": "https://www.jotform.com/myforms/"
-    },
-    {
-     "ghead": "Ordering"
-    },
-    {
-     "label": "Amazon Business",
-     "href": "https://www.amazon.com/business"
-    },
-    {
-     "label": "City Wide Company Store",
-     "href": "https://shopcitywide.mybrightsites.com/"
+     "sub": "Ordering",
+     "items": [
+      {
+       "label": "Amazon Business",
+       "href": "https://www.amazon.com/business"
+      },
+      {
+       "label": "City Wide Company Store",
+       "href": "https://shopcitywide.mybrightsites.com/"
+      }
+     ]
     }
    ]
   }
