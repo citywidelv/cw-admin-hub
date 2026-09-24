@@ -44,7 +44,7 @@ window.CW_NAV = {
     },
     {
      "label": "Background Checks on File (Sheet)",
-     "href": "https://docs.google.com/spreadsheets/d/1kHRyeQzDsi-bnfE5YpD_KPV17GeD5aJ_5vrDQGU_s-0/edit#gid=12628813",
+     "href": "https://docs.google.com/spreadsheets/d/1a_Usbs1FIzaZPnbUpc8vqFg2XV2_QjTAKtqVNPxBPh8/edit",
      "tag": "Sheet"
     },
     {
@@ -122,8 +122,8 @@ window.CW_NAV = {
      "ghead": "Records"
     },
     {
-     "label": "COI Requests (Sheet tab)",
-     "href": "https://docs.google.com/spreadsheets/d/1ymbqR7LMvA7sbgZe2Ro5o2dNiXhP08Tn9Hw1b-H5AeQ/edit#gid=1472416765",
+     "label": "COI Requests (Sheet)",
+     "href": "https://docs.google.com/spreadsheets/d/10orOD2OQGgq9GxJldMNJNKKGmy1fU6uhe4SmCLTDGLg/edit",
      "tag": "Sheet"
     },
     {

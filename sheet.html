@@ -53,9 +53,10 @@ always shown. -->
 (function(){
 var BOOKS = {
   shop:   { id:"1p0CJVr6UJnYTBvAF3-VPBA_6uBHG9BLlByryXLwlOTw", label:"Vendor shop catalog", sub:"products, prices, sizes and colors the shop sells" },
-  supply: { id:"1_T1hxLt7WLIRYqkVVESGwD94f-IpPYAHVPWVoddbS_0", label:"CW Supply and Inventory", sub:"EnvirOx catalog and pricing, supplies reports" },
-  sol:    { id:"1ymbqR7LMvA7sbgZe2Ro5o2dNiXhP08Tn9Hw1b-H5AeQ", label:"CW Solicitations", sub:"postings, responses, change log" },
-  vd:     { id:"1kHRyeQzDsi-bnfE5YpD_KPV17GeD5aJ_5vrDQGU_s-0", label:"CW Vendor Directory", sub:"vendors, service types, background checks" }
+  supply: { id:"1FsvPe5qTkRwO0i2PyWCIQnsriDU_YhS7E3768m9KQHg", label:"CW EnvirOx Orders", sub:"EnvirOx catalog and pricing, EnvirOx orders" },
+  supplies: { id:"1_T1hxLt7WLIRYqkVVESGwD94f-IpPYAHVPWVoddbS_0", label:"CW Building Supplies Reports", sub:"reports that a building needs supplies" },
+  sol:    { id:"1ymbqR7LMvA7sbgZe2Ro5o2dNiXhP08Tn9Hw1b-H5AeQ", label:"CW Open Opportunities", sub:"open opportunities and vendor responses" },
+  vd:     { id:"1kHRyeQzDsi-bnfE5YpD_KPV17GeD5aJ_5vrDQGU_s-0", label:"CW Vendor Directory", sub:"vendors, service types, intake log" }
 };
 function param(n){ var m = new RegExp("[?&]" + n + "=([^&]*)").exec(location.search); return m ? decodeURIComponent(m[1]) : ""; }
 ADMIN.init({ page:"emails", onReady:function(){
