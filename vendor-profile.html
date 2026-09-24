@@ -853,11 +853,10 @@ function renderCompliance(){
   // COI
   h += '<div class="box"><h5>Insurance on file</h5>';
   if(!S.more) h += '<div class="skel" style="width:70%"></div>';
-  else if(!ins) h += '<p class="mini">Could not read the insurance roster' + (m.errors && m.errors.insurance ? ": " + esc(m.errors.insurance) : "") + '.</p><div class="coi">' + coiBox("General liability", s.gl_exp) + coiBox("Workers comp", s.wc_exp) + '</div>';
+  else if(!ins) h += '<p class="mini">Could not read the insurance records' + (m.errors && m.errors.insurance ? ": " + esc(m.errors.insurance) : "") + '.</p><div class="coi">' + coiBox("General liability", s.gl_exp) + coiBox("Workers comp", s.wc_exp) + '</div>';
   else {
     h += '<div class="coi">' + coiBox("General liability", ins.gl.label || (ins.roster ? ins.roster.gl_exp : s.gl_exp), ins.gl.state, ins.gl.days) + coiBox("Workers comp", ins.wc.label || (ins.roster ? ins.roster.wc_exp : s.wc_exp), ins.wc.state, ins.wc.days) + '</div>';
-    if(ins.roster && ((ins.roster.gl_exp || "") !== (s.gl_exp || "") || (ins.roster.wc_exp || "") !== (s.wc_exp || ""))) h += '<p class="mini" style="margin-top:8px">The directory row says GL ' + esc(s.gl_exp || "blank") + ', WC ' + esc(s.wc_exp || "blank") + '. The insurance roster (what reminders run from) says GL ' + esc(ins.roster.gl_exp || "blank") + ', WC ' + esc(ins.roster.wc_exp || "blank") + '. Fix whichever is wrong.</p>';
-    if(!ins.roster) h += '<p class="mini" style="margin-top:8px">Not on the insurance roster yet, so no expiry reminders go to this vendor. Dates shown are from the directory row.</p>';
+    h += '<p class="mini" style="margin-top:8px">Dates are the gl_exp and wc_exp columns on this directory row. The Insurance page reads the same columns, so editing them here is the only place to fix them.</p>';
     if(ins.reminders && ins.reminders.length) h += '<p class="mini" style="margin-top:8px">Last reminder sent ' + esc(niceDate(ins.reminders[0].sent)) + ' (' + esc(ins.reminders[0].coverage) + ').</p>';
   }
   h += '<p class="mailbtn"><a class="btn sm" href="' + OPS + 'insurance.html" target="_blank" rel="noopener">Insurance page</a> <a class="btn sm" href="' + VS + 'upload.html" target="_blank" rel="noopener">Vendor upload page</a></p></div>';
