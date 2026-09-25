@@ -1,7 +1,7 @@
 /* nav.js for the Admin Hub. Seeded from the page menu on 2026-09-13 by Claude.
    The Site Admin hub (cw-admin-hub/site-admin.html) republishes this file; do not edit by hand.
    The page keeps its own MENU as a fallback if this file is missing or malformed.
-   Edited by hand 2026-09-24 (Team & Admin rebuilt as side cascades, Uniform Orders added): before the next Site Admin publish, click Import live menu. */
+   Edited by hand 2026-09-25 (menu cleanup: one home per tool, short labels with tag chips; Account Changes still hidden): before the next Site Admin publish, click Import live menu. */
 window.CW_NAV = {
  "hub": "admin",
  "label": "Admin Hub",
@@ -12,7 +12,7 @@ window.CW_NAV = {
    "page": "bc",
    "items": [
     {
-     "label": "Review & Record Results",
+     "label": "Review and Record Results",
      "href": "background-checks.html",
      "tag": "Hub"
     },
@@ -22,17 +22,9 @@ window.CW_NAV = {
      "tag": "Hub"
     },
     {
-     "ghead": "Requests"
-    },
-    {
-     "label": "Requests and crew status (Onboarding desk)",
+     "label": "Background Check Requests",
      "href": "onboarding.html#bc",
      "tag": "Hub"
-    },
-    {
-     "label": "Vendor request page (Vendor Hub)",
-     "href": "https://citywidelv.github.io/cw-vendor-hub/background-check.html",
-     "tag": "Vendor Hub"
     },
     {
      "label": "Send Vendor Notices",
@@ -40,15 +32,17 @@ window.CW_NAV = {
      "tag": "Ops Hub"
     },
     {
-     "ghead": "Records"
+     "label": "Vendor Request Page",
+     "href": "https://citywidelv.github.io/cw-vendor-hub/background-check.html",
+     "tag": "Vendor Hub"
     },
     {
-     "label": "Background Checks on File (Sheet)",
+     "label": "Background Checks",
      "href": "https://docs.google.com/spreadsheets/d/1a_Usbs1FIzaZPnbUpc8vqFg2XV2_QjTAKtqVNPxBPh8/edit",
      "tag": "Sheet"
     },
     {
-     "label": "Verified First (portal)",
+     "label": "Verified First",
      "href": "https://portal.verifiedfirst.com/#/dashboard",
      "tag": "Site"
     }
@@ -66,7 +60,7 @@ window.CW_NAV = {
      "tag": "Hub"
     },
     {
-     "label": "Accounting Queue (not yet checked off)",
+     "label": "Accounting Queue",
      "href": "accounting-queue.html",
      "tag": "Hub"
     },
@@ -84,7 +78,7 @@ window.CW_NAV = {
      "tag": "Hub"
     },
     {
-     "label": "Active Vendors (Ops Hub)",
+     "label": "Active Vendors",
      "href": "https://citywidelv.github.io/cw-ops-desk/vendors.html#/lv/janitorial",
      "tag": "Ops Hub"
     },
@@ -92,12 +86,12 @@ window.CW_NAV = {
      "ghead": "Records"
     },
     {
-     "label": "CW Account Changes (Sheet)",
+     "label": "CW Account Changes",
      "href": "https://docs.google.com/spreadsheets/d/1IqSFi5gNL1YyDYqFxr2m3KNpILzz27XIvs_hC86MOhI/edit",
      "tag": "Sheet"
     },
     {
-     "label": "Load the Excel history (one time)",
+     "label": "Load the Excel History",
      "href": "act-import.html",
      "tag": "Hub"
     }
@@ -109,33 +103,27 @@ window.CW_NAV = {
    "page": "coi",
    "items": [
     {
-     "label": "Request Log & Status",
+     "label": "Request Log and Status",
      "href": "coi-log.html",
      "tag": "Hub"
     },
     {
-     "label": "New COI Request for a Customer",
+     "label": "New COI Request",
      "href": "https://citywidelv.github.io/cw-ops-desk/coi-request.html",
      "tag": "Ops Hub"
     },
     {
-     "ghead": "Records"
-    },
-    {
-     "label": "COI Requests (Sheet)",
-     "href": "https://docs.google.com/spreadsheets/d/10orOD2OQGgq9GxJldMNJNKKGmy1fU6uhe4SmCLTDGLg/edit",
-     "tag": "Sheet"
-    },
-    {
-     "label": "Vendor COIs Coming In (Ops Hub)",
+     "label": "Vendor COIs Coming In",
      "href": "https://citywidelv.github.io/cw-ops-desk/insurance.html",
      "tag": "Ops Hub"
     },
     {
-     "ghead": "Broker Portal"
+     "label": "COI Requests",
+     "href": "https://docs.google.com/spreadsheets/d/10orOD2OQGgq9GxJldMNJNKKGmy1fU6uhe4SmCLTDGLg/edit",
+     "tag": "Sheet"
     },
     {
-     "label": "InsurLink (Vertafore)",
+     "label": "InsurLink",
      "href": "https://insurlink.vertafore.com/end-insured/2260313c6a34459c8a098ede23d21fb7/2094911/overview",
      "tag": "Site"
     }
@@ -147,17 +135,17 @@ window.CW_NAV = {
    "page": "vendors",
    "items": [
     {
-     "label": "Vendor Profile (everything about one vendor)",
+     "label": "Vendor Profile",
      "href": "vendor-profile.html",
      "tag": "Hub"
     },
     {
-     "label": "Vendor Activity (what vendors sent or changed)",
+     "label": "Vendor Activity",
      "href": "vendor-activity.html",
      "tag": "Hub"
     },
     {
-     "label": "Vendor Email (one place to send)",
+     "label": "Vendor Email",
      "href": "https://citywidelv.github.io/cw-ops-desk/vendor-email.html?from=admin",
      "tag": "Ops Hub"
     },
@@ -165,52 +153,19 @@ window.CW_NAV = {
      "sub": "Onboarding",
      "items": [
       {
-       "label": "Vendor Onboarding desk",
+       "label": "Onboarding Desk",
        "href": "onboarding.html",
        "tag": "Hub"
       },
       {
-       "label": "Start onboarding for a vendor",
+       "label": "Start Onboarding",
        "href": "onboarding.html#start",
        "tag": "Hub"
       },
       {
-       "label": "Background check requests",
-       "href": "onboarding.html#bc",
+       "label": "Old Asana Boards",
+       "href": "asana.html",
        "tag": "Hub"
-      },
-      {
-       "ghead": "Old boards, read only"
-      },
-      {
-       "label": "LV Onboarding - Janitorial ICs",
-       "href": "https://app.asana.com/1/13140959242873/project/1211434492126262",
-       "tag": "Asana"
-      },
-      {
-       "label": "LV Onboarding - Other Services ICs",
-       "href": "https://app.asana.com/1/13140959242873/project/1211502025994506",
-       "tag": "Asana"
-      },
-      {
-       "label": "NNV Onboarding - Janitorial ICs",
-       "href": "https://app.asana.com/1/13140959242873/project/1211502025994509",
-       "tag": "Asana"
-      },
-      {
-       "label": "NNV Onboarding - Other Services ICs",
-       "href": "https://app.asana.com/1/13140959242873/project/1211502025994512",
-       "tag": "Asana"
-      },
-      {
-       "label": "IC Background Checks",
-       "href": "https://app.asana.com/1/13140959242873/project/1211554681536533",
-       "tag": "Asana"
-      },
-      {
-       "label": "NNV IC Transfers",
-       "href": "https://app.asana.com/1/13140959242873/project/1212873397063867",
-       "tag": "Asana"
       }
      ]
     },
@@ -228,13 +183,8 @@ window.CW_NAV = {
        "tag": "Ops Hub"
       },
       {
-       "label": "New Vendor Steps (Vendor Hub)",
+       "label": "New Vendor Steps",
        "href": "https://citywidelv.github.io/cw-vendor-hub/new-vendors.html",
-       "tag": "Vendor Hub"
-      },
-      {
-       "label": "Background Check and Name Badge",
-       "href": "https://citywidelv.github.io/cw-vendor-hub/background-check.html",
        "tag": "Vendor Hub"
       }
      ]
@@ -248,54 +198,56 @@ window.CW_NAV = {
        "tag": "Hub"
       },
       {
-       "label": "Nominations & Plates",
+       "label": "Winners and Plates",
        "href": "recognition.html",
        "tag": "Hub"
       },
       {
-       "label": "Shop Codes & Certificates",
+       "label": "Shop Codes and Certificates",
        "href": "recognition.html#coupons",
        "tag": "Hub"
       },
       {
-       "label": "Nominate a Vendor or G.O.A.T.",
+       "label": "Nominate",
        "href": "https://citywidelv.github.io/cw-ops-desk/nominate.html",
        "tag": "Ops Hub"
       },
       {
-       "label": "The Wall (Vendor Hub)",
+       "label": "The Wall",
        "href": "https://citywidelv.github.io/cw-vendor-hub/#recognition",
        "tag": "Vendor Hub"
       }
      ]
     },
     {
-     "ghead": "Directory"
-    },
-    {
-     "label": "Edit a Vendor Record (Desk)",
-     "href": "records.html?s=vendors_lv",
-     "tag": "Hub"
-    },
-    {
-     "label": "Add a Vendor",
-     "href": "https://citywidelv.github.io/cw-ops-desk/vendor-add.html",
-     "tag": "Ops Hub"
-    },
-    {
-     "label": "Do Not Email or Remove a Vendor",
-     "href": "https://citywidelv.github.io/cw-ops-desk/vendor-dne.html?from=admin",
-     "tag": "Ops Hub"
-    },
-    {
-     "label": "Active Vendors (Las Vegas)",
-     "href": "https://citywidelv.github.io/cw-ops-desk/vendors.html#/lv/janitorial",
-     "tag": "Ops Hub"
-    },
-    {
-     "label": "Active Vendors (Northern Nevada)",
-     "href": "https://citywidelv.github.io/cw-ops-desk/vendors.html#/nnv/janitorial",
-     "tag": "Ops Hub"
+     "sub": "Directory",
+     "items": [
+      {
+       "label": "Edit a Vendor Record",
+       "href": "records.html?s=vendors_lv",
+       "tag": "Hub"
+      },
+      {
+       "label": "Add a Vendor",
+       "href": "https://citywidelv.github.io/cw-ops-desk/vendor-add.html",
+       "tag": "Ops Hub"
+      },
+      {
+       "label": "Do Not Email or Remove",
+       "href": "https://citywidelv.github.io/cw-ops-desk/vendor-dne.html?from=admin",
+       "tag": "Ops Hub"
+      },
+      {
+       "label": "Las Vegas",
+       "href": "https://citywidelv.github.io/cw-ops-desk/vendors.html#/lv",
+       "tag": "Ops Hub"
+      },
+      {
+       "label": "Northern Nevada",
+       "href": "https://citywidelv.github.io/cw-ops-desk/vendors.html#/nnv",
+       "tag": "Ops Hub"
+      }
+     ]
     }
    ]
   },
@@ -305,17 +257,14 @@ window.CW_NAV = {
    "page": "asana",
    "items": [
     {
-     "label": "All Admin Hub boards, live",
+     "label": "All Boards, Live",
      "href": "asana.html",
      "tag": "Hub"
     },
     {
-     "label": "Business Ops team in Asana",
+     "label": "Business Ops Team",
      "href": "https://app.asana.com/0/1211434492126259/overview",
      "tag": "Asana"
-    },
-    {
-     "ghead": "Requests"
     },
     {
      "label": "Exhibit A Requests",
@@ -328,10 +277,7 @@ window.CW_NAV = {
      "tag": "Ops Hub"
     },
     {
-     "ghead": "Office"
-    },
-    {
-     "label": "Office Management board",
+     "label": "Office Management",
      "href": "https://app.asana.com/1/13140959242873/project/1211522761691094",
      "tag": "Asana"
     }
@@ -348,84 +294,30 @@ window.CW_NAV = {
      "tag": "Hub"
     },
     {
-     "sub": "Ops Admin Desk",
-     "items": [
-      {
-       "label": "Desk home (records, one per page)",
-       "href": "desk.html",
-       "tag": "Hub"
-      },
-      {
-       "label": "Account FSM (CRM upload, who owns each account)",
-       "href": "account-fsm.html",
-       "tag": "Hub"
-      }
-     ]
+     "label": "Ops Admin Desk",
+     "href": "desk.html",
+     "tag": "Hub"
     },
     {
-     "sub": "Edit records",
-     "items": [
-      {
-       "ghead": "Opportunity Wall"
-      },
-      {
-       "label": "Opportunity postings",
-       "href": "records.html?s=postings",
-       "tag": "Hub"
-      },
-      {
-       "label": "Vendor responses",
-       "href": "records.html?s=responses",
-       "tag": "Hub"
-      },
-      {
-       "ghead": "Supplies"
-      },
-      {
-       "label": "Supplies needed reports",
-       "href": "records.html?s=supplies",
-       "tag": "Hub"
-      },
-      {
-       "label": "EnvirOx orders",
-       "href": "records.html?s=envirox",
-       "tag": "Hub"
-      },
-      {
-       "label": "Vendor shop orders",
-       "href": "records.html?s=shop",
-       "tag": "Hub"
-      },
-      {
-       "label": "Shop catalog and prices (Sheet)",
-       "href": "sheet.html?b=shop",
-       "tag": "Sheet"
-      },
-      {
-       "ghead": "Vendors and team"
-      },
-      {
-       "label": "Vendors, Las Vegas",
-       "href": "records.html?s=vendors_lv",
-       "tag": "Hub"
-      },
-      {
-       "label": "Vendors, Northern Nevada",
-       "href": "records.html?s=vendors_nnv",
-       "tag": "Hub"
-      },
-      {
-       "label": "Team roster",
-       "href": "records.html?s=staff",
-       "tag": "Hub"
-      }
-     ]
+     "label": "Account FSM",
+     "href": "account-fsm.html",
+     "tag": "Hub"
+    },
+    {
+     "label": "Team Emails by Position",
+     "href": "team-emails.html",
+     "tag": "Hub"
+    },
+    {
+     "label": "Site Admin",
+     "href": "site-admin.html",
+     "tag": "Hub"
     },
     {
      "sub": "Power BI",
      "items": [
       {
-       "label": "Reports and targets",
+       "label": "Reports and Targets",
        "href": "powerbi.html",
        "tag": "Hub"
       },
@@ -440,16 +332,6 @@ window.CW_NAV = {
        "tag": "Sales Hub"
       }
      ]
-    },
-    {
-     "label": "Team Emails by Position",
-     "href": "team-emails.html",
-     "tag": "Hub"
-    },
-    {
-     "label": "Site Admin (menus, lists, switches)",
-     "href": "site-admin.html",
-     "tag": "Hub"
     },
     {
      "sub": "Hubs",
@@ -484,7 +366,7 @@ window.CW_NAV = {
        "href": "https://gocitywide.crm.dynamics.com/main.aspx"
       },
       {
-       "label": "Employee Uniforms (request page)",
+       "label": "Employee Uniforms",
        "href": "https://citywidelv.github.io/cw-ops-desk/uniforms.html",
        "tag": "Ops Hub"
       },
@@ -514,6 +396,23 @@ window.CW_NAV = {
     {
      "sub": "Ordering",
      "items": [
+      {
+       "label": "Order More EnvirOx",
+       "href": "https://citywidelv.github.io/cw-ops-desk/envirox.html",
+       "tag": "Ops Hub"
+      },
+      {
+       "label": "Brady Industries",
+       "href": "https://www.bradyindustries.com/"
+      },
+      {
+       "label": "Staples Advantage",
+       "href": "https://www.staplesadvantage.com/"
+      },
+      {
+       "label": "HD Supply Solutions",
+       "href": "https://hdsupplysolutions.com/"
+      },
       {
        "label": "Amazon Business",
        "href": "https://www.amazon.com/business"

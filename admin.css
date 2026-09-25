@@ -36,7 +36,7 @@ padding:12px 9px;display:flex;align-items:center;gap:7px;white-space:nowrap;curs
 .nbtn svg{opacity:.9;flex:none}
 .nbtn .caret{font-size:8px;opacity:.8}
 .nbtn:hover,.nbtn.open,.nbtn.here{background:var(--red)}
-.nmenu{display:none;position:absolute;top:100%;left:0;min-width:260px;max-width:340px;background:#fff;border:1px solid var(--border);
+.nmenu{display:none;position:absolute;top:100%;left:0;width:max-content;min-width:260px;max-width:360px;background:#fff;border:1px solid var(--border);
 border-top:3px solid var(--red);border-radius:0 0 10px 10px;box-shadow:var(--shadow-lift);padding:6px 0;z-index:70}
 .nmenu.show{display:block}
 .nmenu a{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;color:var(--black);text-decoration:none;padding:10px 16px;min-height:40px}
@@ -48,7 +48,7 @@ border:1px solid var(--border);border-radius:8px;padding:1px 7px}
 .nsub{position:relative}
 .nsub>a.subbtn{justify-content:space-between}
 .nsub>a.subbtn::after{content:"\25B8";color:var(--grey);font-size:10px;margin-left:10px}
-.nsubmenu{display:none;position:absolute;left:100%;top:-7px;min-width:250px;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-lift);padding:6px 0;z-index:80}
+.nsubmenu{display:none;position:absolute;left:100%;top:-7px;width:max-content;min-width:250px;max-width:360px;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-lift);padding:6px 0;z-index:80}
 .nsubmenu.show{display:block}
 @media(hover:hover){.nitem:hover>.nmenu{display:block}.nsub:hover>.nsubmenu{display:block}}
 /* Sep 24 2026: panels are kept on screen by CWNav.place. flip = open to the left instead of the right (or hug the right edge for a top dropdown); scroll = taller than the screen. */
@@ -205,7 +205,7 @@ url('https://citywidelv.github.io/cw-vendor-hub/images/bldg-campus.jpg') center/
 .nav-in{flex-wrap:nowrap;overflow-x:auto;padding:0 6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .nav-in::-webkit-scrollbar{display:none}
 .nbtn{padding:0 10px;font-size:12px;gap:5px}
-.nmenu{position:fixed;left:10px;right:10px;max-width:none;border-radius:10px;max-height:65vh;overflow-y:auto;z-index:120}
+.nmenu{position:fixed;left:10px;right:10px;width:auto;max-width:none;border-radius:10px;max-height:65vh;overflow-y:auto;z-index:120}
 .nsubmenu{position:static;border:none;box-shadow:none;padding:0 0 4px 14px;display:none}
 .nsubmenu.show{display:block}
 .head .t,.head .badge{display:none}
