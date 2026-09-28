@@ -6,6 +6,7 @@
 <meta name="robots" content="noindex">
 <title>Vendor Profile | CW Admin Hub</title>
 <!-- build 2026-09-23d (status colour theme + status control in the head, tinted section heads, Activation checklist in two stages with the accounting hand-off banner; no new backend, same kinds).
+Build 2026-09-28a: "Email needs update" replaces Email bounced; clears only after the email changes.
 Prior: build 2026-09-23c (email bounced flag: directory columns email_status / email_note + do not email list, no new backend).
 Prior: build 2026-09-23a (Contacts card + vendor self-service activity, VendorSelf.gs vs_admin_* kinds).
 Prior: build 2026-09-22b (four parallel loads, index cache). One vendor, everything, one page.
@@ -474,7 +475,7 @@ function renderHead(){
     fact("Source", s.source) + fact("Last updated", s.updated ? niceDate(s.updated) : "") + '</div>';
   var flags = [];
   var erec = (S.core.record && S.core.record.rec) || {};
-  if(/bounce|invalid/i.test(erec.email_status || "")) flags.push('<span class="flag bad">Email ' + esc(String(erec.email_status).toLowerCase()) + (erec.email_note ? ': ' + esc(erec.email_note) : '') + '</span>');
+  if(emailHold(erec)) flags.push('<span class="flag bad">Email needs update' + (erec.email_note ? ': ' + esc(erec.email_note) : '') + '</span>');
   if(s.dne) flags.push('<span class="flag bad">On the do not email list</span>');
   if(s.hide) flags.push('<span class="flag warn">Hidden from pickers</span>');
   if(s.invited) flags.push('<span class="flag warn">Invited, evaluation not in yet</span>');
@@ -881,16 +882,28 @@ function renderCompliance(){
   h += '</div>';
   // email standing
   var er = (S.core.record && S.core.record.rec) || {}, hasEmailCols = S.core.record && ("email_status" in er);
-  var bounced = /bounce|invalid/i.test(er.email_status || "");
+  var hold = emailHold(er), badAddr = holdAddr(er), fixed = emailFixed(er, s);
   h += '<div class="box"><h5>Email standing</h5>' +
-    (bounced ? '<p style="font-size:13px"><b style="color:var(--red)">Email ' + esc(String(er.email_status).toLowerCase()) + '.</b> ' + esc(er.email_note || "") + ' Fix the address on Details, then click below.</p><p class="mailbtn"><button class="btn sm" type="button" id="em_ok">Email works again</button></p>'
-             : (hasEmailCols ? '<p class="mailbtn"><button class="btn sm" type="button" id="em_bad">Email bounced (mark invalid)</button> <span class="mini">marks the row, puts the address on the do not email list</span></p>' : '')) +
+    (hold ? '<p style="font-size:13px"><b style="color:var(--red)">Email needs update.</b> ' + esc(er.email_note || "") + '</p>' +
+            '<p style="font-size:13px">Left out of every vendor email until the address is changed on Details and this is cleared.</p>' +
+            (fixed ? '<p class="mailbtn"><button class="btn sm" type="button" id="em_ok">Email is updated, clear this</button> <span class="mini">new address ' + esc(s.email) + '</span></p>'
+                   : '<p class="mini">Change the email on Details first' + (s.email ? ' (still ' + esc(s.email) + ')' : '') + '. The clear button shows once it is different.</p>')
+           : (hasEmailCols ? '<p class="mailbtn"><button class="btn sm" type="button" id="em_bad">Email needs update</button> <span class="mini">email bounced. Blocks the address and keeps them out of vendor emails until the email is changed</span></p>' : '')) +
     (s.dne ? '<p style="font-size:13px"><b style="color:var(--red)">On the do not email list.</b> Gets no opportunity or vendor messages. Notices, COI and background check emails still go.</p><p class="mailbtn"><button class="btn sm" type="button" id="dne_lift">Take them off the list</button></p>' :
       '<p style="font-size:13px">Gets vendor emails' + (s.email ? "" : " (no email address on file)") + '.</p><p class="mailbtn"><button class="btn sm" type="button" id="dne_add">Put on the do not email list</button></p>') +
     '<p style="font-size:13px;margin-top:8px">' + (s.hide ? '<b style="color:var(--amber)">Hidden</b> from every picker (opportunity emails, violations, messages).' : 'Shown in the pickers.') + '</p><p class="mailbtn"><button class="btn sm" type="button" id="hide_tog">' + (s.hide ? "Show in pickers again" : "Hide from pickers") + '</button> <a class="btn sm" href="' + OPS + 'vendor-dne.html?from=admin" target="_blank" rel="noopener">Do Not Email page</a></p></div>';
   $("k_body").innerHTML = h + '</div>';
   var bad = 0; if(ins && ins.gl && (ins.gl.state === "expired" || ins.gl.state === "soon")) bad++; if(ins && ins.wc && (ins.wc.state === "expired" || ins.wc.state === "soon")) bad++;
   count("c_comp", bad);
+}
+/* Sep 28 2026: "Email needs update". Any text in email_status holds the vendor out of
+   every vendor email picker (notify.js, vendor-email, vendor-messages). It clears only
+   once the email on file differs from the bounced address in email_note. */
+function emailHold(rec){ return /\S/.test(String((rec && rec.email_status) || "")); }
+function holdAddr(rec){ var m = String((rec && rec.email_note) || "").match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/); return m ? m[0].toLowerCase() : ""; }
+function emailFixed(rec, s){
+  var cur = String((s && s.email) || "").trim().toLowerCase(); if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(cur)) return false;
+  var old = holdAddr(rec); return old ? cur.indexOf(old) < 0 : !(s && s.dne);
 }
 function coiBox(label, date, state, days){
   var cls = state || "", txt = date ? niceDate(date) : "not on file";
@@ -910,18 +923,18 @@ $("k_body").addEventListener("click", function(e){
     post({ kind:"dne_remove", email:s.email }).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Not saved"); toast("Off the list", "ok"); return reloadCore("head"); }).catch(function(err){ b.classList.remove("busy"); toast(err.message, "err"); });
   } else if(b.id === "em_bad" || b.id === "em_ok"){
     var rr = S.core.record; if(!rr || !("email_status" in rr.rec)){ toast("The email_status column is missing on this tab", "err"); return; }
-    var bad = b.id === "em_bad", today = new Date().toISOString().slice(0, 10);
-    var note = bad ? "Bounced " + today + ", marked by " + who() : "";
+    var bad = b.id === "em_bad", today = new Date().toISOString().slice(0, 10), cur = String(s.email || "").trim().toLowerCase();
+    if(!bad && !emailFixed(rr.rec, s)){ toast("Change the email on Details first", "err"); return; }
+    var note = bad ? (cur ? "Bounced address " + cur + ". " : "") + "Marked " + today + " by " + who() : "";
     b.classList.add("busy");
-    post({ kind:"adr_save", surface:rr.surface, row:rr.row, id:rr.id, changes:{ email_status:{ old:rr.rec.email_status || "", "new": bad ? "Bounced" : "" }, email_note:{ old:rr.rec.email_note || "", "new": note } } })
+    post({ kind:"adr_save", surface:rr.surface, row:rr.row, id:rr.id, changes:{ email_status:{ old:rr.rec.email_status || "", "new": bad ? "Email needs update" : "" }, email_note:{ old:rr.rec.email_note || "", "new": note } } })
       .then(function(x){
         if(!x || x.ok === false) throw new Error((x && x.error) || "Not saved");
         if(x.stale && x.stale.length) throw new Error("Changed by someone else since you opened it. Reload and try again.");
-        if(bad && s.email && !s.dne) return post({ kind:"dne_add", reason:"Email bounced (undeliverable) " + today, vendor_ids:[S.vid], emails:[] });
-        if(!bad && s.dne && s.email) return post({ kind:"dne_remove", email:s.email });
+        if(bad && cur && !s.dne) return post({ kind:"dne_add", reason:"Email bounced (undeliverable) " + today, vendor_ids:[S.vid], emails:[] });
         return { ok:true };
       })
-      .then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Row saved, but the do not email list did not update"); toast(bad ? "Marked bounced and blocked from vendor emails" : "Email cleared and unblocked", "ok"); return reloadCore("head"); })
+      .then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Row saved, but the do not email list did not update"); toast(bad ? "Email needs update. Left out of vendor emails" : "Cleared. Vendor emails go to the new address", "ok"); return reloadCore("head"); })
       .catch(function(err){ b.classList.remove("busy"); toast(err.message, "err"); });
   } else if(b.id === "hide_tog"){
     var hide = !s.hide, reason2 = hide ? prompt("Why hide them?", "") : ""; if(reason2 === null) return;
