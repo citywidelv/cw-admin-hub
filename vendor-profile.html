@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex">
 <title>Vendor Profile | CW Admin Hub</title>
 <!-- build 2026-09-23d (status colour theme + status control in the head, tinted section heads, Activation checklist in two stages with the accounting hand-off banner; no new backend, same kinds).
-Build 2026-09-28a: "Email needs update" replaces Email bounced; clears only after the email changes.
+Build 2026-09-28c (status only: no do not email list, no FSM alert). 2026-09-28b double click guard. 2026-09-28a: "Email needs update" replaces Email bounced; clears only after the email changes.
 Prior: build 2026-09-23c (email bounced flag: directory columns email_status / email_note + do not email list, no new backend).
 Prior: build 2026-09-23a (Contacts card + vendor self-service activity, VendorSelf.gs vs_admin_* kinds).
 Prior: build 2026-09-22b (four parallel loads, index cache). One vendor, everything, one page.
@@ -888,7 +888,7 @@ function renderCompliance(){
             '<p style="font-size:13px">Left out of every vendor email until the address is changed on Details and this is cleared.</p>' +
             (fixed ? '<p class="mailbtn"><button class="btn sm" type="button" id="em_ok">Email is updated, clear this</button> <span class="mini">new address ' + esc(s.email) + '</span></p>'
                    : '<p class="mini">Change the email on Details first' + (s.email ? ' (still ' + esc(s.email) + ')' : '') + '. The clear button shows once it is different.</p>')
-           : (hasEmailCols ? '<p class="mailbtn"><button class="btn sm" type="button" id="em_bad">Email needs update</button> <span class="mini">email bounced. Blocks the address and keeps them out of vendor emails until the email is changed</span></p>' : '')) +
+           : (hasEmailCols ? '<p class="mailbtn"><button class="btn sm" type="button" id="em_bad">Email needs update</button> <span class="mini">email bounced. Keeps them out of vendor emails until the email is changed</span></p>' : '')) +
     (s.dne ? '<p style="font-size:13px"><b style="color:var(--red)">On the do not email list.</b> Gets no opportunity or vendor messages. Notices, COI and background check emails still go.</p><p class="mailbtn"><button class="btn sm" type="button" id="dne_lift">Take them off the list</button></p>' :
       '<p style="font-size:13px">Gets vendor emails' + (s.email ? "" : " (no email address on file)") + '.</p><p class="mailbtn"><button class="btn sm" type="button" id="dne_add">Put on the do not email list</button></p>') +
     '<p style="font-size:13px;margin-top:8px">' + (s.hide ? '<b style="color:var(--amber)">Hidden</b> from every picker (opportunity emails, violations, messages).' : 'Shown in the pickers.') + '</p><p class="mailbtn"><button class="btn sm" type="button" id="hide_tog">' + (s.hide ? "Show in pickers again" : "Hide from pickers") + '</button> <a class="btn sm" href="' + OPS + 'vendor-dne.html?from=admin" target="_blank" rel="noopener">Do Not Email page</a></p></div>';
@@ -903,7 +903,7 @@ function emailHold(rec){ return /\S/.test(String((rec && rec.email_status) || ""
 function holdAddr(rec){ var m = String((rec && rec.email_note) || "").match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/); return m ? m[0].toLowerCase() : ""; }
 function emailFixed(rec, s){
   var cur = String((s && s.email) || "").trim().toLowerCase(); if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(cur)) return false;
-  var old = holdAddr(rec); return old ? cur.indexOf(old) < 0 : !(s && s.dne);
+  var old = holdAddr(rec); return old ? cur.indexOf(old) < 0 : !(s && s.dne);   // older "Bounced" rows name no address; their dead address sits on the list
 }
 function coiBox(label, date, state, days){
   var cls = state || "", txt = date ? niceDate(date) : "not on file";
@@ -922,6 +922,7 @@ $("k_body").addEventListener("click", function(e){
     b.classList.add("busy");
     post({ kind:"dne_remove", email:s.email }).then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Not saved"); toast("Off the list", "ok"); return reloadCore("head"); }).catch(function(err){ b.classList.remove("busy"); toast(err.message, "err"); });
   } else if(b.id === "em_bad" || b.id === "em_ok"){
+    if(b.classList.contains("busy")) return;
     var rr = S.core.record; if(!rr || !("email_status" in rr.rec)){ toast("The email_status column is missing on this tab", "err"); return; }
     var bad = b.id === "em_bad", today = new Date().toISOString().slice(0, 10), cur = String(s.email || "").trim().toLowerCase();
     if(!bad && !emailFixed(rr.rec, s)){ toast("Change the email on Details first", "err"); return; }
@@ -931,10 +932,8 @@ $("k_body").addEventListener("click", function(e){
       .then(function(x){
         if(!x || x.ok === false) throw new Error((x && x.error) || "Not saved");
         if(x.stale && x.stale.length) throw new Error("Changed by someone else since you opened it. Reload and try again.");
-        if(bad && cur && !s.dne) return post({ kind:"dne_add", reason:"Email bounced (undeliverable) " + today, vendor_ids:[S.vid], emails:[] });
-        return { ok:true };
+        toast(bad ? "Email needs update. Left out of vendor emails" : "Cleared. Vendor emails go to the new address", "ok"); return reloadCore("head");
       })
-      .then(function(r){ if(!r || r.ok === false) throw new Error((r && r.error) || "Row saved, but the do not email list did not update"); toast(bad ? "Email needs update. Left out of vendor emails" : "Cleared. Vendor emails go to the new address", "ok"); return reloadCore("head"); })
       .catch(function(err){ b.classList.remove("busy"); toast(err.message, "err"); });
   } else if(b.id === "hide_tog"){
     var hide = !s.hide, reason2 = hide ? prompt("Why hide them?", "") : ""; if(reason2 === null) return;
