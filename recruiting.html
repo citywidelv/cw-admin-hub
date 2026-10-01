@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Vendor Recruiting | CW Admin Hub</title>
-<!-- build 2026-10-01b (no email on file is a chip and a filter, not a blocker; 143 live vendors had none). 2026-10-01a. One queue of every vendor City Wide is trying to bring in. Reads ob_list
+<!-- build 2026-10-01c (Set priority: level + reason + note on the Priority tab of the recruiting book, rq_priority; priority filter; High first). 2026-10-01b (no email on file is a chip and a filter, not a blocker; 143 live vendors had none). 2026-10-01a. One queue of every vendor City Wide is trying to bring in. Reads ob_list
      (Onboarding.gs) and rq_list (Recruiting.gs) in parallel, joins them in the browser and
      sorts vendors into a pipeline: Invited, Replied, In paperwork, One away, plus Blocked and
      Gone quiet. Active, Waiting for Account, Do Not Contact and fully verified vendors never
@@ -117,6 +117,21 @@
 .chip.ok{border-color:#bfe2cd;background:var(--green-bg);color:var(--green)}
 .chip.more{border-style:dashed}
 .owes{font-size:11px;font-weight:700;margin-top:6px}
+.pri{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px;font-size:11.5px}
+.pri .pp{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:7px;padding:2px 8px;color:#fff;background:var(--grey)}
+.pri .pp.high{background:var(--red)}
+.pri .pp.medium{background:var(--amber)}
+.pri .pp.low{background:var(--grey)}
+.pri .why{font-weight:700;color:var(--black)}
+.pri .by{color:var(--grey);font-size:11px}
+.vrow.high{box-shadow:inset 4px 0 0 var(--red)}
+.vrow.medium{box-shadow:inset 4px 0 0 var(--amber)}
+.plev{display:flex;gap:6px;flex-wrap:wrap}
+.plev label{flex:1;min-width:90px;border:1.5px solid var(--border);border-radius:9px;padding:9px 10px;cursor:pointer;text-align:center;font-size:12px;font-weight:700;color:var(--grey);background:#fff}
+.plev label.on{border-color:var(--black);color:var(--black)}
+.plev label.on.high{border-color:var(--red);color:var(--red);background:var(--red-bg)}
+.plev label.on.medium{border-color:var(--amber);color:var(--amber);background:var(--amber-bg)}
+.plev input{display:none}
 .owes .them{color:var(--amber)}
 .owes .us{color:var(--blue)}
 
@@ -227,6 +242,7 @@
 <div class="seg" id="tr"><button data-v="" class="on" type="button">JS and OS</button><button data-v="JS" type="button">Janitorial</button><button data-v="OS" type="button">Other services</button></div>
 <select id="svc"><option value="">Every service</option></select>
 <select id="issue"><option value="">Any issue</option></select>
+<select id="pri_f"><option value="">Any priority</option><option value="High">High priority</option><option value="Medium">Medium priority</option><option value="Low">Low priority</option><option value="__none">No priority set</option></select>
 <select id="who_f"><option value="">Anyone assigned</option></select>
 <div class="seg" id="owes"><button data-v="" class="on" type="button">Whose move: any</button><button data-v="them" type="button">Vendor owes</button><button data-v="us" type="button">We owe</button></div>
 <div class="srch"><input type="search" id="q" placeholder="Search company, contact, email, phone" autocomplete="off"></div>
@@ -237,7 +253,7 @@
 <div class="legend">
 <b>Vendor owes</b> means the next document or step is theirs. <b>We owe</b> means something is sitting with us: a received document to verify, an orientation to book, a CRM account to set up.
 <b>Blocked</b> is anything that stops the funnel until a person fixes it. <b>Gone quiet</b> is no activity on either side for <span id="quietdays">30</span> days.
-Log every call, email and reply with <b>Log a touch</b>, and set the next follow-up date there, so the queue stays honest. Touches save to the <a id="booklink" href="#" target="_blank" rel="noopener">CW Vendor Recruiting</a> sheet.
+<b>Priority</b> is set by anyone on the team and tells the recruiter who to go after first, with the reason. Log every call, email and reply with <b>Log a touch</b>, and set the next follow-up date there, so the queue stays honest. Touches save to the <a id="booklink" href="#" target="_blank" rel="noopener">CW Vendor Recruiting</a> sheet.
 </div>
 </div>
 </main>
@@ -265,6 +281,21 @@ Log every call, email and reply with <b>Log a touch</b>, and set the next follow
 </div>
 </div>
 
+<!-- Set priority -->
+<div class="modal" id="pm">
+<div class="mbox small">
+<div class="mhead"><h3>Set priority</h3><span class="sub" id="pm_sub"></span><button class="x" type="button" data-close="pm">&times;</button></div>
+<div class="mbody pad">
+<div class="field"><label>How important is this vendor</label>
+<div class="plev" id="pm_lev"><label class="high"><input type="radio" name="pm_level" value="High">High</label><label class="medium"><input type="radio" name="pm_level" value="Medium">Medium</label><label class="low"><input type="radio" name="pm_level" value="Low">Low</label><label><input type="radio" name="pm_level" value="">No priority</label></div></div>
+<div class="field"><label>Why</label><select id="pm_reason"><option value="">Pick one</option></select></div>
+<div class="field"><label>Note for the recruiter</label><textarea id="pm_note" placeholder="Which account, who asked, what to say when you call"></textarea></div>
+<p class="mini" style="font-size:11.5px;color:var(--grey)">High priority vendors sort to the top of their section. Anyone on the team can set this.</p>
+</div>
+<div class="mfoot"><button class="btn sm" type="button" data-close="pm">Cancel</button><button class="btn sm solid" type="button" id="pm_save">Save priority</button></div>
+</div>
+</div>
+
 <!-- Confirm -->
 <div class="modal" id="cm">
 <div class="mbox small">
@@ -287,7 +318,8 @@ var PROFILE = "vendor-profile.html?id=";
 var OPS_INVITE = "https://citywidelv.github.io/cw-ops-desk/vendor-invite.html?region=";
 
 var OB = null, RQ = null, Q = [], HIDDEN = { notApproved:0, complete:0, uncontacted:0 };
-var F = { mk:"", tr:"", svc:"", issue:"", who:"", owes:"", sec:"", q:"", showUncontacted:false };
+var F = { mk:"", tr:"", svc:"", issue:"", pri:"", who:"", owes:"", sec:"", q:"", showUncontacted:false };
+var PRIO = { High:3, Medium:2, Low:1 };
 var OPEN = null, closed = {};
 var SECS = [
   { key:"blocked",     name:"Blocked",        desc:"something stops the funnel until a person fixes it" },
@@ -410,11 +442,13 @@ function build(){
     else sec = "invited";
 
     var crew = crewBy[v.vendor_id] || [];
+    var pr = (RQ.priorities || {})[v.vendor_id] || null;
+    var level = pr ? pr.level : (p && PRIO[p.o.priority] ? p.o.priority : "");
     Q.push({
       id: v.vendor_id, v:v, p:p, rows:rowsCalc, c: p ? p.c : null, track:track, slugs:sl, touches:touches, lastT:lastT, intake:intake,
       invited:invited, invitedDate:invitedDate, replied:replied, replyTouch:replyTouch, evalIn:evalIn, lastActivity:lastActivity, quietDays:quietDays,
       next:next, nextDays:nextDays, issues:issues, sec:sec, market: v.market, both: v.both, assignee: p ? (p.o.assignee || "") : "",
-      priority: p ? (p.o.priority || "") : "", crew:crew,
+      priority: level, pr: pr, crew:crew,
       crewPend: crew.filter(function(c){ return c.result !== "Clear" && c.result !== "Not clear"; }).length
     });
   });
@@ -428,14 +462,14 @@ function build(){
     Q.push({ id:"ob:" + o.ob_id, v:{ vendor_id:"", dba_name:o.vendor, contact_name:o.contact_name || "", email:o.email || "", phone:o.phone || "", status:"", service_types:"" },
       p:{ o:o, c:c }, rows:[{ o:o, c:c }], c:c, track:o.track || "JS", slugs:[], touches:[], lastT:null, intake:null, invited:true, invitedDate:"", replied:(c.ver + c.rec.length) > 0, replyTouch:null, evalIn:false,
       lastActivity: maxDate(o.updated, o.started), quietDays: days(maxDate(o.updated, o.started)), next:"", nextDays:null, issues:["unmatched"], sec:"blocked",
-      market: o.market === "nnv" ? "nnv" : "lv", both:false, assignee:o.assignee || "", priority:o.priority || "", crew:[], crewPend:0, unmatched:true });
+      market: o.market === "nnv" ? "nnv" : "lv", both:false, assignee:o.assignee || "", priority:PRIO[o.priority] ? o.priority : "", pr:null, crew:[], crewPend:0, unmatched:true });
   });
 
   /* sort inside sections: overdue follow-ups, then High priority, then stalest first */
   Q.sort(function(a, b){
     var ao = a.nextDays !== null && a.nextDays <= 0 ? 1 : 0, bo = b.nextDays !== null && b.nextDays <= 0 ? 1 : 0;
     if(ao !== bo) return bo - ao;
-    var ap = a.priority === "High" ? 1 : 0, bp = b.priority === "High" ? 1 : 0;
+    var ap = PRIO[a.priority] || 0, bp = PRIO[b.priority] || 0;
     if(ap !== bp) return bp - ap;
     return (b.quietDays || 0) - (a.quietDays || 0);
   });
@@ -457,6 +491,7 @@ function build(){
   var tt = (cfg.touch_types || []), oo = (cfg.outcomes || []);
   $("tm_type").innerHTML = tt.map(function(t){ return '<option>' + esc(t) + '</option>'; }).join("");
   $("tm_out").innerHTML = '<option value="">Pick one</option>' + oo.map(function(t){ return '<option>' + esc(t) + '</option>'; }).join("");
+  $("pm_reason").innerHTML = '<option value="">Pick one</option>' + (cfg.priority_reasons || []).map(function(t){ return '<option>' + esc(t) + '</option>'; }).join("") + '<option value="__other">Something else (write it in the note)</option>';
 }
 
 /* ---------- filtering ---------- */
@@ -468,6 +503,7 @@ function visible(){
     if(F.tr && x.track !== F.tr) return false;
     if(F.svc === "__none" ? x.slugs.length : (F.svc && x.slugs.indexOf(F.svc) < 0)) return false;
     if(F.issue && x.issues.indexOf(F.issue) < 0) return false;
+    if(F.pri === "__none" ? !!x.priority : (F.pri && x.priority !== F.pri)) return false;
     if(F.who === "__none" ? !!x.assignee : (F.who && x.assignee !== F.who)) return false;
     if(F.owes === "them" && !(x.c && x.c.them.length) && x.sec !== "invited") return false;
     if(F.owes === "us" && !(x.c && x.c.us.length)) return false;
@@ -496,20 +532,20 @@ function renderPipe(){
       '<div class="n">' + n[key] + '</div><div><div class="l">' + esc(SECNAME[key]) + '</div><div class="d">' + esc(SECS.filter(function(s){ return s.key === key; })[0].desc) + '</div></div></button>';
   }
   $("pipe").innerHTML = tile("invited", "stage s1") + tile("replied", "stage") + tile("paper", "stage") + tile("one", "stage s4") + '<span class="gap"></span>' + tile("blocked", "side blocked") + tile("quiet", "side quiet");
+  var hi = scoped().filter(function(x){ return x.priority === "High" && x.sec !== "uncontacted"; }).length;
   var t = $("today");
   if(dueAll){
     t.className = "today";
-    t.innerHTML = '<b>' + dueAll + '</b><span class="t">follow-up' + (dueAll === 1 ? "" : "s") + ' due today' + (overdue ? ' <span>(' + overdue + ' overdue)</span>' : "") + '</span><button type="button" id="duebtn">' + (F.sec === "__due" ? "Show everyone" : "Show them") + '</button>';
+    t.innerHTML = '<b>' + dueAll + '</b><span class="t">follow-up' + (dueAll === 1 ? "" : "s") + ' due today' + (overdue ? ' <span>(' + overdue + ' overdue)</span>' : "") + (hi ? ' <span>&middot; ' + hi + ' high priority</span>' : "") + '</span><button type="button" id="duebtn">' + (F.sec === "__due" ? "Show everyone" : "Show them") + '</button>';
     $("duebtn").addEventListener("click", function(){ F.sec = F.sec === "__due" ? "" : "__due"; render(); });
   } else {
     t.className = "today none";
-    t.innerHTML = '<b>0</b><span class="t">follow-ups due today. Set one on each touch you log so this number tells the truth.</span>';
+    t.innerHTML = '<b>0</b><span class="t">follow-ups due today. Set one on each touch you log so this number tells the truth.' + (hi ? ' <b style="color:var(--red)">' + hi + ' high priority</b> to chase.' : "") + '</span>';
   }
 }
 function pill(x){
   var h = '<span class="pill ' + (x.market === "nnv" ? "nnv" : "lv") + '">' + (x.both ? "Both" : x.market === "nnv" ? "NNV" : "LV") + '</span>';
   h += '<span class="pill ' + (x.track === "JS" ? "todo" : "grey") + '">' + x.track + '</span>';
-  if(x.priority === "High") h += '<span class="pill fail">High</span>';
   return h;
 }
 function svcHtml(x){
@@ -561,6 +597,7 @@ function nextHtml(x){
   else h += '<div class="fu none">No follow-up set</div>';
   h += '<div class="acts">';
   if(!x.unmatched) h += '<button class="btn sm solid" type="button" data-act="touch" data-id="' + esc(x.id) + '">Log a touch</button>';
+  if(!x.unmatched) h += '<button class="btn sm" type="button" data-act="priority" data-id="' + esc(x.id) + '" title="Set priority">' + (x.priority ? "Priority" : "Set priority") + '</button>';
   if(x.v.vendor_id) h += '<a class="btn sm" href="' + PROFILE + encodeURIComponent(x.v.vendor_id) + '">Profile</a>';
   else h += '<a class="btn sm" href="onboarding.html">Open on the desk</a>';
   h += '<span class="more"><button class="btn sm" type="button" data-act="menu" data-id="' + esc(x.id) + '" aria-haspopup="true">More</button><div class="menu" data-menu="' + esc(x.id) + '">' + menuHtml(x) + '</div></span>';
@@ -588,8 +625,15 @@ function rowHtml(x){
   if(v.email) meta.push('<a href="mailto:' + esc(v.email) + '" style="color:inherit">' + esc(v.email) + '</a>');
   if(v.phone || v.business_phone) meta.push(esc(v.phone || v.business_phone));
   if(x.assignee) meta.push('<b>' + esc(x.assignee) + '</b>');
-  return '<li class="vrow' + (OPEN === x.id ? " open" : "") + '" data-id="' + esc(x.id) + '">' +
-    '<div><div class="nm" data-act="open" data-id="' + esc(x.id) + '">' + esc(v.dba_name) + pill(x) + '</div><div class="meta">' + meta.map(function(m){ return '<span>' + m + '</span>'; }).join("") + '</div>' + svcHtml(x) + '</div>' +
+  var pri = "";
+  if(x.priority){
+    pri = '<div class="pri"><span class="pp ' + x.priority.toLowerCase() + '">' + esc(x.priority) + ' priority</span>' +
+      (x.pr && x.pr.reason ? '<span class="why">' + esc(x.pr.reason) + '</span>' : "") +
+      (x.pr && x.pr.set_by ? '<span class="by">' + esc(x.pr.set_by) + (x.pr.set_at ? ', ' + esc(fmtDate(x.pr.set_at)) : "") + '</span>' : (x.pr ? "" : '<span class="by">from the onboarding desk</span>')) + '</div>' +
+      (x.pr && x.pr.note ? '<div class="meta" style="margin-top:2px">' + esc(x.pr.note) + '</div>' : "");
+  }
+  return '<li class="vrow' + (OPEN === x.id ? " open" : "") + (x.priority ? " " + x.priority.toLowerCase() : "") + '" data-id="' + esc(x.id) + '">' +
+    '<div><div class="nm" data-act="open" data-id="' + esc(x.id) + '">' + esc(v.dba_name) + pill(x) + '</div><div class="meta">' + meta.map(function(m){ return '<span>' + m + '</span>'; }).join("") + '</div>' + pri + svcHtml(x) + '</div>' +
     whereHtml(x) + nextHtml(x) + (OPEN === x.id ? detHtml(x) : "") + '</li>';
 }
 function detHtml(x){
@@ -624,7 +668,7 @@ function renderList(){
   var active = F.mk || F.tr || F.svc || F.issue || F.who || F.owes || F.sec || F.q;
   $("showing").innerHTML = 'Showing <b>' + rows.length + '</b> of ' + Q.filter(function(x){ return x.sec !== "uncontacted"; }).length + ' vendors in the pipeline' +
     (active ? ' <a href="#" id="clearf">clear filters</a>' : "") + (RQ && RQ.fetched ? ' <span class="mini">last read ' + esc(ADMIN.ago(RQ.fetched)) + '</span>' : "");
-  var cf = $("clearf"); if(cf) cf.addEventListener("click", function(e){ e.preventDefault(); F = { mk:"", tr:"", svc:"", issue:"", who:"", owes:"", sec:"", q:"", showUncontacted:F.showUncontacted }; syncControls(); render(); });
+  var cf = $("clearf"); if(cf) cf.addEventListener("click", function(e){ e.preventDefault(); F = { mk:"", tr:"", svc:"", issue:"", pri:"", who:"", owes:"", sec:"", q:"", showUncontacted:F.showUncontacted }; syncControls(); render(); });
   var html = "";
   SECS.forEach(function(s){
     var mine = rows.filter(function(x){ return x.sec === s.key; });
@@ -644,8 +688,8 @@ function renderList(){
 }
 function syncControls(){
   ["mk", "tr", "owes"].forEach(function(id){ Array.prototype.forEach.call($(id).querySelectorAll("button"), function(b){ b.classList.toggle("on", b.getAttribute("data-v") === F[id]); }); });
-  $("svc").value = F.svc; $("issue").value = F.issue; $("who_f").value = F.who; $("q").value = F.q;
-  ["svc", "issue", "who_f"].forEach(function(id){ $(id).classList.toggle("on", !!$(id).value); });
+  $("svc").value = F.svc; $("issue").value = F.issue; $("pri_f").value = F.pri; $("who_f").value = F.who; $("q").value = F.q;
+  ["svc", "issue", "pri_f", "who_f"].forEach(function(id){ $(id).classList.toggle("on", !!$(id).value); });
 }
 
 /* ---------- actions ---------- */
@@ -679,6 +723,36 @@ function saveTouch(){
     toast("Touch saved" + (t.next_followup ? ", follow up " + fmtDate(t.next_followup) : ""), "ok");
   }).catch(function(e){ $("tm_save").disabled = false; toast("Could not save: " + e.message, "err"); });
 }
+var PRI = null;
+function openPriority(x){
+  PRI = x;
+  $("pm_sub").textContent = x.v.dba_name;
+  var cur = x.pr || {};
+  var lv = x.priority || "";
+  Array.prototype.forEach.call(document.querySelectorAll('#pm_lev input'), function(i){ i.checked = i.value === lv; i.parentElement.classList.toggle("on", i.value === lv); });
+  $("pm_reason").value = cur.reason || "";
+  if(cur.reason && $("pm_reason").value !== cur.reason) $("pm_reason").value = "__other";
+  $("pm_note").value = cur.note || "";
+  $("pm").classList.add("show");
+}
+function savePriority(){
+  var x = PRI; if(!x) return;
+  var lv = (document.querySelector('#pm_lev input:checked') || {}).value || "";
+  var reason = $("pm_reason").value === "__other" ? "" : $("pm_reason").value;
+  if(lv && !reason && !$("pm_note").value.trim()){ toast("Pick a reason or write a note, so the recruiter knows why.", "err"); return; }
+  $("pm_save").disabled = true;
+  post({ kind:"rq_priority", vendor_id:x.v.vendor_id, vendor:x.v.dba_name, market:x.market, level:lv, reason:reason, note:$("pm_note").value.trim() }).then(function(r){
+    $("pm_save").disabled = false;
+    if(!r || r.ok === false){ toast("Could not save: " + ((r && r.error) || "no reply"), "err"); return; }
+    $("pm").classList.remove("show");
+    RQ.priorities = RQ.priorities || {};
+    if(r.priority) RQ.priorities[x.v.vendor_id] = r.priority; else delete RQ.priorities[x.v.vendor_id];
+    /* keep the onboarding desk's own priority field in step when a record exists */
+    if(x.p && x.p.o.ob_id && (x.p.o.priority || "") !== lv){ x.p.o.priority = lv; post({ kind:"ob_save", ob_id:x.p.o.ob_id, priority:lv }); }
+    cacheWrite(); build(); render();
+    toast(lv ? lv + " priority set" : "Priority cleared", "ok");
+  }).catch(function(e){ $("pm_save").disabled = false; toast("Could not save: " + e.message, "err"); });
+}
 var CONFIRM = null;
 function confirmThen(title, body, fn){ CONFIRM = fn; $("cm_title").textContent = title; $("cm_body").innerHTML = body; $("cm").classList.add("show"); }
 function setVendor(x, field, value, okMsg){
@@ -697,6 +771,7 @@ function act(name, id){
   var v = x.v;
   if(name === "open"){ OPEN = OPEN === id ? null : id; renderList(); return; }
   if(name === "touch"){ openTouch(x); return; }
+  if(name === "priority"){ openPriority(x); return; }
   if(name === "menu"){ var m = document.querySelector('.menu[data-menu="' + CSS.escape(id) + '"]'); if(m && !wasOpen) m.classList.add("show"); return; }
   if(name === "start"){
     post({ kind:"ob_save", vendor_id:v.vendor_id, track:x.track, stage:"New" }).then(function(r){
@@ -758,10 +833,13 @@ document.addEventListener("click", function(e){
   var c = e.target.closest("[data-close]"); if(c){ $(c.getAttribute("data-close")).classList.remove("show"); return; }
   if(!e.target.closest(".more")) closeMenus();
 });
-document.addEventListener("keydown", function(e){ if(e.key === "Escape"){ closeMenus(); $("tm").classList.remove("show"); $("cm").classList.remove("show"); } });
+document.addEventListener("keydown", function(e){ if(e.key === "Escape"){ closeMenus(); $("tm").classList.remove("show"); $("pm").classList.remove("show"); $("cm").classList.remove("show"); } });
 ["mk", "tr", "owes"].forEach(function(id){ Array.prototype.forEach.call($(id).querySelectorAll("button"), function(b){ b.addEventListener("click", function(){ F[id] = b.getAttribute("data-v"); syncControls(); render(); }); }); });
 $("svc").addEventListener("change", function(){ F.svc = this.value; syncControls(); render(); });
 $("issue").addEventListener("change", function(){ F.issue = this.value; syncControls(); render(); });
+$("pri_f").addEventListener("change", function(){ F.pri = this.value; syncControls(); render(); });
+$("pm_save").addEventListener("click", savePriority);
+Array.prototype.forEach.call(document.querySelectorAll('#pm_lev input'), function(i){ i.addEventListener("change", function(){ Array.prototype.forEach.call(document.querySelectorAll('#pm_lev label'), function(l){ l.classList.toggle("on", l.querySelector("input").checked); }); }); });
 $("who_f").addEventListener("change", function(){ F.who = this.value; syncControls(); render(); });
 var qt = null; $("q").addEventListener("input", function(){ clearTimeout(qt); var v = this.value.trim(); qt = setTimeout(function(){ F.q = v; render(); }, 120); });
 $("refresh").addEventListener("click", load);
