@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Vendor Recruiting | CW Admin Hub</title>
-<!-- build 2026-10-01a. One queue of every vendor City Wide is trying to bring in. Reads ob_list
+<!-- build 2026-10-01b (no email on file is a chip and a filter, not a blocker; 143 live vendors had none). 2026-10-01a. One queue of every vendor City Wide is trying to bring in. Reads ob_list
      (Onboarding.gs) and rq_list (Recruiting.gs) in parallel, joins them in the browser and
      sorts vendors into a pipeline: Invited, Replied, In paperwork, One away, plus Blocked and
      Gone quiet. Active, Waiting for Account, Do Not Contact and fully verified vendors never
@@ -305,7 +305,7 @@ var TYPENAME = {};
 function me(){ var w = $("who").value.trim(); if(w) ADMIN.setWho(w); return w || "Admin Hub"; }
 function today(){ var d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
 function plusDays(n){ var d = new Date(); d.setDate(d.getDate() + n); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
-function days(from){ if(!from) return null; var m = String(from).match(/^(\d{4})-(\d{2})-(\d{2})/); if(!m) return null; var t = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime(); return Math.round((Date.now() - t) / 86400000); }
+function days(from){ if(!from) return null; var m = String(from).match(/^(\d{4})-(\d{2})-(\d{2})/); if(!m) return null; var t = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime(); var n = new Date(); var t0 = new Date(n.getFullYear(), n.getMonth(), n.getDate()).getTime(); return Math.round((t0 - t) / 86400000); }
 function ageTxt(d){ if(d === null) return ""; if(d <= 0) return "today"; if(d === 1) return "1 day"; return d + " days"; }
 function maxDate(){ var m = ""; for(var i = 0; i < arguments.length; i++){ var v = String(arguments[i] || "").slice(0, 10); if(/^\d{4}-\d{2}-\d{2}$/.test(v) && v > m) m = v; } return m; }
 function slugs(s){ return String(s || "").toLowerCase().split(",").map(function(x){ return x.trim(); }).filter(function(x){ return x; }); }
@@ -398,9 +398,11 @@ function build(){
     }
     if(!p && replied && v.status === "In Progress") issues.push("norecord");
 
+    /* No email is shown and filterable but does not block: a phone-only vendor can still be worked. */
+    var blocking = issues.filter(function(i){ return i !== "noemail"; });
     var sec;
     if(!invited && !replied && !p && !touches.length){ sec = "uncontacted"; HIDDEN.uncontacted++; issues = []; }
-    else if(issues.length) sec = "blocked";
+    else if(blocking.length) sec = "blocked";
     else if(quietDays !== null && quietDays >= quiet) sec = "quiet";
     else if(p && p.c.req && p.c.left.length === 1) sec = "one";
     else if(p && docsIn > 0) sec = "paper";
