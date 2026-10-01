@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Vendor Recruiting | CW Admin Hub</title>
-<!-- build 2026-10-01c (Set priority: level + reason + note on the Priority tab of the recruiting book, rq_priority; priority filter; High first). 2026-10-01b (no email on file is a chip and a filter, not a blocker; 143 live vendors had none). 2026-10-01a. One queue of every vendor City Wide is trying to bring in. Reads ob_list
+<!-- build 2026-10-01d (directory outreach column may hold a channel word instead of a date; read it as such). 2026-10-01c (Set priority: level + reason + note on the Priority tab of the recruiting book, rq_priority; priority filter; High first). 2026-10-01b (no email on file is a chip and a filter, not a blocker; 143 live vendors had none). 2026-10-01a. One queue of every vendor City Wide is trying to bring in. Reads ob_list
      (Onboarding.gs) and rq_list (Recruiting.gs) in parallel, joins them in the browser and
      sorts vendors into a pipeline: Invited, Replied, In paperwork, One away, plus Blocked and
      Gone quiet. Active, Waiting for Account, Do Not Contact and fully verified vendors never
@@ -340,6 +340,14 @@ function plusDays(n){ var d = new Date(); d.setDate(d.getDate() + n); return d.g
 function days(from){ if(!from) return null; var m = String(from).match(/^(\d{4})-(\d{2})-(\d{2})/); if(!m) return null; var t = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime(); var n = new Date(); var t0 = new Date(n.getFullYear(), n.getMonth(), n.getDate()).getTime(); return Math.round((t0 - t) / 86400000); }
 function ageTxt(d){ if(d === null) return ""; if(d <= 0) return "today"; if(d === 1) return "1 day"; return d + " days"; }
 function maxDate(){ var m = ""; for(var i = 0; i < arguments.length; i++){ var v = String(arguments[i] || "").slice(0, 10); if(/^\d{4}-\d{2}-\d{2}$/.test(v) && v > m) m = v; } return m; }
+/* The directory outreach column is a date when the hub wrote it, and a channel word
+   ("Email", "Text only") on rows imported from the old lists. Both mean we reached out. */
+function outreachInfo(v){
+  var o = String(v.outreach || "").trim();
+  if(/^\d{4}-\d{2}-\d{2}/.test(o)) return { date:o.slice(0, 10), how:"" };
+  if(!o || /^(false|true|no|none|needs verification|do not contact|dnc|unknown|n\/a|tbd|-)$/i.test(o)) return null;
+  return { date:"", how:o };
+}
 function slugs(s){ return String(s || "").toLowerCase().split(",").map(function(x){ return x.trim(); }).filter(function(x){ return x; }); }
 function post(p){ p.who = me(); return api(p); }
 
@@ -405,8 +413,9 @@ function build(){
     var intake = (RQ.intake || {})[v.vendor_id] || null;
     var sl = slugs(v.service_types);
     var track = p ? p.c.track : (sl.indexOf("janitorial") >= 0 ? "JS" : "OS");
-    var invitedDate = v.last_invite || ((v.source || "").toLowerCase() === "hub invite" ? v.outreach : "");
-    var invited = !!(invitedDate || v.outreach || touches.some(function(t){ return /Call|Email|Text|Visit|Invite/.test(t.type); }));
+    var oi = outreachInfo(v);
+    var invitedDate = v.last_invite || ((v.source || "").toLowerCase() === "hub invite" && oi && oi.date ? oi.date : "");
+    var invited = !!(invitedDate || oi || touches.some(function(t){ return /Call|Email|Text|Visit|Invite/.test(t.type); }));
     var replyTouch = touches.filter(function(t){ return t.type === "Reply received" || t.type === "Orientation booked" || /replied|Spoke|Scheduled/i.test(t.outcome || ""); })[0] || null;
     /* documents in, not counting the evaluation itself (that is the reply, not paperwork) */
     var docsIn = 0;
@@ -446,7 +455,7 @@ function build(){
     var level = pr ? pr.level : (p && PRIO[p.o.priority] ? p.o.priority : "");
     Q.push({
       id: v.vendor_id, v:v, p:p, rows:rowsCalc, c: p ? p.c : null, track:track, slugs:sl, touches:touches, lastT:lastT, intake:intake,
-      invited:invited, invitedDate:invitedDate, replied:replied, replyTouch:replyTouch, evalIn:evalIn, lastActivity:lastActivity, quietDays:quietDays,
+      invited:invited, invitedDate:invitedDate, oi:oi, replied:replied, replyTouch:replyTouch, evalIn:evalIn, lastActivity:lastActivity, quietDays:quietDays,
       next:next, nextDays:nextDays, issues:issues, sec:sec, market: v.market, both: v.both, assignee: p ? (p.o.assignee || "") : "",
       priority: level, pr: pr, crew:crew,
       crewPend: crew.filter(function(c){ return c.result !== "Clear" && c.result !== "Not clear"; }).length
@@ -460,7 +469,7 @@ function build(){
     var c = calc(o);
     if(c.req && !c.left.length) return;
     Q.push({ id:"ob:" + o.ob_id, v:{ vendor_id:"", dba_name:o.vendor, contact_name:o.contact_name || "", email:o.email || "", phone:o.phone || "", status:"", service_types:"" },
-      p:{ o:o, c:c }, rows:[{ o:o, c:c }], c:c, track:o.track || "JS", slugs:[], touches:[], lastT:null, intake:null, invited:true, invitedDate:"", replied:(c.ver + c.rec.length) > 0, replyTouch:null, evalIn:false,
+      p:{ o:o, c:c }, rows:[{ o:o, c:c }], c:c, track:o.track || "JS", slugs:[], touches:[], lastT:null, intake:null, invited:true, invitedDate:"", oi:null, replied:(c.ver + c.rec.length) > 0, replyTouch:null, evalIn:false,
       lastActivity: maxDate(o.updated, o.started), quietDays: days(maxDate(o.updated, o.started)), next:"", nextDays:null, issues:["unmatched"], sec:"blocked",
       market: o.market === "nnv" ? "nnv" : "lv", both:false, assignee:o.assignee || "", priority:PRIO[o.priority] ? o.priority : "", pr:null, crew:[], crewPend:0, unmatched:true });
   });
@@ -559,7 +568,10 @@ function whereHtml(x){
   var h = '<div class="where">', v = x.v, a;
   if(x.unmatched) h += '<div class="line"><b>Onboarding record only.</b> No directory row carries this company. Match it on the desk.</div>';
   if(x.invitedDate){ a = days(x.invitedDate); h += '<div class="line"><b>Invited ' + esc(fmtDate(x.invitedDate)) + '</b>' + (v.last_invite_by ? ' by ' + esc(v.last_invite_by) : "") + (v.invites > 1 ? ' <span class="age">(' + v.invites + ' invites)</span>' : "") + (!x.replied ? ' <span class="age' + (a >= (RQ.config.resend_days || 14) ? " old" : "") + '">no reply for ' + ageTxt(a) + '</span>' : "") + '</div>'; }
-  else if(v.outreach && !x.replied){ h += '<div class="line"><b>Reached out ' + esc(fmtDate(v.outreach)) + '</b><span class="age">no reply for ' + ageTxt(days(v.outreach)) + '</span></div>'; }
+  else if(x.oi && !x.replied){
+    if(x.oi.date) h += '<div class="line"><b>Reached out ' + esc(fmtDate(x.oi.date)) + '</b><span class="age' + (days(x.oi.date) >= (RQ.config.resend_days || 14) ? " old" : "") + '">no reply for ' + ageTxt(days(x.oi.date)) + '</span></div>';
+    else h += '<div class="line"><b>Reached out by ' + esc(x.oi.how.toLowerCase()) + '</b>' + (v.updated ? '<span class="age">around ' + esc(fmtDate(v.updated)) + ', no reply</span>' : '<span class="age">no reply</span>') + '</div>';
+  }
   if(x.evalIn) h += '<div class="line"><b>Evaluation in</b>' + (v.eval_date ? ' ' + esc(fmtDate(v.eval_date)) : "") + '</div>';
   else if(x.intake) h += '<div class="line"><b>' + (x.intake.kind === "eval" ? "Evaluation" : "Intake form") + ' in</b> ' + esc(fmtDate(x.intake.when)) + '</div>';
   if(x.replyTouch && !x.evalIn) h += '<div class="line"><b>' + esc(x.replyTouch.type === "Reply received" ? "They replied" : x.replyTouch.type) + '</b> ' + esc(fmtDate(x.replyTouch.when)) + '</div>';
