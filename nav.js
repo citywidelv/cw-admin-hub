@@ -1,7 +1,7 @@
 /* nav.js for the Admin Hub. Seeded from the page menu on 2026-09-13 by Claude.
    The Site Admin hub (cw-admin-hub/site-admin.html) republishes this file; do not edit by hand.
    The page keeps its own MENU as a fallback if this file is missing or malformed.
-   Edited by hand 2026-09-25 (menu cleanup: one home per tool, short labels with tag chips; Account Changes still hidden): before the next Site Admin publish, click Import live menu. */
+   Edited by hand 2026-10-01 (Vendor Recruiting under Vendors) and 2026-09-25 (menu cleanup: one home per tool, short labels with tag chips; Account Changes still hidden): before the next Site Admin publish, click Import live menu. */
 window.CW_NAV = {
  "hub": "admin",
  "label": "Admin Hub",
@@ -142,6 +142,11 @@ window.CW_NAV = {
     {
      "label": "Vendor Activity",
      "href": "vendor-activity.html",
+     "tag": "Hub"
+    },
+    {
+     "label": "Vendor Recruiting",
+     "href": "recruiting.html",
      "tag": "Hub"
     },
     {

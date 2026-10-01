@@ -1,4 +1,4 @@
-/* CW Admin Hub shared script. Build 2026-09-24 (Team & Admin rebuilt as side cascades, Uniform Orders page; group headings in any tall dropdown open to the side and every panel is kept on screen via CWNav.place). 2026-09-21 (Shop Codes & Certificates under Vendor of the Month). 2026-09-19b (Vendor Onboarding desk: onboarding.html; Asana onboarding boards and the Asana background check form retired from the menus). 2026-09-19 (Ops Admin Desk: desk.html, records.html, sheet.html under Team & Admin). 2026-09-13 (Site Admin: MENU below is the fallback, nav.js is live; cascade submenus; Vendor of the Month).
+/* CW Admin Hub shared script. Build 2026-10-01 (Vendor Recruiting queue: recruiting.html under Vendors). 2026-09-24 (Team & Admin rebuilt as side cascades, Uniform Orders page; group headings in any tall dropdown open to the side and every panel is kept on screen via CWNav.place). 2026-09-21 (Shop Codes & Certificates under Vendor of the Month). 2026-09-19b (Vendor Onboarding desk: onboarding.html; Asana onboarding boards and the Asana background check form retired from the menus). 2026-09-19 (Ops Admin Desk: desk.html, records.html, sheet.html under Team & Admin). 2026-09-13 (Site Admin: MENU below is the fallback, nav.js is live; cascade submenus; Vendor of the Month).
    Gate, header, cascading nav, webhook helper, Asana project registry.
    Every page: <link admin.css> ... <div id="gate"> + <div id="app" class="hidden">, then
    this file, then ADMIN.init({page:'...'}). Data lives in Google Sheets through the
@@ -206,6 +206,11 @@ var MENU = [
    {
     "label": "Vendor Activity",
     "href": "vendor-activity.html",
+    "tag": "Hub"
+   },
+   {
+    "label": "Vendor Recruiting",
+    "href": "recruiting.html",
     "tag": "Hub"
    },
    {

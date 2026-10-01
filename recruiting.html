@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Vendor Recruiting | CW Admin Hub</title>
+<!-- build 2026-10-01a. One queue of every vendor City Wide is trying to bring in. Reads ob_list
+     (Onboarding.gs) and rq_list (Recruiting.gs) in parallel, joins them in the browser and
+     sorts vendors into a pipeline: Invited, Replied, In paperwork, One away, plus Blocked and
+     Gone quiet. Active, Waiting for Account, Do Not Contact and fully verified vendors never
+     show. Touches (calls, emails, replies, follow-up dates) live on the CW Vendor Recruiting
+     book through rq_touch. Last payload cached in localStorage so the page paints at once, then refreshes. -->
+<link rel="stylesheet" href="admin.css">
+<link rel="icon" href="https://citywidelv.github.io/cw-ops-desk/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="https://citywidelv.github.io/cw-ops-desk/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://citywidelv.github.io/cw-ops-desk/apple-touch-icon.png">
+<style>
+.topbar{position:relative;z-index:5;margin-top:-46px}
+.topbar .qcard{padding:14px 18px 12px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.topbar .qcard .qhead{margin:0}
+.topbar .who{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--grey)}
+.topbar .who input{font-size:11.5px;border:1px solid var(--border);border-radius:6px;padding:5px 8px;width:150px}
+.topbar .sp{flex:1}
+
+/* ---------- the pipeline ---------- */
+.pipe{display:grid;grid-template-columns:repeat(4,1fr) 14px repeat(2,1fr);gap:0;margin:18px 0 14px;align-items:stretch}
+.pipe .gap{width:14px}
+.pt{position:relative;background:#fff;border:1px solid var(--border);padding:14px 16px 12px 22px;cursor:pointer;text-align:left;font-family:inherit;color:var(--black);min-height:92px;display:flex;flex-direction:column;justify-content:space-between;transition:box-shadow .15s}
+.pt.stage{clip-path:polygon(0 0,calc(100% - 14px) 0,100% 50%,calc(100% - 14px) 100%,0 100%,14px 50%);margin-right:-1px;border-right:none;padding-left:30px}
+.pt.s1{clip-path:polygon(0 0,calc(100% - 14px) 0,100% 50%,calc(100% - 14px) 100%,0 100%);padding-left:22px;border-radius:12px 0 0 12px}
+.pt.s4{clip-path:polygon(0 0,100% 0,100% 100%,0 100%,14px 50%);border-right:1px solid var(--border);border-radius:0 12px 12px 0;margin-right:0}
+.pt.side{border-radius:12px;margin-left:0}
+.pt.side.blocked{border:1.5px solid var(--red);background:#fffafa}
+.pt.side.quiet{border:1.5px dashed var(--grey);background:var(--light)}
+.pt .n{font-size:26px;font-weight:700;line-height:1;letter-spacing:-.01em}
+.pt .l{font-size:12.5px;font-weight:700;margin-top:6px}
+.pt .d{font-size:11px;color:var(--grey);margin-top:2px;line-height:1.35}
+.pt.on{box-shadow:inset 0 -4px 0 var(--red)}
+.pt.side.quiet.on{box-shadow:inset 0 -4px 0 var(--grey)}
+.pt:hover{box-shadow:inset 0 -4px 0 var(--border)}
+.pt.on:hover{box-shadow:inset 0 -4px 0 var(--red)}
+.pt .due{position:absolute;top:10px;right:22px;font-size:10.5px;font-weight:700;color:var(--red);background:var(--red-bg);border-radius:9px;padding:2px 8px}
+.pt.stage .due{right:24px}
+.pt.s4 .due,.pt.side .due{right:12px}
+
+.today{display:flex;align-items:center;gap:12px;background:var(--black);color:#fff;border-radius:12px;padding:12px 18px;margin:0 0 14px;flex-wrap:wrap}
+.today b{font-size:18px}
+.today .t{font-size:12.5px}
+.today .t span{color:#cfcac3}
+.today button{margin-left:auto;background:var(--red);color:#fff;border:none;border-radius:8px;font-weight:700;font-size:11.5px;padding:8px 12px;cursor:pointer}
+.today button:hover{background:var(--red-dark)}
+.today.none{background:#fff;color:var(--grey);border:1px solid var(--border)}
+.today.none b{color:var(--black)}
+
+/* ---------- filters ---------- */
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 18px;border-bottom:1px solid var(--border)}
+.seg{display:inline-flex;border:1.5px solid var(--border);border-radius:9px;overflow:hidden;background:#fff}
+.seg button{border:none;background:none;font-size:11.5px;font-weight:700;padding:7px 11px;cursor:pointer;color:var(--grey);white-space:nowrap;font-family:inherit}
+.seg button.on{background:var(--black);color:#fff}
+.seg button:hover:not(.on){background:var(--light);color:var(--black)}
+.filters select{font-size:11.5px;font-weight:700;border:1.5px solid var(--border);border-radius:9px;padding:7px 10px;background:#fff;color:var(--black);font-family:inherit;max-width:220px}
+.filters select.on{border-color:var(--black)}
+.filters .srch{position:relative;margin-left:auto;min-width:220px}
+.filters .srch input{width:100%;font-size:12.5px;border:1.5px solid var(--border);border-radius:16px;padding:8px 12px;background:var(--light);outline:none;font-family:inherit}
+.filters .srch input:focus{border-color:var(--red);background:#fff}
+.showing{font-size:11.5px;color:var(--grey);padding:8px 18px;border-bottom:1px solid var(--light);display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.showing b{color:var(--black)}
+.showing a{color:var(--red);font-weight:700;text-decoration:none}
+.showing .mini{font-size:10.5px}
+
+/* ---------- sections and rows ---------- */
+.sec{border-bottom:1px solid var(--border)}
+.sec:last-child{border-bottom:none}
+.sh{display:flex;align-items:center;gap:10px;padding:14px 18px 8px;cursor:pointer;user-select:none}
+.sh .rail{width:4px;height:22px;border-radius:2px;background:var(--grey)}
+.sh h4{font-size:13.5px}
+.sh .cnt{font-size:11.5px;font-weight:700;color:var(--grey);background:var(--light);border-radius:9px;padding:1px 8px}
+.sh .desc{font-size:11.5px;color:var(--grey)}
+.sh .chev{margin-left:auto;font-size:10px;color:var(--grey);transition:transform .15s}
+.sec.closed .chev{transform:rotate(-90deg)}
+.sec.closed .vl{display:none}
+.sec[data-sec="blocked"] .rail{background:var(--red)}
+.sec[data-sec="quiet"] .rail{background:var(--grey)}
+.sec[data-sec="one"] .rail{background:var(--green)}
+.sec[data-sec="paper"] .rail{background:var(--amber)}
+.sec[data-sec="replied"] .rail{background:var(--blue)}
+.sec[data-sec="invited"] .rail{background:#9a9a9a}
+.sec[data-sec="uncontacted"] .rail{background:var(--border)}
+.vl{list-style:none}
+.vrow{display:grid;grid-template-columns:minmax(220px,1.1fr) minmax(220px,1.3fr) minmax(200px,.9fr);gap:14px;padding:12px 18px 12px 32px;border-top:1px solid var(--light);align-items:start}
+.vrow:hover{background:#fffbf2}
+.vrow.open{background:#fffbf2}
+.vrow .nm{font-size:13.5px;font-weight:700;line-height:1.3;cursor:pointer}
+.vrow .nm:hover{color:var(--red)}
+.vrow .nm .pill{margin-left:6px;vertical-align:middle}
+.vrow .meta{font-size:11.5px;color:var(--grey);margin-top:3px;overflow-wrap:anywhere}
+.vrow .meta span+span::before{content:"\00a0\00a0"}
+.svc{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.svc span{font-size:10.5px;color:var(--black);background:var(--light);border:1px solid var(--border);border-radius:7px;padding:1px 7px}
+.svc span.none{color:var(--grey);font-style:italic}
+
+.where{font-size:12px;line-height:1.5}
+.where .line{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.where .line b{font-weight:700}
+.where .age{color:var(--grey);font-size:11.5px}
+.where .age.old{color:var(--red);font-weight:700}
+.bar{height:6px;background:var(--light);border-radius:3px;overflow:hidden;margin:6px 0 4px;max-width:260px}
+.bar i{display:block;height:100%;background:var(--green);border-radius:3px}
+.bar i.mid{background:var(--amber)}
+.bar i.low{background:var(--grey)}
+.chips{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.chip{font-size:10.5px;font-weight:700;border-radius:7px;padding:2px 8px;border:1px solid var(--border);background:#fff;color:var(--grey);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.chip.them{border-color:#ead9a6;background:var(--amber-bg);color:var(--amber)}
+.chip.us{border-color:#c9d9f5;background:var(--blue-bg);color:var(--blue)}
+.chip.fix{border-color:#f3c4c7;background:var(--red-bg);color:var(--red)}
+.chip.ok{border-color:#bfe2cd;background:var(--green-bg);color:var(--green)}
+.chip.more{border-style:dashed}
+.owes{font-size:11px;font-weight:700;margin-top:6px}
+.owes .them{color:var(--amber)}
+.owes .us{color:var(--blue)}
+
+.next{font-size:12px;line-height:1.5}
+.next .lt{color:var(--grey);font-size:11.5px}
+.next .fu{font-weight:700}
+.next .fu.over{color:var(--red)}
+.next .fu.soon{color:var(--amber)}
+.next .fu.none{color:var(--grey);font-weight:400}
+.acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center}
+.acts .btn.sm{padding:6px 10px;font-size:11px}
+.acts .more{position:relative}
+.acts .menu{display:none;position:absolute;right:0;top:calc(100% + 4px);background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-lift);min-width:220px;z-index:40;padding:5px 0}
+.acts .menu.show{display:block}
+.acts .menu button,.acts .menu a{display:block;width:100%;text-align:left;border:none;background:none;font-family:inherit;font-size:12px;font-weight:700;color:var(--black);padding:9px 14px;cursor:pointer;text-decoration:none}
+.acts .menu button:hover,.acts .menu a:hover{background:var(--light);color:var(--red)}
+.acts .menu button.danger{color:var(--red)}
+.acts .menu hr{border:none;border-top:1px solid var(--border);margin:4px 0}
+
+/* expanded detail */
+.det{grid-column:1/-1;background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:18px;font-size:12px;margin-top:4px}
+.det h5{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--grey);margin-bottom:6px}
+.det ul{list-style:none}
+.det li{padding:3px 0;border-bottom:1px solid var(--light);display:flex;gap:8px;align-items:baseline}
+.det li:last-child{border-bottom:none}
+.det li .st{flex:none;width:68px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.det li .st.v{color:var(--green)}.det li .st.r{color:var(--blue)}.det li .st.f{color:var(--red)}.det li .st.b{color:var(--amber)}
+.det li .note{color:var(--grey);font-size:11px}
+.det .tch{padding:4px 0;border-bottom:1px solid var(--light)}
+.det .tch:last-child{border-bottom:none}
+.det .tch b{font-weight:700}
+.det .tch .w{color:var(--grey);font-size:11px}
+.det pre{white-space:pre-wrap;font-family:inherit;font-size:11.5px;color:var(--grey);line-height:1.5}
+.det .mini{font-size:11px;color:var(--grey)}
+
+.empty{padding:40px 18px;text-align:center;color:var(--grey);font-size:13px}
+.empty b{display:block;color:var(--black);font-size:14px;margin-bottom:4px}
+.loading{padding:30px 18px;color:var(--grey);font-size:12.5px;display:flex;align-items:center;gap:10px}
+.spin{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:sp .8s linear infinite;display:inline-block}
+@keyframes sp{to{transform:rotate(360deg)}}
+.legend{font-size:11.5px;color:var(--grey);padding:12px 18px 16px;border-top:1px solid var(--light);line-height:1.6}
+.legend b{color:var(--black)}
+.legend a{color:var(--red);font-weight:700;text-decoration:none}
+.foot-note{font-size:11.5px;color:var(--grey);padding:10px 18px;border-top:1px solid var(--light);display:flex;gap:14px;flex-wrap:wrap}
+.foot-note a{color:var(--red);font-weight:700;text-decoration:none;cursor:pointer}
+
+/* modal */
+.mbox.small{width:min(560px,100%)}
+.mbody.pad{padding:16px 18px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{margin-bottom:12px}
+.field textarea{min-height:70px;resize:vertical}
+.quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.quick button{border:1px solid var(--border);background:#fff;font-family:inherit;font-size:11px;font-weight:700;border-radius:7px;padding:4px 9px;cursor:pointer;color:var(--grey)}
+.quick button.on,.quick button:hover{border-color:var(--black);color:var(--black)}
+.mfoot{display:flex;gap:8px;justify-content:flex-end;padding:12px 18px;border-top:1px solid var(--border)}
+.mhead .sub{font-size:11.5px;color:var(--grey);font-weight:400}
+
+@media(max-width:980px){
+.pipe{grid-template-columns:repeat(2,1fr);gap:8px}
+.pipe .gap{display:none}
+.pt,.pt.stage,.pt.s1,.pt.s4{clip-path:none;border-radius:12px;padding-left:16px;margin-right:0;border-right:1px solid var(--border)}
+.pt .due,.pt.stage .due{right:12px}
+.vrow{grid-template-columns:1fr;gap:8px;padding-left:18px}
+.det{grid-template-columns:1fr}
+.filters .srch{margin-left:0;width:100%}
+.grid2{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){.pt,.sh .chev{transition:none}.spin{animation:none}}
+</style>
+<link rel="stylesheet" href="https://citywidelv.github.io/cw-base.css">
+</head>
+<body>
+<div id="gate" class="gate"></div>
+<div id="app" class="hidden">
+<header class="head" id="adminhead"></header>
+
+<section class="hero slim">
+<div class="bg" style="background-image:url('https://citywidelv.github.io/cw-ops-desk/images/fsm-team.jpg')"></div>
+<div class="wrap">
+<div class="htext">
+<div class="kick">Vendors</div>
+<h1>Vendor Recruiting</h1>
+<p>Every vendor City Wide is trying to bring in, from the first invite to the last document. Who we reached out to, who replied, how far they got and whose move it is. Active vendors and finished checklists never show here.</p>
+</div>
+</div>
+</section>
+
+<div class="wrap topbar">
+<div class="qcard">
+<div class="qhead"><span class="bar-accent"></span><h2>Recruiting queue</h2></div>
+<span class="who">Working as <input id="who" placeholder="Your name"></span>
+<span class="sp"></span>
+<a class="btn sm" id="invitelink" href="https://citywidelv.github.io/cw-ops-desk/vendor-invite.html?region=lv">Invite a vendor</a>
+<a class="btn sm" href="onboarding.html">Onboarding desk</a>
+<a class="btn sm" href="vendor-profile.html">Vendor profile</a>
+<button class="btn sm dark" id="refresh" type="button">Refresh</button>
+</div>
+</div>
+
+<main class="wrap" style="padding-top:6px">
+<div class="pipe" id="pipe"></div>
+<div class="today none" id="today"></div>
+
+<div class="card">
+<div class="filters">
+<div class="seg" id="mk"><button data-v="" class="on" type="button">Both markets</button><button data-v="lv" type="button">Las Vegas</button><button data-v="nnv" type="button">Northern Nevada</button></div>
+<div class="seg" id="tr"><button data-v="" class="on" type="button">JS and OS</button><button data-v="JS" type="button">Janitorial</button><button data-v="OS" type="button">Other services</button></div>
+<select id="svc"><option value="">Every service</option></select>
+<select id="issue"><option value="">Any issue</option></select>
+<select id="who_f"><option value="">Anyone assigned</option></select>
+<div class="seg" id="owes"><button data-v="" class="on" type="button">Whose move: any</button><button data-v="them" type="button">Vendor owes</button><button data-v="us" type="button">We owe</button></div>
+<div class="srch"><input type="search" id="q" placeholder="Search company, contact, email, phone" autocomplete="off"></div>
+</div>
+<div class="showing" id="showing"></div>
+<div id="list"><div class="loading"><span class="spin"></span>Loading the recruiting queue...</div></div>
+<div class="foot-note" id="footnote"></div>
+<div class="legend">
+<b>Vendor owes</b> means the next document or step is theirs. <b>We owe</b> means something is sitting with us: a received document to verify, an orientation to book, a CRM account to set up.
+<b>Blocked</b> is anything that stops the funnel until a person fixes it. <b>Gone quiet</b> is no activity on either side for <span id="quietdays">30</span> days.
+Log every call, email and reply with <b>Log a touch</b>, and set the next follow-up date there, so the queue stays honest. Touches save to the <a id="booklink" href="#" target="_blank" rel="noopener">CW Vendor Recruiting</a> sheet.
+</div>
+</div>
+</main>
+
+<footer class="foot"><div class="fin">
+<b>City Wide Facility Solutions</b> &middot; Admin Hub &middot; Internal use only &middot; Something missing? Tell TJ. &middot; <a href="https://www.gocitywide.com" target="_blank" rel="noopener">GoCityWide.com</a>
+<span class="fr">Las Vegas<span>&bull;</span>Reno</span>
+</div></footer>
+</div><!-- /app -->
+
+<!-- Log a touch -->
+<div class="modal" id="tm">
+<div class="mbox small">
+<div class="mhead"><h3 id="tm_title">Log a touch</h3><span class="sub" id="tm_sub"></span><button class="x" type="button" data-close="tm">&times;</button></div>
+<div class="mbody pad">
+<div class="grid2">
+<div class="field"><label>What happened</label><select id="tm_type"></select></div>
+<div class="field"><label>Outcome</label><select id="tm_out"><option value="">Pick one</option></select></div>
+</div>
+<div class="field"><label>Note</label><textarea id="tm_note" placeholder="What they said, what you sent, what is still missing"></textarea></div>
+<div class="field"><label>Next follow-up</label><input type="date" id="tm_next">
+<div class="quick"><button type="button" data-days="1">Tomorrow</button><button type="button" data-days="2">In 2 days</button><button type="button" data-days="7">In a week</button><button type="button" data-days="14">In 2 weeks</button><button type="button" data-days="">No follow-up</button></div></div>
+</div>
+<div class="mfoot"><button class="btn sm" type="button" data-close="tm">Cancel</button><button class="btn sm solid" type="button" id="tm_save">Save touch</button></div>
+</div>
+</div>
+
+<!-- Confirm -->
+<div class="modal" id="cm">
+<div class="mbox small">
+<div class="mhead"><h3 id="cm_title">Are you sure?</h3><button class="x" type="button" data-close="cm">&times;</button></div>
+<div class="mbody pad" id="cm_body" style="font-size:13px;line-height:1.6"></div>
+<div class="mfoot"><button class="btn sm" type="button" data-close="cm">Cancel</button><button class="btn sm solid" type="button" id="cm_ok">Yes, do it</button></div>
+</div>
+</div>
+
+<script src="https://citywidelv.github.io/cw-ops-desk/cw-auth.js"></script>
+<script src="nav.js"></script>
+<script src="https://citywidelv.github.io/cw-ops-desk/cw-nav.js"></script>
+<script src="admin-shared.js"></script>
+<script>
+(function(){
+var esc = ADMIN.esc, api = ADMIN.api, toast = ADMIN.toast, fmtDate = ADMIN.fmtDate;
+function $(id){ return document.getElementById(id); }
+var CACHE = "cwRecruiting";
+var PROFILE = "vendor-profile.html?id=";
+var OPS_INVITE = "https://citywidelv.github.io/cw-ops-desk/vendor-invite.html?region=";
+
+var OB = null, RQ = null, Q = [], HIDDEN = { notApproved:0, complete:0, uncontacted:0 };
+var F = { mk:"", tr:"", svc:"", issue:"", who:"", owes:"", sec:"", q:"", showUncontacted:false };
+var OPEN = null, closed = {};
+var SECS = [
+  { key:"blocked",     name:"Blocked",        desc:"something stops the funnel until a person fixes it" },
+  { key:"quiet",       name:"Gone quiet",     desc:"no activity on either side, follow up or let go" },
+  { key:"one",         name:"One away",       desc:"one item left, get it and they are through" },
+  { key:"paper",       name:"In paperwork",   desc:"documents coming in, some verified, some still owed" },
+  { key:"replied",     name:"Replied, not started", desc:"they answered, nothing verified yet" },
+  { key:"invited",     name:"Invited, no reply", desc:"we reached out, nothing back" },
+  { key:"uncontacted", name:"No outreach yet", desc:"prospects on the directory nobody has invited" }
+];
+var SECNAME = {}; SECS.forEach(function(s){ SECNAME[s.key] = s.name; });
+var ISSUES = { email:"Email needs update", noemail:"No email on file", fix:"Needs a fix", coi:"COI expired", unmatched:"Not on the directory", drift:"Status out of step", norecord:"No onboarding record" };
+var TYPENAME = {};
+
+function me(){ var w = $("who").value.trim(); if(w) ADMIN.setWho(w); return w || "Admin Hub"; }
+function today(){ var d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+function plusDays(n){ var d = new Date(); d.setDate(d.getDate() + n); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+function days(from){ if(!from) return null; var m = String(from).match(/^(\d{4})-(\d{2})-(\d{2})/); if(!m) return null; var t = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime(); return Math.round((Date.now() - t) / 86400000); }
+function ageTxt(d){ if(d === null) return ""; if(d <= 0) return "today"; if(d === 1) return "1 day"; return d + " days"; }
+function maxDate(){ var m = ""; for(var i = 0; i < arguments.length; i++){ var v = String(arguments[i] || "").slice(0, 10); if(/^\d{4}-\d{2}-\d{2}$/.test(v) && v > m) m = v; } return m; }
+function slugs(s){ return String(s || "").toLowerCase().split(",").map(function(x){ return x.trim(); }).filter(function(x){ return x; }); }
+function post(p){ p.who = me(); return api(p); }
+
+/* ---------- load ---------- */
+/* localStorage, not sessionStorage: a new tab or tomorrow's first open paints at once from
+   the last read (up to 2 days old), then the fresh read replaces it. */
+function cacheRead(){ try { var c = JSON.parse(localStorage.getItem(CACHE) || "null"); if(c && c.ob && c.rq && Date.now() - (c.at || 0) < 2 * 86400000) return c; } catch(e){} return null; }
+function cacheWrite(){ try { localStorage.setItem(CACHE, JSON.stringify({ ob:OB, rq:RQ, at:Date.now() })); } catch(e){} }
+function load(){
+  $("refresh").disabled = true;
+  var a = api({ kind:"ob_list", log:false }), b = api({ kind:"rq_list" });
+  return Promise.all([a, b]).then(function(r){
+    $("refresh").disabled = false;
+    if(!r[0] || r[0].ok === false) throw new Error((r[0] && r[0].error) || "ob_list failed");
+    if(!r[1] || r[1].ok === false) throw new Error((r[1] && r[1].error) || "rq_list failed");
+    OB = r[0]; RQ = r[1]; cacheWrite(); build(); render();
+  }).catch(function(e){
+    $("refresh").disabled = false;
+    toast("Could not load: " + e.message, "err");
+    if(!OB) $("list").innerHTML = '<div class="empty"><b>The queue did not load.</b>' + esc(e.message) + '<br><br><button class="btn sm" id="retry" type="button">Try again</button></div>', $("retry").addEventListener("click", load);
+  });
+}
+
+/* ---------- join and compute ---------- */
+function build(){
+  Q = []; HIDDEN = { notApproved:0, complete:0, uncontacted:0 };
+  if(!OB || !RQ) return;
+  var cfg = RQ.config || {};
+  var quiet = Number(cfg.quiet_days) || 30;
+  TYPENAME = {}; (RQ.types || []).forEach(function(t){ TYPENAME[t.slug] = t.name; });
+  var byV = {};
+  (OB.onboarding || []).forEach(function(o){ if(o.vendor_id) (byV[o.vendor_id] = byV[o.vendor_id] || []).push(o); });
+  var crewBy = {};
+  (OB.crew || []).forEach(function(c){ if(c.vendor_id) (crewBy[c.vendor_id] = crewBy[c.vendor_id] || []).push(c); });
+  var items = {}; (OB.checklist || []).forEach(function(c){ items[c.key] = c; });
+  var tdy = today();
+
+  function calc(o){
+    var track = o.track || "JS";
+    var req = (OB.checklist || []).filter(function(c){ return c.required && (c.track === "Both" || c.track === track); });
+    var ver = [], left = [], rec = [], fix = [];
+    req.forEach(function(c){
+      var d = (o.docs || {})[c.key] || {};
+      if(d.s === "verified") ver.push(c);
+      else { left.push({ c:c, s:d.s || "", n:d.n || "" }); if(d.s === "received") rec.push(c); if(d.s === "fix") fix.push(c); }
+    });
+    var them = left.filter(function(x){ return x.s !== "received" && !/CRM/i.test(x.c.group) && x.c.key !== "orientation"; });
+    var us = left.filter(function(x){ return x.s === "received" || /CRM/i.test(x.c.group) || x.c.key === "orientation"; });
+    return { track:track, req:req.length, ver:ver.length, left:left, rec:rec, fix:fix, them:them, us:us, pct: req.length ? Math.round(ver.length / req.length * 100) : 0 };
+  }
+
+  (RQ.vendors || []).forEach(function(v){
+    var rows = byV[v.vendor_id] || [];
+    var rowsCalc = rows.map(function(o){ return { o:o, c:calc(o) }; });
+    rowsCalc.sort(function(a, b){ return a.c.pct - b.c.pct; });
+    var open = rowsCalc.filter(function(r){ return r.o.stage !== "Not Approved"; });
+    if(rowsCalc.length && !open.length){ HIDDEN.notApproved++; return; }
+    var p = open[0] || null;
+    if(p && p.c.req && !p.c.left.length){ HIDDEN.complete++; return; }
+
+    var touches = (RQ.touches || {})[v.vendor_id] || [];
+    var lastT = touches[0] || null;
+    var intake = (RQ.intake || {})[v.vendor_id] || null;
+    var sl = slugs(v.service_types);
+    var track = p ? p.c.track : (sl.indexOf("janitorial") >= 0 ? "JS" : "OS");
+    var invitedDate = v.last_invite || ((v.source || "").toLowerCase() === "hub invite" ? v.outreach : "");
+    var invited = !!(invitedDate || v.outreach || touches.some(function(t){ return /Call|Email|Text|Visit|Invite/.test(t.type); }));
+    var replyTouch = touches.filter(function(t){ return t.type === "Reply received" || t.type === "Orientation booked" || /replied|Spoke|Scheduled/i.test(t.outcome || ""); })[0] || null;
+    /* documents in, not counting the evaluation itself (that is the reply, not paperwork) */
+    var docsIn = 0;
+    if(p && p.c.req){ Object.keys(p.o.docs || {}).forEach(function(k){ var d = (p.o.docs || {})[k] || {}; if(k !== "eval" && (d.s === "verified" || d.s === "received")) docsIn++; }); }
+    var evalIn = !!(v.eval_date || (p && ((p.o.docs || {}).eval || {}).s));
+    var replied = !!(evalIn || intake || replyTouch || docsIn > 0);
+    var lastActivity = maxDate(v.updated, v.outreach, v.eval_date, p ? p.o.updated : "", lastT ? lastT.when : "", intake ? intake.when : "");
+    var quietDays = days(lastActivity);
+    var next = lastT && lastT.next_followup ? lastT.next_followup : "";
+    var nextDays = next ? -days(next) : null; /* positive = days until */
+
+    var issues = [];
+    if(v.email_status) issues.push("email");
+    if(!v.email) issues.push("noemail");
+    if(p && p.c.fix.length) issues.push("fix");
+    if(p){
+      var dg = (p.o.docs || {}).coi_gl || {}, dw = (p.o.docs || {}).coi_wc || {};
+      if((dg.s === "verified" && v.gl_exp && v.gl_exp.slice(0, 10) < tdy) || (dw.s === "verified" && v.wc_exp && v.wc_exp.slice(0, 10) < tdy)) issues.push("coi");
+      if(p.o.stage === "Complete" && p.c.left.length) issues.push("drift");
+      else if(v.status === "Prospect" && p.c.ver > 0) issues.push("drift");
+    }
+    if(!p && replied && v.status === "In Progress") issues.push("norecord");
+
+    var sec;
+    if(!invited && !replied && !p && !touches.length){ sec = "uncontacted"; HIDDEN.uncontacted++; issues = []; }
+    else if(issues.length) sec = "blocked";
+    else if(quietDays !== null && quietDays >= quiet) sec = "quiet";
+    else if(p && p.c.req && p.c.left.length === 1) sec = "one";
+    else if(p && docsIn > 0) sec = "paper";
+    else if(replied) sec = "replied";
+    else sec = "invited";
+
+    var crew = crewBy[v.vendor_id] || [];
+    Q.push({
+      id: v.vendor_id, v:v, p:p, rows:rowsCalc, c: p ? p.c : null, track:track, slugs:sl, touches:touches, lastT:lastT, intake:intake,
+      invited:invited, invitedDate:invitedDate, replied:replied, replyTouch:replyTouch, evalIn:evalIn, lastActivity:lastActivity, quietDays:quietDays,
+      next:next, nextDays:nextDays, issues:issues, sec:sec, market: v.market, both: v.both, assignee: p ? (p.o.assignee || "") : "",
+      priority: p ? (p.o.priority || "") : "", crew:crew,
+      crewPend: crew.filter(function(c){ return c.result !== "Clear" && c.result !== "Not clear"; }).length
+    });
+  });
+
+  /* Onboarding records that never matched a directory vendor. */
+  (OB.onboarding || []).forEach(function(o){
+    if(o.vendor_id && o.matched !== "FALSE") return;
+    if(o.stage === "Complete" || o.stage === "Not Approved") return;
+    var c = calc(o);
+    if(c.req && !c.left.length) return;
+    Q.push({ id:"ob:" + o.ob_id, v:{ vendor_id:"", dba_name:o.vendor, contact_name:o.contact_name || "", email:o.email || "", phone:o.phone || "", status:"", service_types:"" },
+      p:{ o:o, c:c }, rows:[{ o:o, c:c }], c:c, track:o.track || "JS", slugs:[], touches:[], lastT:null, intake:null, invited:true, invitedDate:"", replied:(c.ver + c.rec.length) > 0, replyTouch:null, evalIn:false,
+      lastActivity: maxDate(o.updated, o.started), quietDays: days(maxDate(o.updated, o.started)), next:"", nextDays:null, issues:["unmatched"], sec:"blocked",
+      market: o.market === "nnv" ? "nnv" : "lv", both:false, assignee:o.assignee || "", priority:o.priority || "", crew:[], crewPend:0, unmatched:true });
+  });
+
+  /* sort inside sections: overdue follow-ups, then High priority, then stalest first */
+  Q.sort(function(a, b){
+    var ao = a.nextDays !== null && a.nextDays <= 0 ? 1 : 0, bo = b.nextDays !== null && b.nextDays <= 0 ? 1 : 0;
+    if(ao !== bo) return bo - ao;
+    var ap = a.priority === "High" ? 1 : 0, bp = b.priority === "High" ? 1 : 0;
+    if(ap !== bp) return bp - ap;
+    return (b.quietDays || 0) - (a.quietDays || 0);
+  });
+
+  /* filter options */
+  var svcSeen = {}; Q.forEach(function(x){ x.slugs.forEach(function(s){ svcSeen[s] = 1; }); });
+  var opts = '<option value="">Every service</option>';
+  (RQ.types || []).forEach(function(t){ if(svcSeen[t.slug] || t.slug === "unclassified") opts += '<option value="' + esc(t.slug) + '">' + esc(t.name) + '</option>'; });
+  Object.keys(svcSeen).forEach(function(s){ if(!TYPENAME[s]) opts += '<option value="' + esc(s) + '">' + esc(s) + '</option>'; });
+  opts += '<option value="__none">No service type</option>';
+  var keep = F.svc; $("svc").innerHTML = opts; $("svc").value = keep; if($("svc").value !== keep){ F.svc = ""; }
+  var io = '<option value="">Any issue</option>'; Object.keys(ISSUES).forEach(function(k){ io += '<option value="' + k + '">' + esc(ISSUES[k]) + '</option>'; });
+  keep = F.issue; $("issue").innerHTML = io; $("issue").value = keep;
+  var who = {}; Q.forEach(function(x){ if(x.assignee) who[x.assignee] = 1; });
+  var wo = '<option value="">Anyone assigned</option><option value="__none">Nobody assigned</option>'; Object.keys(who).sort().forEach(function(w){ wo += '<option value="' + esc(w) + '">' + esc(w) + '</option>'; });
+  keep = F.who; $("who_f").innerHTML = wo; $("who_f").value = keep;
+  $("quietdays").textContent = quiet;
+  if(RQ.book) $("booklink").href = RQ.book;
+  var tt = (cfg.touch_types || []), oo = (cfg.outcomes || []);
+  $("tm_type").innerHTML = tt.map(function(t){ return '<option>' + esc(t) + '</option>'; }).join("");
+  $("tm_out").innerHTML = '<option value="">Pick one</option>' + oo.map(function(t){ return '<option>' + esc(t) + '</option>'; }).join("");
+}
+
+/* ---------- filtering ---------- */
+function visible(){
+  var q = F.q.toLowerCase();
+  return Q.filter(function(x){
+    if(x.sec === "uncontacted" && !F.showUncontacted && F.sec !== "uncontacted") return false;
+    if(F.mk && x.market !== F.mk && !x.both) return false;
+    if(F.tr && x.track !== F.tr) return false;
+    if(F.svc === "__none" ? x.slugs.length : (F.svc && x.slugs.indexOf(F.svc) < 0)) return false;
+    if(F.issue && x.issues.indexOf(F.issue) < 0) return false;
+    if(F.who === "__none" ? !!x.assignee : (F.who && x.assignee !== F.who)) return false;
+    if(F.owes === "them" && !(x.c && x.c.them.length) && x.sec !== "invited") return false;
+    if(F.owes === "us" && !(x.c && x.c.us.length)) return false;
+    if(F.sec && x.sec !== F.sec) return false;
+    if(q){
+      var hay = [x.v.dba_name, x.v.legal_name, x.v.contact_name, x.v.email, x.v.phone, x.v.business_phone, x.id, x.assignee].join(" ").toLowerCase();
+      x.crew.forEach(function(c){ hay += " " + c.first_name + " " + c.last_name; });
+      hay = hay.toLowerCase();
+      if(q.split(/\s+/).some(function(w){ return hay.indexOf(w) < 0; })) return false;
+    }
+    return true;
+  });
+}
+function scoped(){ /* market + track only, for the pipeline counts */
+  return Q.filter(function(x){ if(F.mk && x.market !== F.mk && !x.both) return false; if(F.tr && x.track !== F.tr) return false; return true; });
+}
+
+/* ---------- render ---------- */
+function render(){ renderPipe(); renderList(); }
+function renderPipe(){
+  var n = {}, due = {}, dueAll = 0, overdue = 0;
+  SECS.forEach(function(s){ n[s.key] = 0; due[s.key] = 0; });
+  scoped().forEach(function(x){ n[x.sec]++; if(x.nextDays !== null && x.nextDays <= 0){ due[x.sec]++; dueAll++; if(x.nextDays < 0) overdue++; } });
+  function tile(key, cls){
+    return '<button class="pt ' + cls + (F.sec === key ? " on" : "") + '" data-sec="' + key + '" type="button">' + (due[key] ? '<span class="due">' + due[key] + ' due</span>' : "") +
+      '<div class="n">' + n[key] + '</div><div><div class="l">' + esc(SECNAME[key]) + '</div><div class="d">' + esc(SECS.filter(function(s){ return s.key === key; })[0].desc) + '</div></div></button>';
+  }
+  $("pipe").innerHTML = tile("invited", "stage s1") + tile("replied", "stage") + tile("paper", "stage") + tile("one", "stage s4") + '<span class="gap"></span>' + tile("blocked", "side blocked") + tile("quiet", "side quiet");
+  var t = $("today");
+  if(dueAll){
+    t.className = "today";
+    t.innerHTML = '<b>' + dueAll + '</b><span class="t">follow-up' + (dueAll === 1 ? "" : "s") + ' due today' + (overdue ? ' <span>(' + overdue + ' overdue)</span>' : "") + '</span><button type="button" id="duebtn">' + (F.sec === "__due" ? "Show everyone" : "Show them") + '</button>';
+    $("duebtn").addEventListener("click", function(){ F.sec = F.sec === "__due" ? "" : "__due"; render(); });
+  } else {
+    t.className = "today none";
+    t.innerHTML = '<b>0</b><span class="t">follow-ups due today. Set one on each touch you log so this number tells the truth.</span>';
+  }
+}
+function pill(x){
+  var h = '<span class="pill ' + (x.market === "nnv" ? "nnv" : "lv") + '">' + (x.both ? "Both" : x.market === "nnv" ? "NNV" : "LV") + '</span>';
+  h += '<span class="pill ' + (x.track === "JS" ? "todo" : "grey") + '">' + x.track + '</span>';
+  if(x.priority === "High") h += '<span class="pill fail">High</span>';
+  return h;
+}
+function svcHtml(x){
+  if(!x.slugs.length) return '<div class="svc"><span class="none">no service type</span></div>';
+  var h = '<div class="svc">';
+  x.slugs.slice(0, 3).forEach(function(s){ h += '<span>' + esc(TYPENAME[s] || s) + '</span>'; });
+  if(x.slugs.length > 3) h += '<span>+' + (x.slugs.length - 3) + '</span>';
+  return h + '</div>';
+}
+function whereHtml(x){
+  var h = '<div class="where">', v = x.v, a;
+  if(x.unmatched) h += '<div class="line"><b>Onboarding record only.</b> No directory row carries this company. Match it on the desk.</div>';
+  if(x.invitedDate){ a = days(x.invitedDate); h += '<div class="line"><b>Invited ' + esc(fmtDate(x.invitedDate)) + '</b>' + (v.last_invite_by ? ' by ' + esc(v.last_invite_by) : "") + (v.invites > 1 ? ' <span class="age">(' + v.invites + ' invites)</span>' : "") + (!x.replied ? ' <span class="age' + (a >= (RQ.config.resend_days || 14) ? " old" : "") + '">no reply for ' + ageTxt(a) + '</span>' : "") + '</div>'; }
+  else if(v.outreach && !x.replied){ h += '<div class="line"><b>Reached out ' + esc(fmtDate(v.outreach)) + '</b><span class="age">no reply for ' + ageTxt(days(v.outreach)) + '</span></div>'; }
+  if(x.evalIn) h += '<div class="line"><b>Evaluation in</b>' + (v.eval_date ? ' ' + esc(fmtDate(v.eval_date)) : "") + '</div>';
+  else if(x.intake) h += '<div class="line"><b>' + (x.intake.kind === "eval" ? "Evaluation" : "Intake form") + ' in</b> ' + esc(fmtDate(x.intake.when)) + '</div>';
+  if(x.replyTouch && !x.evalIn) h += '<div class="line"><b>' + esc(x.replyTouch.type === "Reply received" ? "They replied" : x.replyTouch.type) + '</b> ' + esc(fmtDate(x.replyTouch.when)) + '</div>';
+  if(x.sec === "uncontacted") h += '<div class="line"><span class="age">On the directory as ' + esc(v.status || "Prospect") + (v.source ? ', from ' + esc(v.source) : "") + '. Nobody has reached out.</span></div>';
+  if(x.c && x.c.req){
+    var cls = x.c.pct >= 100 ? "" : x.c.pct >= 50 ? " mid" : " low";
+    h += '<div class="bar"><i class="' + cls.trim() + '" style="width:' + x.c.pct + '%"></i></div><div class="line"><b>' + x.c.ver + ' of ' + x.c.req + '</b> verified' + (x.rows.length > 1 ? ' <span class="age">' + x.track + ' track, ' + (x.rows.length - 1) + ' more</span>' : "") + '</div>';
+    var chips = "";
+    x.c.fix.forEach(function(c){ chips += '<span class="chip fix" title="Needs a fix">' + esc(c.label) + '</span>'; });
+    var shown = x.c.fix.length;
+    x.c.left.forEach(function(l){ if(l.s === "fix") return; if(shown >= 4) return; shown++; var who = x.c.us.indexOf(l) >= 0 ? "us" : "them"; chips += '<span class="chip ' + who + '" title="' + (who === "us" ? "We owe this" : "Vendor owes this") + '">' + esc(l.c.label) + '</span>'; });
+    if(x.c.left.length > shown) chips += '<span class="chip more">+' + (x.c.left.length - shown) + ' more</span>';
+    if(x.track === "JS" && x.crewPend) chips += '<span class="chip us">' + x.crewPend + ' crew to clear</span>';
+    h += '<div class="chips">' + chips + '</div>';
+    h += '<div class="owes">' + (x.c.them.length ? '<span class="them">Vendor owes ' + x.c.them.length + '</span>' : "") + (x.c.them.length && x.c.us.length ? ' &nbsp;' : "") + (x.c.us.length ? '<span class="us">We owe ' + x.c.us.length + '</span>' : "") + (!x.c.left.length ? '<span class="chip ok">Everything verified</span>' : "") + '</div>';
+  } else if(x.sec !== "uncontacted") {
+    h += '<div class="chips">' + (x.replied ? '<span class="chip us">Start onboarding</span>' : '<span class="chip them">Waiting on their evaluation</span>') + '</div>';
+  }
+  if(x.issues.length){ h += '<div class="chips">'; x.issues.forEach(function(i){ h += '<span class="chip fix">' + esc(ISSUES[i]) + (i === "email" && v.email_note ? ": " + esc(v.email_note) : "") + '</span>'; }); h += '</div>'; }
+  return h + '</div>';
+}
+function nextHtml(x){
+  var h = '<div class="next">';
+  if(x.lastT) h += '<div class="lt">Last touch: <b>' + esc(x.lastT.type) + '</b>' + (x.lastT.outcome ? ", " + esc(x.lastT.outcome.toLowerCase()) : "") + ' <span>(' + esc(x.lastT.who || "") + ', ' + ageTxt(days(x.lastT.when)) + (days(x.lastT.when) > 0 ? " ago" : "") + ')</span></div>';
+  else h += '<div class="lt">No touch logged' + (x.lastActivity ? '. Last activity ' + ageTxt(x.quietDays) + (x.quietDays > 0 ? " ago" : "") : "") + '</div>';
+  if(x.next){
+    var d = x.nextDays, cls = d < 0 ? "over" : d <= (RQ.config.due_soon_days || 3) ? "soon" : "";
+    h += '<div class="fu ' + cls + '">Follow up ' + (d < 0 ? "was due " + ageTxt(-d) + " ago" : d === 0 ? "today" : "in " + ageTxt(d)) + ' <span style="font-weight:400;color:var(--grey)">(' + esc(fmtDate(x.next)) + ')</span></div>';
+  } else if(x.sec === "invited" && x.invitedDate){
+    var a = days(x.invitedDate);
+    if(a >= (RQ.config.resend_days || 14)) h += '<div class="fu over">Resend the invite</div>';
+    else if(a >= (RQ.config.nudge_days || 7)) h += '<div class="fu soon">Time for a nudge</div>';
+    else h += '<div class="fu none">Give them a few days</div>';
+  } else if(x.sec === "quiet") h += '<div class="fu over">Follow up or let go</div>';
+  else h += '<div class="fu none">No follow-up set</div>';
+  h += '<div class="acts">';
+  if(!x.unmatched) h += '<button class="btn sm solid" type="button" data-act="touch" data-id="' + esc(x.id) + '">Log a touch</button>';
+  if(x.v.vendor_id) h += '<a class="btn sm" href="' + PROFILE + encodeURIComponent(x.v.vendor_id) + '">Profile</a>';
+  else h += '<a class="btn sm" href="onboarding.html">Open on the desk</a>';
+  h += '<span class="more"><button class="btn sm" type="button" data-act="menu" data-id="' + esc(x.id) + '" aria-haspopup="true">More</button><div class="menu" data-menu="' + esc(x.id) + '">' + menuHtml(x) + '</div></span>';
+  return h + '</div></div>';
+}
+function menuHtml(x){
+  var h = "", v = x.v;
+  if(x.unmatched) return '<a href="onboarding.html">Open the onboarding desk</a>';
+  if(!x.p) h += '<button type="button" data-act="start" data-id="' + esc(x.id) + '">Start onboarding (' + x.track + ')</button>';
+  if(v.email) h += '<button type="button" data-act="invite" data-id="' + esc(x.id) + '">' + (x.invitedDate ? "Resend the invite" : "Send the invite") + '</button>';
+  if(v.email) h += '<button type="button" data-act="link" data-id="' + esc(x.id) + '">Send their profile link</button>';
+  h += '<hr>';
+  if(v.email_status) h += '<button type="button" data-act="emailok" data-id="' + esc(x.id) + '">Clear the email hold</button>';
+  else h += '<button type="button" data-act="emailbad" data-id="' + esc(x.id) + '">Email needs update</button>';
+  if(x.p) h += '<a href="onboarding.html">Edit checklist on the desk</a>';
+  h += '<hr>';
+  h += '<button type="button" class="danger" data-act="notint" data-id="' + esc(x.id) + '">Not interested, close out</button>';
+  h += '<button type="button" class="danger" data-act="dnc" data-id="' + esc(x.id) + '">Do not contact</button>';
+  return h;
+}
+function rowHtml(x){
+  var v = x.v;
+  var meta = [];
+  if(v.contact_name) meta.push(esc(v.contact_name));
+  if(v.email) meta.push('<a href="mailto:' + esc(v.email) + '" style="color:inherit">' + esc(v.email) + '</a>');
+  if(v.phone || v.business_phone) meta.push(esc(v.phone || v.business_phone));
+  if(x.assignee) meta.push('<b>' + esc(x.assignee) + '</b>');
+  return '<li class="vrow' + (OPEN === x.id ? " open" : "") + '" data-id="' + esc(x.id) + '">' +
+    '<div><div class="nm" data-act="open" data-id="' + esc(x.id) + '">' + esc(v.dba_name) + pill(x) + '</div><div class="meta">' + meta.map(function(m){ return '<span>' + m + '</span>'; }).join("") + '</div>' + svcHtml(x) + '</div>' +
+    whereHtml(x) + nextHtml(x) + (OPEN === x.id ? detHtml(x) : "") + '</li>';
+}
+function detHtml(x){
+  var h = '<div class="det"><div><h5>Checklist, ' + esc(x.track) + ' track</h5>';
+  if(x.c && x.c.req){
+    h += '<ul>';
+    (OB.checklist || []).filter(function(c){ return c.required && (c.track === "Both" || c.track === x.track); }).forEach(function(c){
+      var d = ((x.p.o.docs || {})[c.key]) || {};
+      var st = d.s === "verified" ? '<span class="st v">verified</span>' : d.s === "received" ? '<span class="st r">to verify</span>' : d.s === "fix" ? '<span class="st f">needs fix</span>' : '<span class="st b">' + (/CRM/i.test(c.group) || c.key === "orientation" ? "ours" : "theirs") + '</span>';
+      h += '<li>' + st + '<span>' + esc(c.label) + (d.n ? ' <span class="note">' + esc(d.n) + '</span>' : "") + '</span></li>';
+    });
+    h += '</ul>';
+    if(x.rows.length > 1) h += '<div class="mini" style="margin-top:6px">' + (x.rows.length - 1) + ' more track' + (x.rows.length > 2 ? "s" : "") + ' on the desk.</div>';
+  } else h += '<div class="mini">No onboarding record yet. It starts on its own when the vendor submits the evaluation, or start it from More.</div>';
+  if(x.crew.length){ h += '<h5 style="margin-top:12px">Crew background checks</h5><ul>'; x.crew.slice(0, 8).forEach(function(c){ h += '<li><span class="st ' + (c.result === "Clear" ? "v" : c.result === "Not clear" ? "f" : "r") + '">' + esc(c.result || c.status || "pending") + '</span><span>' + esc(c.first_name + " " + c.last_name) + '</span></li>'; }); h += '</ul>'; }
+  h += '</div><div><h5>Touches</h5>';
+  if(x.touches.length){ x.touches.forEach(function(t){ h += '<div class="tch"><b>' + esc(t.type) + '</b>' + (t.outcome ? ', ' + esc(t.outcome.toLowerCase()) : "") + ' <span class="w">' + esc(t.who || "") + ', ' + esc(fmtDate(t.when)) + '</span>' + (t.note ? '<div class="w">' + esc(t.note) + '</div>' : "") + (t.next_followup ? '<div class="w">Next: ' + esc(fmtDate(t.next_followup)) + '</div>' : "") + '</div>'; }); }
+  else h += '<div class="mini">Nothing logged yet. Log a touch after every call, email or reply.</div>';
+  h += '</div><div><h5>On the directory</h5>';
+  var v = x.v;
+  h += '<div class="mini">' + esc(v.vendor_id || "no id") + (v.status ? ', ' + esc(v.status) : "") + (v.source ? ', from ' + esc(v.source) : "") + (v.added_by ? ' by ' + esc(v.added_by) : "") + '</div>';
+  if(v.legal_name && v.legal_name !== v.dba_name) h += '<div class="mini">Legal name ' + esc(v.legal_name) + '</div>';
+  if(v.city_state) h += '<div class="mini">' + esc(v.city_state) + '</div>';
+  if(v.gl_exp || v.wc_exp) h += '<div class="mini">COI: GL ' + esc(v.gl_exp || "none") + ', WC ' + esc(v.wc_exp || "none") + '</div>';
+  if(v.notes_tail) h += '<pre style="margin-top:8px">' + esc(v.notes_tail) + '</pre>';
+  if(x.p && x.p.o.notes) h += '<h5 style="margin-top:12px">Desk notes</h5><pre>' + esc(String(x.p.o.notes).slice(0, 600)) + '</pre>';
+  return h + '</div></div>';
+}
+function renderList(){
+  var rows = visible();
+  if(F.sec === "__due") rows = rows.filter(function(x){ return x.nextDays !== null && x.nextDays <= 0; });
+  var active = F.mk || F.tr || F.svc || F.issue || F.who || F.owes || F.sec || F.q;
+  $("showing").innerHTML = 'Showing <b>' + rows.length + '</b> of ' + Q.filter(function(x){ return x.sec !== "uncontacted"; }).length + ' vendors in the pipeline' +
+    (active ? ' <a href="#" id="clearf">clear filters</a>' : "") + (RQ && RQ.fetched ? ' <span class="mini">last read ' + esc(ADMIN.ago(RQ.fetched)) + '</span>' : "");
+  var cf = $("clearf"); if(cf) cf.addEventListener("click", function(e){ e.preventDefault(); F = { mk:"", tr:"", svc:"", issue:"", who:"", owes:"", sec:"", q:"", showUncontacted:F.showUncontacted }; syncControls(); render(); });
+  var html = "";
+  SECS.forEach(function(s){
+    var mine = rows.filter(function(x){ return x.sec === s.key; });
+    if(!mine.length) return;
+    html += '<div class="sec' + (closed[s.key] ? " closed" : "") + '" data-sec="' + s.key + '"><div class="sh"><span class="rail"></span><h4>' + esc(s.name) + '</h4><span class="cnt">' + mine.length + '</span><span class="desc">' + esc(s.desc) + '</span><span class="chev">&#9660;</span></div><ul class="vl">' + mine.map(rowHtml).join("") + '</ul></div>';
+  });
+  if(!html){
+    html = '<div class="empty"><b>' + (Q.length ? "Nobody matches these filters." : "The pipeline is empty.") + '</b>' + (Q.length ? "Change a filter or clear the search." : "Invite a vendor from the Ops Hub and they show up here.") + '</div>';
+  }
+  $("list").innerHTML = html;
+  var fn = "";
+  if(HIDDEN.uncontacted) fn += '<span><b>' + HIDDEN.uncontacted + '</b> prospects nobody has reached out to. <a id="togglu">' + (F.showUncontacted ? "Hide them" : "Show them") + '</a></span>';
+  if(HIDDEN.notApproved) fn += '<span>' + HIDDEN.notApproved + ' closed out as not approved or not interested.</span>';
+  if(HIDDEN.complete) fn += '<span>' + HIDDEN.complete + ' with every item verified, waiting on status.</span>';
+  $("footnote").innerHTML = fn; $("footnote").style.display = fn ? "" : "none";
+  var tu = $("togglu"); if(tu) tu.addEventListener("click", function(){ F.showUncontacted = !F.showUncontacted; render(); });
+}
+function syncControls(){
+  ["mk", "tr", "owes"].forEach(function(id){ Array.prototype.forEach.call($(id).querySelectorAll("button"), function(b){ b.classList.toggle("on", b.getAttribute("data-v") === F[id]); }); });
+  $("svc").value = F.svc; $("issue").value = F.issue; $("who_f").value = F.who; $("q").value = F.q;
+  ["svc", "issue", "who_f"].forEach(function(id){ $(id).classList.toggle("on", !!$(id).value); });
+}
+
+/* ---------- actions ---------- */
+function byId(id){ return Q.filter(function(x){ return x.id === id; })[0]; }
+function closeMenus(){ document.querySelectorAll(".menu.show").forEach(function(m){ m.classList.remove("show"); }); }
+var TOUCH = null;
+function openTouch(x, preset){
+  TOUCH = x;
+  $("tm_title").textContent = "Log a touch";
+  $("tm_sub").textContent = x.v.dba_name;
+  $("tm_type").value = preset && preset.type ? preset.type : ($("tm_type").options[0] ? $("tm_type").options[0].value : "");
+  $("tm_out").value = preset && preset.outcome ? preset.outcome : "";
+  $("tm_note").value = preset && preset.note ? preset.note : "";
+  $("tm_next").value = preset && preset.next !== undefined ? preset.next : (x.sec === "invited" ? plusDays(7) : plusDays(2));
+  markQuick();
+  $("tm").classList.add("show");
+  setTimeout(function(){ $("tm_note").focus(); }, 60);
+}
+function markQuick(){ var v = $("tm_next").value; Array.prototype.forEach.call(document.querySelectorAll("#tm .quick button"), function(b){ var d = b.getAttribute("data-days"); b.classList.toggle("on", d === "" ? !v : v === plusDays(Number(d))); }); }
+function saveTouch(){
+  var x = TOUCH; if(!x) return;
+  var p = { kind:"rq_touch", vendor_id:x.v.vendor_id, vendor:x.v.dba_name, market:x.market, type:$("tm_type").value, outcome:$("tm_out").value, note:$("tm_note").value.trim(), next:$("tm_next").value };
+  $("tm_save").disabled = true;
+  post(p).then(function(r){
+    $("tm_save").disabled = false;
+    if(!r || r.ok === false){ toast("Could not save: " + ((r && r.error) || "no reply"), "err"); return; }
+    $("tm").classList.remove("show");
+    var t = r.touch; RQ.touches[x.v.vendor_id] = [t].concat(RQ.touches[x.v.vendor_id] || []).slice(0, 5);
+    if(/Call|Email|Text|Visit|Invite/.test(t.type)){ var v = RQ.vendors.filter(function(v){ return v.vendor_id === x.v.vendor_id; })[0]; if(v) v.outreach = today(); }
+    cacheWrite(); build(); render();
+    toast("Touch saved" + (t.next_followup ? ", follow up " + fmtDate(t.next_followup) : ""), "ok");
+  }).catch(function(e){ $("tm_save").disabled = false; toast("Could not save: " + e.message, "err"); });
+}
+var CONFIRM = null;
+function confirmThen(title, body, fn){ CONFIRM = fn; $("cm_title").textContent = title; $("cm_body").innerHTML = body; $("cm").classList.add("show"); }
+function setVendor(x, field, value, okMsg){
+  return post({ kind:"rq_set", vendor_id:x.v.vendor_id, field:field, value:value }).then(function(r){
+    if(!r || r.ok === false){ toast("Could not save: " + ((r && r.error) || "no reply"), "err"); return false; }
+    var v = RQ.vendors.filter(function(v){ return v.vendor_id === x.v.vendor_id; })[0];
+    if(v) v[field] = value;
+    if(field === "status" && (value === "Do Not Contact" || value === "Active" || value === "Waiting for Account")) RQ.vendors = RQ.vendors.filter(function(v){ return v.vendor_id !== x.v.vendor_id; });
+    cacheWrite(); build(); render(); if(okMsg) toast(okMsg, "ok"); return true;
+  });
+}
+function act(name, id){
+  var x = byId(id); if(!x) return;
+  var mm = document.querySelector('.menu[data-menu="' + CSS.escape(id) + '"]'), wasOpen = !!(mm && mm.classList.contains("show"));
+  closeMenus();
+  var v = x.v;
+  if(name === "open"){ OPEN = OPEN === id ? null : id; renderList(); return; }
+  if(name === "touch"){ openTouch(x); return; }
+  if(name === "menu"){ var m = document.querySelector('.menu[data-menu="' + CSS.escape(id) + '"]'); if(m && !wasOpen) m.classList.add("show"); return; }
+  if(name === "start"){
+    post({ kind:"ob_save", vendor_id:v.vendor_id, track:x.track, stage:"New" }).then(function(r){
+      if(!r || r.ok === false){ toast("Could not start: " + ((r && r.error) || "no reply"), "err"); return; }
+      toast("Onboarding started", "ok"); load();
+    });
+    return;
+  }
+  if(name === "invite"){
+    confirmThen((x.invitedDate ? "Resend" : "Send") + " the invite to " + v.dba_name + "?",
+      "An email goes to <b>" + esc(v.email) + "</b> with the New Vendor steps for " + (x.market === "nnv" ? "Northern Nevada" : "Las Vegas") + ". The touch is logged for you." +
+      (x.invitedDate ? "<br><br>Last invite went " + esc(fmtDate(x.invitedDate)) + "." : ""),
+      function(){
+        post({ kind:"vd_invite", market:x.market, business:v.dba_name, contact:v.contact_name, email:v.email, phone:v.phone, by:me() }).then(function(r){
+          if(!r || r.ok === false){ toast("Invite failed: " + ((r && r.error) || "no reply"), "err"); return; }
+          toast("Invite sent to " + (r.sent_to || v.email), "ok");
+          return post({ kind:"rq_touch", vendor_id:v.vendor_id, vendor:v.dba_name, market:x.market, type:"Invite sent", outcome:"", note:"Sent from the recruiting queue", next:plusDays(7) });
+        }).then(function(){ load(); });
+      });
+    return;
+  }
+  if(name === "link"){
+    post({ kind:"vs_admin_link", vendor_id:v.vendor_id, email:v.email }).then(function(r){
+      if(!r || r.ok === false){ toast("Could not send: " + ((r && r.error) || "no reply"), "err"); return; }
+      toast("Profile link sent to " + (r.sent_to || v.email), "ok");
+    });
+    return;
+  }
+  if(name === "emailbad"){
+    confirmThen("Mark the email as needing an update?", "<b>" + esc(v.email) + "</b> bounced or is wrong. The vendor is held out of vendor emails until the email on file changes. They move to Blocked here.", function(){
+      setVendor(x, "email_note", v.email || "").then(function(ok){ if(ok) return setVendor(x, "email_status", "Email needs update", "Email hold set"); });
+    });
+    return;
+  }
+  if(name === "emailok"){ setVendor(x, "email_status", "", "Email hold cleared").then(function(ok){ if(ok) setVendor(x, "email_note", ""); }); return; }
+  if(name === "notint"){
+    confirmThen("Close out " + v.dba_name + "?", "They leave the recruiting queue. The onboarding record is marked <b>Not Approved</b> and the touch is logged. They stay on the directory as they are.", function(){
+      var p = x.p ? { kind:"ob_save", ob_id:x.p.o.ob_id, stage:"Not Approved" } : { kind:"ob_save", vendor_id:v.vendor_id, track:x.track, stage:"Not Approved" };
+      post(p).then(function(r){
+        if(!r || r.ok === false){ toast("Could not close out: " + ((r && r.error) || "no reply"), "err"); return; }
+        return post({ kind:"rq_touch", vendor_id:v.vendor_id, vendor:v.dba_name, market:x.market, type:"Other", outcome:"Not interested", note:"Closed out from the recruiting queue", next:"" });
+      }).then(function(){ toast("Closed out", "ok"); load(); });
+    });
+    return;
+  }
+  if(name === "dnc"){
+    confirmThen("Set " + v.dba_name + " to Do Not Contact?", "They drop off every vendor list and email on the platform. Use this for a vendor who asked not to be contacted, not for someone who went quiet.", function(){
+      setVendor(x, "status", "Do Not Contact", "Set to Do Not Contact");
+    });
+  }
+}
+
+/* ---------- wiring ---------- */
+document.addEventListener("click", function(e){
+  var t = e.target.closest("[data-act]");
+  if(t){ e.preventDefault(); act(t.getAttribute("data-act"), t.getAttribute("data-id")); return; }
+  var pt = e.target.closest(".pt"); if(pt){ var s = pt.getAttribute("data-sec"); F.sec = F.sec === s ? "" : s; render(); return; }
+  var sh = e.target.closest(".sh"); if(sh){ var k = sh.parentElement.getAttribute("data-sec"); closed[k] = !closed[k]; sh.parentElement.classList.toggle("closed", closed[k]); return; }
+  var c = e.target.closest("[data-close]"); if(c){ $(c.getAttribute("data-close")).classList.remove("show"); return; }
+  if(!e.target.closest(".more")) closeMenus();
+});
+document.addEventListener("keydown", function(e){ if(e.key === "Escape"){ closeMenus(); $("tm").classList.remove("show"); $("cm").classList.remove("show"); } });
+["mk", "tr", "owes"].forEach(function(id){ Array.prototype.forEach.call($(id).querySelectorAll("button"), function(b){ b.addEventListener("click", function(){ F[id] = b.getAttribute("data-v"); syncControls(); render(); }); }); });
+$("svc").addEventListener("change", function(){ F.svc = this.value; syncControls(); render(); });
+$("issue").addEventListener("change", function(){ F.issue = this.value; syncControls(); render(); });
+$("who_f").addEventListener("change", function(){ F.who = this.value; syncControls(); render(); });
+var qt = null; $("q").addEventListener("input", function(){ clearTimeout(qt); var v = this.value.trim(); qt = setTimeout(function(){ F.q = v; render(); }, 120); });
+$("refresh").addEventListener("click", load);
+$("tm_save").addEventListener("click", saveTouch);
+$("tm_next").addEventListener("change", markQuick);
+Array.prototype.forEach.call(document.querySelectorAll("#tm .quick button"), function(b){ b.addEventListener("click", function(){ var d = b.getAttribute("data-days"); $("tm_next").value = d === "" ? "" : plusDays(Number(d)); markQuick(); }); });
+$("cm_ok").addEventListener("click", function(){ $("cm").classList.remove("show"); if(CONFIRM){ var f = CONFIRM; CONFIRM = null; f(); } });
+$("mk").addEventListener("click", function(){ $("invitelink").href = OPS_INVITE + (F.mk === "nnv" ? "nnv" : "lv"); });
+
+/* ---------- boot ---------- */
+ADMIN.init({ page:"vendors", onReady:function(){
+  $("who").value = ADMIN.who() || "";
+  $("who").addEventListener("change", function(){ ADMIN.setWho(this.value.trim()); });
+  var c = cacheRead();
+  if(c){ OB = c.ob; RQ = c.rq; build(); render(); $("showing").innerHTML += ' <span class="mini">refreshing&hellip;</span>'; }
+  load();
+}});
+})();
+</script>
+</body>
+</html>
