@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>CW Admin Hub | Business Operations Management</title>
-<!-- build 2026-09-24 (Uniform Orders feature card). 2026-09-22a (Vendor Profile feature card and quick link). 2026-09-19b (Vendor Onboarding desk replaces the Asana boards on this page; old boards demoted to a footer link, no Asana calls on load). 2026-09-19 (Ops Admin Desk feature card). 2026-09-11b: retired the vendor packet, walkthrough email and Exhibit A request Asana forms; the Ops Hub does all three itself now (vendor-invite.html, postings.html, create-exhibit-a.html). 2026-09-11 (renamed Admin Hub, Vendor of the Month card). 2026-09-05b (Team Emails quick link; gate via cw-auth.js in admin-shared.js). 2026-09-05a (COI request card + quick link). The Business Operations Manager's front door, a sibling of the
+<!-- build 2026-10-03 (Task Queue card for the ops admin between Most Used and the feature cards: evaluations, signed PandaDoc IC documents and crew background checks from the last 21 days, backend AdminQueue.gs aq_ kinds). 2026-09-24 (Uniform Orders feature card). 2026-09-22a (Vendor Profile feature card and quick link). 2026-09-19b (Vendor Onboarding desk replaces the Asana boards on this page; old boards demoted to a footer link, no Asana calls on load). 2026-09-19 (Ops Admin Desk feature card). 2026-09-11b: retired the vendor packet, walkthrough email and Exhibit A request Asana forms; the Ops Hub does all three itself now (vendor-invite.html, postings.html, create-exhibit-a.html). 2026-09-11 (renamed Admin Hub, Vendor of the Month card). 2026-09-05b (Team Emails quick link; gate via cw-auth.js in admin-shared.js). 2026-09-05a (COI request card + quick link). The Business Operations Manager's front door, a sibling of the
 Ops Hub (cw-ops-desk) on the Nevada Team Portal. Passcode gate checked server-side
 (kind vd_bom_auth in VendorDirectory.gs; the Ops Hub team passcode also unlocks it).
 Background check roster and Asana boards are read live; nothing on this page is
@@ -56,6 +56,55 @@ hardcoded data except the menu tree and the Asana project registry in admin-shar
 .photoband img{width:100%;height:100%;object-fit:cover;display:block}
 .photoband figcaption{position:absolute;left:0;right:0;bottom:0;padding:26px 16px 11px;background:linear-gradient(180deg,rgba(20,18,16,0) 0%,rgba(20,18,16,.82) 100%);color:#fff;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
 @media(max-width:760px){.photoband .pb{grid-template-columns:1fr}}
+/* Task Queue (Oct 3 2026): the ops admin's work list. Renders from the browser cache first, then refreshes. */
+.aqcard{background:#fff;border:1px solid var(--border);border-top:4px solid var(--red);border-radius:14px;box-shadow:var(--shadow-lift);padding:16px 18px 14px}
+.aqhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.aqhead h2{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--grey)}
+.aqcount{font-size:11px;font-weight:700;background:var(--red);color:#fff;border-radius:10px;padding:2px 9px;min-width:22px;text-align:center}
+.aqcount:empty{display:none}
+.aqsub{font-size:12px;color:var(--grey);flex:1;min-width:220px}
+.aqwho{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;color:var(--grey)}
+.aqwho input{font:inherit;font-weight:600;color:var(--black);border:1px solid var(--border);border-radius:8px;padding:6px 9px;width:130px;min-height:34px}
+.aqrefresh{font-size:16px;line-height:1;border:1px solid var(--border);background:#fff;border-radius:8px;width:34px;min-height:34px;cursor:pointer;color:var(--grey)}
+.aqrefresh:hover{border-color:var(--red);color:var(--red)}
+.aqtabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.aqtab{font-size:12px;font-weight:700;border:1.5px solid var(--border);border-radius:20px;padding:6px 13px;background:#fff;cursor:pointer;color:var(--black);min-height:34px;display:inline-flex;align-items:center;gap:7px}
+.aqtab b{font-size:11px;background:var(--light);border-radius:9px;padding:1px 7px;color:var(--grey)}
+.aqtab.on{border-color:var(--black);background:var(--black);color:#fff}
+.aqtab.on b{background:var(--red);color:#fff}
+.aqlist{display:flex;flex-direction:column}
+.aqrow{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--light)}
+.aqrow:first-child{border-top:none}
+.aqrow.busy{opacity:.5;pointer-events:none}
+.aqrow .ic{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;flex:none}
+.aqrow .ic.bc{background:var(--black)}
+.aqrow .ic.eval{background:var(--blue)}
+.aqrow .ic.packet{background:var(--green)}
+.aqrow .ic svg{color:#fff}
+.aqrow .t{min-width:0}
+.aqrow .t .n{font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.aqrow .t .n a{color:inherit;text-decoration:none}
+.aqrow .t .n a:hover{color:var(--red)}
+.aqrow .t .s{font-size:11.5px;color:var(--grey);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.aqrow .t .st{font-size:12px;font-weight:700;color:var(--black);margin-top:3px}
+.aqrow .t .st::before{content:"Next: ";color:var(--red)}
+.aqrow .a{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.aqbtn{font:inherit;font-size:12px;font-weight:700;border:1.5px solid var(--border);background:#fff;color:var(--black);border-radius:9px;padding:8px 12px;min-height:36px;cursor:pointer;white-space:nowrap}
+.aqbtn:hover{border-color:var(--red);color:var(--red)}
+.aqbtn.go{background:var(--red);border-color:var(--red);color:#fff}
+.aqbtn.go:hover{background:var(--red-dark);border-color:var(--red-dark);color:#fff}
+.aqbtn.ok{border-color:var(--green);color:var(--green)}
+.aqbtn.ok:hover{background:var(--green);color:#fff}
+.aqbtn.no{border-color:var(--border);color:var(--grey)}
+.aqbtn.no:hover{border-color:var(--red);color:var(--red)}
+.aqempty{font-size:13px;color:var(--grey);padding:14px 0 6px}
+.aqempty b{color:var(--green)}
+.aqfoot{font-size:11px;color:var(--grey);margin-top:10px;display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.aqfoot a{color:var(--red);font-weight:700;text-decoration:none}
+.aqfoot .warn{color:var(--amber);font-weight:700}
+.aqdone{font-size:11.5px;color:var(--grey);margin-top:8px}
+.aqdone a{color:var(--red);font-weight:700;text-decoration:none;cursor:pointer}
+@media(max-width:700px){.aqrow{grid-template-columns:auto 1fr}.aqrow .a{grid-column:1/-1;justify-content:flex-start}}
 .loading{color:var(--grey);font-size:12.5px}
 .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:sp .8s linear infinite;vertical-align:middle;margin-right:8px}
 @keyframes sp{to{transform:rotate(360deg)}}
@@ -87,6 +136,21 @@ hardcoded data except the menu tree and the Asana project registry in admin-shar
 <div class="qcard">
 <div class="qhead"><span class="bar-accent"></span><h2>Most Used</h2></div>
 <div class="qrow" id="quickrow"></div>
+</div>
+</div>
+
+<div class="wrap feature" id="aqwrap">
+<div class="aqcard">
+<div class="aqhead">
+<span class="bar-accent"></span><h2>Task Queue</h2>
+<span class="aqcount" id="aqcount"></span>
+<span class="aqsub">Evaluations, signed PandaDoc documents and crew background checks from the last 3 weeks. Click a step when it is done.</span>
+<label class="aqwho">Working as <input id="aqwho" placeholder="your name" maxlength="40"></label>
+<button class="aqrefresh" id="aqrefresh" type="button" title="Refresh">&#8635;</button>
+</div>
+<div class="aqtabs" id="aqtabs"></div>
+<div class="aqbody" id="aqbody"><span class="loading"><span class="spin"></span>Reading the queue...</span></div>
+<div class="aqfoot" id="aqfoot"></div>
 </div>
 </div>
 
@@ -325,7 +389,150 @@ function loadRec(){
     el.textContent = open ? open + (open === 1 ? " nomination waiting." : " nominations waiting.") : "";
   }).catch(function(){});
 }
-ADMIN.init({ page:"home", onReady:function(){ loadBc(); loadOb(); loadCoi(); loadRec(); } });
+/* ---------- Task Queue (Oct 3 2026) ----------
+   Backend: AdminQueue.gs (aq_list, aq_done, aq_bc). Items are the last 21 days of
+   vendor evaluations, signed PandaDoc IC documents and crew background check
+   requests from both markets. The cached copy paints first so the page never waits. */
+var AQ = { items:[], done:[], counts:{}, pd:{}, filter:"all", fetched:"" };
+var AQKEY = "cwAdminQueue";
+var AQ_TYPE = { bc:"Background check", eval:"Evaluation", packet:"PandaDoc" };
+var AQ_ICON = {
+  bc:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg>',
+  eval:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>',
+  packet:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 15l2 2 4-4"/></svg>'
+};
+var AQ_BTN = {
+  sent:{ label:"Submitted to Verified First", cls:"go" },
+  clear:{ label:"Cleared", cls:"ok" },
+  notclear:{ label:"Not cleared", cls:"no" },
+  badge:{ label:"Badge printed", cls:"go" },
+  notify:{ label:"Notify Jeremy", cls:"go" }
+};
+function aqWho(){
+  var el = document.getElementById("aqwho");
+  var w = (el && el.value || "").trim();
+  if(w) ADMIN.setWho(w);
+  return w;
+}
+function aqNeedWho(){
+  var w = aqWho();
+  if(w) return w;
+  ADMIN.toast("Type your name in Working as first.", "err");
+  var el = document.getElementById("aqwho"); if(el) el.focus();
+  return "";
+}
+function aqAgo(s){
+  if(!s) return "";
+  var m = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/.exec(String(s));
+  if(!m) return String(s);
+  var d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4] || 0), Number(m[5] || 0));
+  var days = Math.floor((Date.now() - d.getTime()) / 86400000);
+  if(days <= 0) return "today";
+  if(days === 1) return "yesterday";
+  return days + " days ago";
+}
+function aqRender(){
+  var host = document.getElementById("aqbody"), tabs = document.getElementById("aqtabs"), cnt = document.getElementById("aqcount"), foot = document.getElementById("aqfoot");
+  var items = AQ.items || [];
+  var c = { all:items.length, bc:0, eval:0, packet:0 };
+  items.forEach(function(it){ c[it.type] = (c[it.type] || 0) + 1; });
+  cnt.textContent = items.length ? String(items.length) : "";
+  tabs.innerHTML = [["all","Everything"],["bc","Background checks"],["eval","Evaluations"],["packet","PandaDoc"]].map(function(t){
+    return '<button type="button" class="aqtab' + (AQ.filter === t[0] ? ' on' : '') + '" data-f="' + t[0] + '">' + t[1] + '<b>' + (c[t[0]] || 0) + '</b></button>';
+  }).join("");
+  var show = items.filter(function(it){ return AQ.filter === "all" || it.type === AQ.filter; });
+  if(!show.length){
+    host.innerHTML = '<div class="aqempty"><b>Nothing waiting.</b> ' + (items.length ? 'Nothing in this group.' : 'Every evaluation, signed document and background check from the last 3 weeks is handled.') + '</div>';
+  } else {
+    host.innerHTML = '<div class="aqlist">' + show.map(function(it){
+      var mk = '<span class="pill ' + (it.market === "nnv" ? "nnv" : "lv") + '">' + (it.market === "nnv" ? "Northern Nevada" : "Las Vegas") + '</span>';
+      var title = it.link ? '<a href="' + esc(it.link) + '"' + (ADMIN.isExternal(it.link) ? ' target="_blank" rel="noopener"' : '') + '>' + esc(it.title) + '</a>' : esc(it.title);
+      var btns = "";
+      if(it.type === "bc"){
+        btns = (it.actions || []).map(function(a){ var b = AQ_BTN[a]; return b ? '<button type="button" class="aqbtn ' + b.cls + '" data-act="' + a + '" data-key="' + esc(it.key) + '">' + b.label + '</button>' : ''; }).join("");
+        if(it.report_link) btns = '<a class="aqbtn" href="' + esc(it.report_link) + '" target="_blank" rel="noopener">Open report</a>' + btns;
+      } else {
+        if(it.link) btns += '<a class="aqbtn" href="' + esc(it.link) + '"' + (ADMIN.isExternal(it.link) ? ' target="_blank" rel="noopener"' : '') + '>' + (it.type === "packet" ? "Open in PandaDoc" : "Open") + '</a>';
+        if(it.pdf_url) btns += '<a class="aqbtn" href="' + esc(it.pdf_url) + '" target="_blank" rel="noopener">PDF</a>';
+        btns += '<button type="button" class="aqbtn go" data-act="done" data-key="' + esc(it.key) + '">Mark reviewed</button>';
+      }
+      var extra = it.type === "bc" && it.sent ? ' &middot; sent ' + esc(ADMIN.fmtDate(it.sent)) : '';
+      return '<div class="aqrow" data-key="' + esc(it.key) + '"><span class="ic ' + it.type + '">' + AQ_ICON[it.type] + '</span>' +
+        '<div class="t"><div class="n">' + title + mk + '<span class="pill grey">' + AQ_TYPE[it.type] + '</span></div>' +
+        '<div class="s">' + esc(it.sub || "") + ' &middot; ' + esc(aqAgo(it.received)) + extra + '</div>' +
+        '<div class="st">' + esc(it.step_label || "") + '</div></div>' +
+        '<div class="a">' + btns + '</div></div>';
+    }).join("") + '</div>';
+  }
+  var f = [];
+  if(AQ.fetched) f.push('As of ' + esc(ADMIN.ago(AQ.fetched)) + '.');
+  if(AQ.pd && AQ.pd.on === false) f.push('<span class="warn">PandaDoc is not connected yet.</span>');
+  else if(AQ.pd && AQ.pd.error) f.push('<span class="warn">PandaDoc: ' + esc(AQ.pd.error) + '</span>');
+  f.push('<a href="onboarding.html">Onboarding desk</a>');
+  f.push('<a href="onboarding.html#bc">All background check requests</a>');
+  f.push('<a href="background-checks.html">Review desk</a>');
+  var dn = (AQ.done || []).slice(0, 5);
+  if(dn.length) f.push('<span class="aqdone">Recently reviewed: ' + dn.map(function(d){ return esc(d.title) + ' (' + esc(d.done_by) + ') <a data-undo="' + esc(d.key) + '" data-type="' + esc(d.type) + '" data-title="' + esc(d.title) + '" data-market="' + esc(d.market) + '">undo</a>'; }).join(', ') + '</span>');
+  foot.innerHTML = f.join(' ');
+}
+function aqLoad(){
+  var btn = document.getElementById("aqrefresh"); if(btn) btn.disabled = true;
+  return api({ kind:"aq_list" }).then(function(r){
+    if(btn) btn.disabled = false;
+    if(!r || !r.ok){ document.getElementById("aqfoot").innerHTML = '<span class="warn">Could not read the queue: ' + esc((r && r.error) || "") + '</span>'; if(!AQ.items.length) document.getElementById("aqbody").innerHTML = '<div class="aqempty">The queue did not load. Try the refresh button.</div>'; return; }
+    AQ.items = r.items || []; AQ.done = r.done || []; AQ.counts = r.counts || {}; AQ.pd = r.pandadoc || {}; AQ.fetched = r.fetched || new Date().toISOString();
+    try { sessionStorage.setItem(AQKEY, JSON.stringify({ items:AQ.items, done:AQ.done, pd:AQ.pd, fetched:AQ.fetched })); } catch(e){}
+    aqRender();
+  }).catch(function(){ if(btn) btn.disabled = false; document.getElementById("aqfoot").innerHTML = '<span class="warn">Could not reach the server.</span>'; });
+}
+function aqFind(key){ return (AQ.items || []).filter(function(it){ return it.key === key; })[0]; }
+function aqBusy(key, on){ var row = document.querySelector('.aqrow[data-key="' + key.replace(/"/g, '\\"') + '"]'); if(row) row.classList.toggle("busy", !!on); }
+function aqRemove(key){ AQ.items = (AQ.items || []).filter(function(it){ return it.key !== key; }); }
+function aqAct(act, key){
+  var it = aqFind(key); if(!it) return;
+  var who = aqNeedWho(); if(!who) return;
+  if(act === "done"){
+    aqBusy(key, true);
+    api({ kind:"aq_done", key:key, type:it.type, title:it.title, market:it.market, vendor_id:it.vendor_id || "", who:who }).then(function(r){
+      if(!r.ok) throw new Error(r.error || "Save failed");
+      aqRemove(key); AQ.done.unshift({ key:key, type:it.type, title:it.title, market:it.market, done_by:who, done_at:"now" });
+      ADMIN.toast("Marked reviewed", "ok"); aqRender();
+      try { sessionStorage.setItem(AQKEY, JSON.stringify({ items:AQ.items, done:AQ.done, pd:AQ.pd, fetched:AQ.fetched })); } catch(e){}
+    }).catch(function(e){ aqBusy(key, false); ADMIN.toast(String(e.message || e), "err"); });
+    return;
+  }
+  var confirmText = { notclear:"Record " + it.title + " as NOT cleared? Their row on the background check list is set to Not clear.", notify:"Email Jeremy Walker that " + it.title + " is approved for a name badge?" }[act];
+  if(confirmText && !confirm(confirmText)) return;
+  aqBusy(key, true);
+  api({ kind:"aq_bc", req_id:it.req_id, action:act, who:who }).then(function(r){
+    if(!r.ok) throw new Error(r.error || "Save failed");
+    if(r.done){ aqRemove(key); }
+    else { it.status = r.status; it.badge = r.badge; it.step = r.step; it.step_label = r.step_label; it.actions = r.actions; if(act === "sent") it.sent = new Date().toISOString().slice(0,10); }
+    ADMIN.toast({ sent:"Marked submitted to Verified First", clear:"Cleared", notclear:"Recorded as not cleared", badge:"Badge printed", notify:"Jeremy Walker notified" }[act] || "Saved", "ok");
+    aqRender();
+    try { sessionStorage.setItem(AQKEY, JSON.stringify({ items:AQ.items, done:AQ.done, pd:AQ.pd, fetched:AQ.fetched })); } catch(e){}
+  }).catch(function(e){ aqBusy(key, false); ADMIN.toast(String(e.message || e), "err"); });
+}
+function aqUndo(key, type, title, market){
+  var who = aqNeedWho(); if(!who) return;
+  api({ kind:"aq_done", key:key, type:type, title:title, market:market, who:who, undo:true }).then(function(r){
+    if(!r.ok) throw new Error(r.error || "Undo failed");
+    ADMIN.toast("Put back in the queue", "ok"); aqLoad();
+  }).catch(function(e){ ADMIN.toast(String(e.message || e), "err"); });
+}
+(function aqInit(){
+  var w = document.getElementById("aqwho"); if(w) w.value = ADMIN.who() || "";
+  try { var c = JSON.parse(sessionStorage.getItem(AQKEY) || "null"); if(c && c.items){ AQ.items = c.items; AQ.done = c.done || []; AQ.pd = c.pd || {}; AQ.fetched = c.fetched || ""; aqRender(); } } catch(e){}
+  document.getElementById("aqwrap").addEventListener("click", function(ev){
+    var t = ev.target.closest("[data-f],[data-act],[data-undo]"); if(!t) return;
+    if(t.dataset.f){ AQ.filter = t.dataset.f; aqRender(); return; }
+    if(t.dataset.undo){ ev.preventDefault(); aqUndo(t.dataset.undo, t.dataset.type, t.dataset.title, t.dataset.market); return; }
+    aqAct(t.dataset.act, t.dataset.key);
+  });
+  document.getElementById("aqrefresh").addEventListener("click", function(){ aqLoad(); });
+})();
+
+ADMIN.init({ page:"home", onReady:function(){ setTimeout(aqLoad, 0); loadBc(); loadOb(); loadCoi(); loadRec(); } });
 })();
 </script>
 </body>
