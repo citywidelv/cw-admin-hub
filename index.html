@@ -78,6 +78,10 @@ hardcoded data except the menu tree and the Asana project registry in admin-shar
 .aqrow.busy{opacity:.5;pointer-events:none}
 .aqrow .ic{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;flex:none}
 .aqrow .ic.bc{background:var(--black)}
+.aqrow.sp{background:#FFF3F3;border-left:4px solid #D22730;padding-left:10px;border-radius:0 8px 8px 0}
+.aqrow .spline{font-size:12px;font-weight:700;color:#D22730;margin-top:3px}
+.pill.sp{background:#D22730;color:#fff;font-size:10px;letter-spacing:.04em}
+
 .aqrow .ic.eval{background:var(--blue)}
 .aqrow .ic.packet{background:var(--green)}
 .aqrow .ic svg{color:#fff}
@@ -457,9 +461,12 @@ function aqRender(){
         btns += '<button type="button" class="aqbtn go" data-act="done" data-key="' + esc(it.key) + '">Mark reviewed</button>';
       }
       var extra = it.type === "bc" && it.sent ? ' &middot; sent ' + esc(ADMIN.fmtDate(it.sent)) : '';
-      return '<div class="aqrow" data-key="' + esc(it.key) + '"><span class="ic ' + it.type + '">' + AQ_ICON[it.type] + '</span>' +
-        '<div class="t"><div class="n">' + title + mk + '<span class="pill grey">' + AQ_TYPE[it.type] + '</span></div>' +
+      // Oct 6 2026: Arroweye needs the 10-Year check, a credit check and a drug screen. Say so in red.
+      var sp = it.type === "bc" ? (it.special || (/arrow\s*eye/i.test(it.sub || "") ? "10-Year check + credit check + drug screen" : "")) : "";
+      return '<div class="aqrow' + (sp ? ' sp' : '') + '" data-key="' + esc(it.key) + '"><span class="ic ' + it.type + '">' + AQ_ICON[it.type] + '</span>' +
+        '<div class="t"><div class="n">' + title + mk + '<span class="pill grey">' + AQ_TYPE[it.type] + '</span>' + (sp ? '<span class="pill sp">Arroweye 10-Year</span>' : '') + '</div>' +
         '<div class="s">' + esc(it.sub || "") + ' &middot; ' + esc(aqAgo(it.received)) + extra + '</div>' +
+        (sp ? '<div class="spline">Special check: 10-year background, credit check and drug screen. Not the standard Verified First check.</div>' : '') +
         '<div class="st">' + esc(it.step_label || "") + '</div></div>' +
         '<div class="a">' + btns + '</div></div>';
     }).join("") + '</div>';

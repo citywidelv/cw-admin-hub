@@ -150,6 +150,8 @@ results write through vd_bc_upsert, the same path as background-checks.html. -->
 .reqrow small{display:block;color:var(--grey);font-size:11px;margin-top:2px}
 .imp pre{font-size:11.5px;background:var(--light);border:1px solid var(--border);border-radius:8px;padding:10px 12px;white-space:pre-wrap;max-height:50vh;overflow:auto}
 .imp .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.pill.sp{background:#D22730;color:#fff;font-size:10px;letter-spacing:.04em}
+.spbox{background:#D22730;color:#fff;border-radius:8px;padding:10px 12px;margin:6px 0;font-weight:700;font-size:13px;line-height:1.4}
 .pill.inv{background:var(--light);color:var(--grey);border:1px solid var(--border)}
 .pill.js{background:var(--black);color:#fff}
 .pill.os{background:#fff;color:var(--black);border:1px solid var(--border)}
@@ -499,6 +501,7 @@ function reqState(r){
   if(r.status === "Closed") return { k:"grey", t:"Closed in Asana" };
   return { k:"todo", t:"To send" };
 }
+function spOf(t){ return /arrow\s*eye/i.test(String(t || "")) ? "Arroweye: 10-Year check + credit check + drug screen" : ""; }
 function renderReqs(){
   var all = D.requests.filter(function(r){ return !r.dupe_of; });
   var list = all.filter(function(r){
@@ -515,7 +518,7 @@ function renderReqs(){
   if(!list.length){ host.innerHTML = '<div class="mini">' + (F.req === "New" ? "Nothing waiting to be sent to Verified First." : "Nothing here.") + '</div>'; return; }
   host.innerHTML = list.slice(0, 40).map(function(r){
     var s = reqState(r);
-    return '<div class="rq" data-req="' + esc(r.req_id) + '"><span class="pill ' + s.k + '">' + esc(s.t) + '</span><div class="n"><div class="co">' + esc(r.legal_name || (r.first_name + " " + r.last_name)) + '</div><small>' + esc(r.company) + (r.vendor_id ? "" : " (not matched)") + (r.report_link ? ' &middot; report attached' : "") + ' &middot; ' + (r.market === "nnv" ? "NNV" : "LV") + ' &middot; ' + esc(fmtDate(r.received)) + (r.client_account ? " &middot; for " + esc(r.client_account) : "") + '</small></div></div>';
+    return '<div class="rq" data-req="' + esc(r.req_id) + '"><span class="pill ' + s.k + '">' + esc(s.t) + '</span><div class="n"><div class="co">' + esc(r.legal_name || (r.first_name + " " + r.last_name)) + (spOf(r.client_account) || r.check_package ? ' <span class="pill sp">Arroweye 10-Year + credit + drug</span>' : '') + '</div><small>' + esc(r.company) + (r.vendor_id ? "" : " (not matched)") + (r.report_link ? ' &middot; report attached' : "") + ' &middot; ' + (r.market === "nnv" ? "NNV" : "LV") + ' &middot; ' + esc(fmtDate(r.received)) + (r.client_account ? " &middot; for " + esc(r.client_account) : "") + '</small></div></div>';
   }).join("") + (list.length > 40 ? '<div class="mini">and ' + (list.length - 40) + ' more. Search a vendor to see theirs.</div>' : "");
 }
 document.getElementById("reqlist").addEventListener("click", function(e){
@@ -650,7 +653,7 @@ function openOb(obId, focus){
     });
     // requests with no roster person (badge only, or unmatched name)
     reqs.filter(function(r){ return !crew.some(function(p){ return p.first_name.toLowerCase() === r.first_name.toLowerCase() && p.last_name.toLowerCase() === r.last_name.toLowerCase(); }); }).forEach(function(r){
-      h += '<div class="item"><div><div class="lb">' + esc(r.legal_name) + ' <span class="pill grey">' + esc(r.request_type) + '</span><small>Requested ' + esc(fmtDate(r.received)) + (r.email ? " &middot; " + esc(r.email) : "") + '</small></div></div><div class="mini">badge: ' + esc(r.badge || "") + '</div></div>';
+      h += '<div class="item"><div><div class="lb">' + esc(r.legal_name) + ' <span class="pill grey">' + esc(r.request_type) + '</span>' + (spOf(r.client_account) || r.check_package ? ' <span class="pill sp">Arroweye 10-Year + credit + drug</span>' : '') + '<small>Requested ' + esc(fmtDate(r.received)) + (r.email ? " &middot; " + esc(r.email) : "") + '</small></div></div><div class="mini">badge: ' + esc(r.badge || "") + '</div></div>';
     });
     h += '</div>';
   }
@@ -751,7 +754,7 @@ function openRequest(r){
   document.getElementById("vm_title").textContent = r.company;
   var st = reqState(r);
   document.getElementById("vm_body").innerHTML = '<div class="det"><div class="main"><div class="dhead"><div><h2>' + esc(r.company) + '</h2><div class="sub"><span class="pill ' + (r.market === "nnv" ? "nnv" : "lv") + '">' + (r.market === "nnv" ? "Northern Nevada" : "Las Vegas") + '</span><span class="pill ' + st.k + '">' + esc(st.t) + '</span><span>' + esc(r.req_id) + '</span></div></div></div>' +
-    '<div class="kv" style="font-size:13px"><div style="padding:4px 0"><b>' + esc(r.legal_name) + '</b>' + (r.preferred_name ? " (goes by " + esc(r.preferred_name) + ")" : "") + '</div><div style="padding:4px 0">' + esc(r.request_type) + '</div><div style="padding:4px 0">' + esc(r.email || "") + ' &middot; ' + esc(r.mobile || "") + '</div>' + (r.client_account ? '<div style="padding:4px 0">For: ' + esc(r.client_account) + '</div>' : "") + (r.report_link ? '<div style="padding:4px 0"><a href="' + esc(r.report_link) + '" target="_blank" rel="noopener" style="color:var(--red);font-weight:700">Open the vendor-run report</a> (' + esc(r.report_name || "") + ')</div>' : "") + '<div style="padding:4px 0" class="mini">Received ' + esc(r.received) + ' via ' + esc(r.source) + (r.submitted_by ? " from " + esc(r.submitted_by) + " " + esc(r.submitter_email) : "") + '</div></div>' +
+    '<div class="kv" style="font-size:13px"><div style="padding:4px 0"><b>' + esc(r.legal_name) + '</b>' + (r.preferred_name ? " (goes by " + esc(r.preferred_name) + ")" : "") + '</div><div style="padding:4px 0">' + esc(r.request_type) + '</div>' + (spOf(r.client_account) || r.check_package ? '<div class="spbox">' + esc(r.check_package ? "Arroweye: " + r.check_package : spOf(r.client_account)) + '. Order this, not the standard check.</div>' : '') + '<div style="padding:4px 0">' + esc(r.email || "") + ' &middot; ' + esc(r.mobile || "") + '</div>' + (r.client_account ? '<div style="padding:4px 0">For: ' + esc(r.client_account) + '</div>' : "") + (r.report_link ? '<div style="padding:4px 0"><a href="' + esc(r.report_link) + '" target="_blank" rel="noopener" style="color:var(--red);font-weight:700">Open the vendor-run report</a> (' + esc(r.report_name || "") + ')</div>' : "") + '<div style="padding:4px 0" class="mini">Received ' + esc(r.received) + ' via ' + esc(r.source) + (r.submitted_by ? " from " + esc(r.submitted_by) + " " + esc(r.submitter_email) : "") + '</div></div>' +
     '<p style="font-size:13px;color:var(--grey);margin-top:12px">This company is not on the vendor directory' + (r.vendor_id ? "" : ", so the request is not attached to an onboarding record") + '. Attach it, or <a href="' + ADMIN.OPS + 'vendor-add.html" target="_blank" rel="noopener">add the vendor</a> first.</p>' +
     '<div class="field" style="margin-top:10px"><label>Attach to vendor</label><input id="ratt_v" list="vlist" placeholder="Type the vendor name..." autocomplete="off"></div><button class="btn sm solid" id="ratt_go" type="button" style="margin-top:8px">Attach</button></div><div class="aside"><h5>Notes on the request</h5><p style="font-size:12.5px">' + esc(r.notes || "none") + '</p></div></div>';
   document.getElementById("ratt_go").addEventListener("click", function(){
