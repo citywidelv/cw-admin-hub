@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Vendor Profile | CW Admin Hub</title>
-<!-- build 2026-10-15a (Service types card: checklist read from vd_types, pre-checked from the directory row, saved with adr_save; Import from the evaluation; service_types read only in Details). No backend change.
+<!-- build 2026-10-15b (jump nav stays on one row, scrolls sideways when narrow). 2026-10-15a (Service types card: checklist read from vd_types, pre-checked from the directory row, saved with adr_save; Import from the evaluation; service_types read only in Details). No backend change.
 Prior: build 2026-09-23d (status colour theme + status control in the head, tinted section heads, Activation checklist in two stages with the accounting hand-off banner; no new backend, same kinds).
 Build 2026-09-28c (status only: no do not email list, no FSM alert). 2026-09-28b double click guard. 2026-09-28a: "Email needs update" replaces Email bounced; clears only after the email changes.
 Prior: build 2026-09-23c (email bounced flag: directory columns email_status / email_note + do not email list, no new backend).
@@ -194,8 +194,9 @@ table.lst td a{color:var(--red);text-decoration:none;font-weight:700}
 .card#c_eval .chead,.card#c_resp .chead{border-left-color:var(--blue)}
 .card#c_notices .chead,.card#c_act .chead{border-left-color:var(--grey)}
 .card .cbody{padding:18px 20px 20px}
-.jump{gap:8px;padding:12px 0 10px}
-.jump a{font-size:12.5px;padding:8px 13px;min-height:38px}
+.jump{gap:6px;padding:12px 0 10px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.jump::-webkit-scrollbar{display:none}
+.jump a{font-size:12px;padding:8px 11px;min-height:38px;flex:none}
 .jump a.hot{background:var(--red);border-color:var(--red);color:#fff}
 .jump a.hot .n{background:#fff;color:var(--red)}
 .sec h4{font-size:12px;color:var(--black);background:var(--light);margin:0 -20px;padding:10px 20px;border-top:none}
