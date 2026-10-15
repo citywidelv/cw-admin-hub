@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Vendor Profile | CW Admin Hub</title>
-<!-- build 2026-09-23d (status colour theme + status control in the head, tinted section heads, Activation checklist in two stages with the accounting hand-off banner; no new backend, same kinds).
+<!-- build 2026-10-15a (Service types card: checklist read from vd_types, pre-checked from the directory row, saved with adr_save; Import from the evaluation; service_types read only in Details). No backend change.
+Prior: build 2026-09-23d (status colour theme + status control in the head, tinted section heads, Activation checklist in two stages with the accounting hand-off banner; no new backend, same kinds).
 Build 2026-09-28c (status only: no do not email list, no FSM alert). 2026-09-28b double click guard. 2026-09-28a: "Email needs update" replaces Email bounced; clears only after the email changes.
 Prior: build 2026-09-23c (email bounced flag: directory columns email_status / email_note + do not email list, no new backend).
 Prior: build 2026-09-23a (Contacts card + vendor self-service activity, VendorSelf.gs vs_admin_* kinds).
@@ -176,7 +177,7 @@ table.lst td a{color:var(--red);text-decoration:none;font-weight:700}
 .stbox .stsel::after{content:"";position:absolute;right:15px;top:18px;width:9px;height:9px;border-right:2.5px solid #fff;border-bottom:2.5px solid #fff;transform:rotate(45deg);pointer-events:none}
 .stbox .stx{font-size:12px;color:var(--grey);margin-top:7px;line-height:1.45}
 .stbox .stx b{color:var(--st-ink)}
-.stbox.busy{opacity:.6;pointer-events:none}
+.stbox.busy,#t_body.busy{opacity:.6;pointer-events:none}
 .phead .pills .pill{font-size:11px;padding:4px 11px}
 .phead .pill.stpill{background:var(--st);color:#fff}
 .facts label{font-size:11px}
@@ -202,6 +203,26 @@ table.lst td a{color:var(--red);text-decoration:none;font-weight:700}
 .f label{font-size:11.5px}
 .f .v{font-size:14px}
 .help{font-size:13px}
+/* ---- build 2026-10-15a: service types checklist ---- */
+.card#c_types .chead{border-left-color:var(--blue)}
+.tgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 18px;margin-top:10px}
+.tgrid .ti{display:flex;align-items:center;gap:12px;padding:7px 8px;border-radius:10px;cursor:pointer;border:1.5px solid transparent;min-height:46px}
+.tgrid .ti:hover{background:#fafafa;border-color:var(--border)}
+.tgrid .ti .lb{font-size:14px;font-weight:600;line-height:1.3}
+.tgrid .ti .lb small{display:block;font-size:11px;color:var(--grey);font-weight:400}
+.tgrid .ti.on .lb{color:var(--black)}
+.tgrid .ti.chg{background:var(--amber-bg);border-color:#f0d9a0}
+.tgrid .ti.gone .lb{color:var(--grey);text-decoration:line-through}
+.cb.on{background:var(--red);border-color:var(--red)}
+.cb.on::before{content:"\2713"}
+.tbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;padding:12px 14px;border-radius:12px;background:var(--amber-bg);border:1.5px solid #f0d9a0}
+.tbar b{font-size:13.5px;color:var(--amber)}
+.tbar .sp{flex:1}
+.tfrom{margin-top:14px;border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:12.5px;line-height:1.5}
+.tfrom b{color:var(--black)}
+.tfrom .raw{margin-top:6px;color:var(--grey)}
+@media(max-width:900px){.tgrid{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.tgrid{grid-template-columns:1fr}}
 /* activation checklist */
 .prog{display:flex;align-items:center;gap:14px;margin:4px 0 16px;flex-wrap:wrap}
 .prog .bar{flex:1;min-width:180px;height:14px;background:var(--light);border:1px solid var(--border);border-radius:8px;overflow:hidden}
@@ -297,6 +318,9 @@ table.lst td a{color:var(--red);text-decoration:none;font-weight:700}
 
 <nav class="jump" id="jump"></nav>
 
+<div class="card" id="c_types"><div class="chead"><span class="bar-accent"></span><h3>Service types</h3><div class="tools"><span class="mini" id="t_sub"></span><button class="btn sm" id="t_eval" type="button">Import from the evaluation</button></div></div>
+<div class="cbody" id="t_body"></div></div>
+
 <div class="card" id="c_onb"><div class="chead"><span class="bar-accent"></span><h3>Activation checklist</h3><div class="tools"><span class="mini" id="o_sub"></span></div></div>
 <div class="cbody" id="o_body"></div></div>
 
@@ -342,7 +366,7 @@ table.lst td a{color:var(--red);text-decoration:none;font-weight:700}
 var esc = ADMIN.esc, toast = ADMIN.toast, OPS = ADMIN.OPS, VS = ADMIN.VS;
 function $(id){ return document.getElementById(id); }
 var IDX_KEY = "vp:index", IDX_TTL = 15 * 60 * 1000;
-var S = { vid:"", core:null, more:null, idx:null, editing:false, busy:false, ddi:-1, hits:[] };
+var S = { vid:"", core:null, more:null, idx:null, editing:false, busy:false, ddi:-1, hits:[], types:null, tsel:null, typesErr:false };
 
 function who(){ return ($("who").value || ADMIN.who() || "").trim() || "unknown"; }
 function needWho(){ if(!who() || who() === "unknown"){ toast("Type your name in Editing as first, so the log knows who.", "err"); $("who").focus(); return false; } return true; }
@@ -406,12 +430,13 @@ document.addEventListener("click", function(e){ if(!e.target.closest(".srch")) $
 var PARTS = ["head", "onboarding", "crew", "more"];
 function open(vid){
   if(S.editing && !confirm("You have unsaved changes on Details. Leave without saving?")) return;
-  S.vid = vid; S.core = {}; S.more = null; S.self = null; S.editing = false; setUrl();
+  S.vid = vid; S.core = {}; S.more = null; S.self = null; S.editing = false; S.tsel = null; setUrl();
+  loadTypes();
   $("start").classList.add("hidden"); $("prof").classList.remove("hidden");
   $("phead").innerHTML = '<div class="skel" style="width:40%"></div><div class="skel" style="width:70%"></div>';
-  ["d_body","ct_body","o_body","b_body","e_body","k_body","a_body"].forEach(function(id){ $(id).innerHTML = '<div class="skel" style="width:60%"></div><div class="skel" style="width:35%"></div>'; });
+  ["d_body","t_body","ct_body","o_body","b_body","e_body","k_body","a_body"].forEach(function(id){ $(id).innerHTML = '<div class="skel" style="width:60%"></div><div class="skel" style="width:35%"></div>'; });
   $("r_body").innerHTML = '<div class="skel" style="width:60%"></div>'; $("n_body").innerHTML = '<div class="skel" style="width:50%"></div>';
-  ["d_sub","ct_sub","o_sub","b_sub","e_sub","r_sub","k_sub","n_sub","a_sub"].forEach(function(id){ $(id).textContent = ""; });
+  ["d_sub","t_sub","ct_sub","o_sub","b_sub","e_sub","r_sub","k_sub","n_sub","a_sub"].forEach(function(id){ $(id).textContent = ""; });
   $("jump").innerHTML = "";
   window.scrollTo({ top: 0 });
   PARTS.forEach(function(part){ loadPart(vid, part); });
@@ -429,9 +454,9 @@ function loadPart(vid, part){
     if(part === "more"){ S.more = r; renderMore(); return; }
     Object.keys(r).forEach(function(k){ if(k !== "ok" && k !== "part" && k !== "errors" && k !== "timing") S.core[k] = r[k]; });
     Object.keys(r.errors || {}).forEach(function(k){ toast("Could not load " + k + ": " + r.errors[k], "err"); });
-    if(part === "head"){ renderHead(); renderDetails(); renderOnboarding(); renderCrew(); renderEval(); renderActivity(); renderCompliance(); }
+    if(part === "head"){ renderHead(); renderDetails(); renderTypes(); renderOnboarding(); renderCrew(); renderEval(); renderActivity(); renderCompliance(); }
     if(part === "onboarding"){ renderOnboarding(); renderActivity(); renderCrew(); }
-    if(part === "crew"){ renderCrew(); renderEval(); renderActivity(); }
+    if(part === "crew"){ renderCrew(); renderEval(); renderTypes(); renderActivity(); }
     if(part !== "head") renderCompliance();
   }).catch(function(){ if(vid === S.vid){ if(part === "head") $("phead").innerHTML = '<div class="banner red">Could not reach the script. Try again.</div>'; else toast("Could not reach the script for " + part + ".", "err"); } });
 }
@@ -484,7 +509,7 @@ function renderHead(){
   if(flags.length) h += '<div class="flags">' + flags.join("") + '</div>';
   $("phead").innerHTML = h;
   document.title = s.dba_name + " | Vendor Profile";
-  var jumps = [["c_onb","Activation checklist"],["c_details","Details"],["c_contacts","Contacts"],["c_bc","Background checks"],["c_eval","Evaluation"],["c_resp","Interest letters"],["c_comp","Compliance"],["c_notices","Notices"],["c_act","Activity"]];
+  var jumps = [["c_types","Service types"],["c_onb","Activation checklist"],["c_details","Details"],["c_contacts","Contacts"],["c_bc","Background checks"],["c_eval","Evaluation"],["c_resp","Interest letters"],["c_comp","Compliance"],["c_notices","Notices"],["c_act","Activity"]];
   if(!$("jump").innerHTML) $("jump").innerHTML = jumps.map(function(j){ return '<a href="#' + j[0] + '" data-j="' + j[0] + '"' + (j[0] === "c_onb" ? ' class="hot"' : "") + '>' + j[1] + '<span class="n hidden"></span></a>'; }).join("");
   renderCompliance();
 }
@@ -529,6 +554,7 @@ function fieldHtml(f, v, editing){
   var wide = f.type === "long" || (v && String(v).length > 70);
   var cls = "f" + (wide ? " wide" : "") + (f.readonly ? " ro" : "");
   var lab = '<label>' + esc(f.label) + '</label>';
+  if(f.name === "service_types") return '<div class="' + cls + ' ro" data-f="service_types">' + lab + '<div class="v">' + viewValue(f, v) + ' <a href="#c_types" style="font-size:11.5px;white-space:nowrap">Change in Service types</a></div></div>';
   if(!editing || f.readonly) return '<div class="' + cls + '" data-f="' + esc(f.name) + '">' + lab + '<div class="v">' + viewValue(f, v) + '</div></div>';
   return '<div class="' + cls + '" data-f="' + esc(f.name) + '">' + lab + inputHtml(f, v) + '</div>';
 }
@@ -590,7 +616,7 @@ function readInput(el, f){ if(f.type === "bool") return el.checked ? "TRUE" : "F
 function collect(){
   var changes = {}, n = 0, r = rec();
   r.fields.forEach(function(f){
-    if(f.readonly) return;
+    if(f.readonly || f.name === "service_types") return;
     var el = $("d_body").querySelector('[name="' + f.name.replace(/"/g, '\\"') + '"]'); if(!el) return;
     var v = readInput(el, f), was = r.rec[f.name] == null ? "" : String(r.rec[f.name]);
     if(v === "" && was !== "" && /^(date|datetime|number)$/.test(f.type) && !el.dataset.cleared) return;
@@ -620,6 +646,85 @@ function saveDetails(){
 }
 $("d_body").addEventListener("click", function(e){ var b = e.target.closest("button[data-act]"); if(!b) return; var a = b.getAttribute("data-act"); if(a === "edit") startEdit(); else if(a === "cancel") cancelEdit(); else if(a === "save") saveDetails(); });
 $("d_edit").addEventListener("click", startEdit); $("d_cancel").addEventListener("click", cancelEdit); $("d_save").addEventListener("click", saveDetails);
+
+/* ---------- service types (vd_types list + adr_save on the directory row) ---------- */
+/* The master list comes from the Service Types tab through vd_types and is kept in
+   localStorage for 12 hours (it changes rarely). The vendor's slugs come from the
+   directory row, which the evaluation filled at intake. Checking and unchecking only
+   changes the page until Save, which writes one adr_save on service_types with the
+   same log and undo as every other directory edit. */
+var TYPES_KEY = "vp:types", TYPES_TTL = 12 * 60 * 60 * 1000, UNCLASS = "unclassified";
+function loadTypes(force){
+  try{ var c = JSON.parse(localStorage.getItem(TYPES_KEY) || "null"); if(c && !force && Date.now() - c.t < TYPES_TTL){ S.types = c.v; renderTypes(); return Promise.resolve(S.types); } }catch(e){}
+  return post({ kind:"vd_types" }).then(function(r){
+    if(!r || r.ok === false) throw new Error((r && r.error) || "no list");
+    S.types = (r.types || []).filter(function(t){ return t.slug; }).map(function(t){ return { slug:String(t.slug).toLowerCase(), name:t.name || t.slug, description:t.description || "" }; });
+    try{ localStorage.setItem(TYPES_KEY, JSON.stringify({ t:Date.now(), v:S.types })); }catch(e){}
+    renderTypes();
+  }).catch(function(){ S.types = S.types || null; S.typesErr = true; renderTypes(); });
+}
+function curSlugs(){ var r = rec(); return String((r && r.rec.service_types) || "").split(",").map(function(x){ return x.trim().toLowerCase(); }).filter(Boolean); }
+function evalSlugs(){ var it = S.core && S.core.intake, ev = it && it.eval; if(!ev) return null; var raw = ev.raw || {}; return String(ev.service_types || raw.service_types || "").split(",").map(function(x){ return x.trim().toLowerCase(); }).filter(Boolean); }
+function typeName(slug){ var t = (S.types || []).filter(function(x){ return x.slug === slug; })[0]; return t ? t.name : (slug === UNCLASS ? "Needs classification" : slug); }
+function renderTypes(){
+  if(!ready() || !rec()) return;
+  var r = rec(), cur = curSlugs(), sel = S.tsel || cur.slice(), types = S.types, h = "";
+  if(!types){ $("t_body").innerHTML = S.typesErr ? '<div class="banner red">The service type list could not be read. <button class="btn sm" type="button" id="t_retry">Try again</button></div>' : '<div class="skel" style="width:60%"></div><div class="skel" style="width:35%"></div>'; var rb = $("t_retry"); if(rb) rb.onclick = function(){ S.typesErr = false; loadTypes(true); }; return; }
+  var list = types.filter(function(t){ return t.slug !== UNCLASS; });
+  var known = {}; list.forEach(function(t){ known[t.slug] = 1; });
+  var extra = cur.filter(function(x){ return !known[x] && x !== UNCLASS; });
+  var dirty = sel.slice().sort().join(",") !== cur.slice().sort().join(",");
+  $("t_sub").textContent = sel.length ? sel.length + " checked" : "none checked";
+  h += '<p class="help"><b>Check everything this vendor does.</b> This is what the hubs read: which opportunity emails they get, which pickers list them, and whether they are on the janitorial track. Changes save to the directory row when you press Save.</p>';
+  h += '<div class="tgrid">' + list.map(function(t){ var on = sel.indexOf(t.slug) >= 0, was = cur.indexOf(t.slug) >= 0; return '<div class="ti' + (on ? " on" : "") + (on !== was ? " chg" : "") + '" data-slug="' + esc(t.slug) + '" role="checkbox" aria-checked="' + on + '" tabindex="0"><button class="cb' + (on ? " on" : "") + '" type="button" tabindex="-1" aria-hidden="true"></button><div class="lb">' + esc(t.name) + (t.description ? '<small>' + esc(t.description) + '</small>' : "") + '</div></div>'; }).join("") + '</div>';
+  if(extra.length) h += '<p class="help" style="margin-top:12px"><b>On the row but not on the list</b> (retired or misspelled types). Uncheck to drop them.</p><div class="tgrid">' + extra.map(function(x){ var on = sel.indexOf(x) >= 0; return '<div class="ti gone' + (on ? " on" : "") + (!on ? " chg" : "") + '" data-slug="' + esc(x) + '" role="checkbox" aria-checked="' + on + '" tabindex="0"><button class="cb' + (on ? " on" : "") + '" type="button" tabindex="-1" aria-hidden="true"></button><div class="lb">' + esc(x) + '</div></div>'; }).join("") + '</div>';
+  if(cur.indexOf(UNCLASS) >= 0 && !dirty) h += '<div class="banner" style="margin-top:12px">This vendor is filed as Needs classification. Check what they do and save; that label drops off on its own.</div>';
+  if(dirty) h += '<div class="tbar"><b>' + (sel.length ? "Not saved yet." : "Nothing checked. Saving files them as Needs classification.") + '</b><span class="sp"></span><button class="btn sm" type="button" data-t="cancel">Cancel</button><button class="btn sm solid" type="button" data-t="save">Save service types</button></div>';
+  var es = evalSlugs(), ev = S.core.intake && S.core.intake.eval, raw = (ev && ev.raw) || {};
+  if(ev){
+    var picked = String(raw.trade_raw || raw.services || "").split(/;|\n/).map(function(x){ return x.trim(); }).filter(Boolean);
+    h += '<div class="tfrom"><b>From the evaluation</b> submitted ' + esc(niceDate(ev.received)) + ': ' + (es && es.length ? esc(es.map(typeName).join(", ")) : '<span class="muted">no types recorded</span>') + (picked.length ? '<div class="raw">What the vendor picked, in their words: ' + esc(picked.join("; ")) + '</div>' : "") + '</div>';
+    $("t_eval").classList.toggle("hidden", !(es && es.length));
+  } else $("t_eval").classList.add("hidden");
+  $("t_body").innerHTML = h;
+}
+function setTypes(sel){ S.tsel = sel; renderTypes(); }
+$("t_body").addEventListener("click", function(e){
+  var b = e.target.closest("button[data-t]");
+  if(b){ if(b.getAttribute("data-t") === "cancel"){ S.tsel = null; renderTypes(); } else saveTypes(); return; }
+  var ti = e.target.closest(".ti[data-slug]"); if(!ti) return;
+  toggleType(ti.getAttribute("data-slug"));
+});
+$("t_body").addEventListener("keydown", function(e){ var ti = e.target.closest(".ti[data-slug]"); if(!ti || (e.key !== " " && e.key !== "Enter")) return; e.preventDefault(); toggleType(ti.getAttribute("data-slug")); });
+function toggleType(slug){
+  if(S.busy) return;
+  var sel = (S.tsel || curSlugs()).slice(), i = sel.indexOf(slug);
+  if(i >= 0) sel.splice(i, 1); else sel.push(slug);
+  sel = sel.filter(function(x){ return x !== UNCLASS; });
+  setTypes(sel);
+}
+$("t_eval").addEventListener("click", function(){ var es = evalSlugs(); if(!es || !es.length){ toast("No types on the evaluation to import.", "err"); return; } setTypes(es.filter(function(x){ return x !== UNCLASS; })); toast("Checked what the evaluation picked. Press Save to keep it."); });
+function saveTypes(){
+  if(S.busy) return;
+  var r = rec(); if(!r || !needWho()) return;
+  if(S.editing){ toast("Finish or cancel the Details edit first.", "err"); return; }
+  var sel = (S.tsel || curSlugs()).slice(), was = r.rec.service_types == null ? "" : String(r.rec.service_types);
+  var order = {}; (S.types || []).forEach(function(t, i){ order[t.slug] = i; });
+  sel.sort(function(a, b){ return (order[a] == null ? 999 : order[a]) - (order[b] == null ? 999 : order[b]); });
+  var next = sel.length ? sel.join(",") : UNCLASS;
+  if(next === was){ S.tsel = null; renderTypes(); toast("Nothing changed."); return; }
+  if(!sel.length && !confirm("Save with no service types? The vendor is filed as Needs classification and drops out of every service list until something is checked.")) return;
+  S.busy = true; $("t_body").classList.add("busy");
+  post({ kind:"adr_save", surface:r.surface, row:r.row, id:r.id, changes:{ service_types:{ old:was, "new":next } } }).then(function(x){
+    S.busy = false; $("t_body").classList.remove("busy");
+    if(!x || x.ok === false) throw new Error((x && x.error) || "Save failed");
+    if(x.stale && x.stale.length) throw new Error("Someone changed the service types on the Sheet since you opened this. Reloading.");
+    r.rec.service_types = next; S.tsel = null;
+    toast("Service types saved: " + (sel.length ? sel.map(typeName).join(", ") : "Needs classification"), "ok");
+    try{ sessionStorage.removeItem(IDX_KEY); S.idx = null; S.idxFresh = true; }catch(e){}
+    reloadCore("head");
+  }).catch(function(err){ S.busy = false; $("t_body").classList.remove("busy"); toast("Not saved: " + err.message, "err"); reloadCore("head"); });
+}
 
 /* ---------- onboarding (ob_*) ---------- */
 function docLabel(s){ return s === "fix" ? "Needs a fix" : s === "received" ? "Received" : s === "verified" ? "Verified" : ""; }
