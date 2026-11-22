@@ -555,10 +555,6 @@ var MENU = [
     "sub": "Site",
     "items": [
      {
-      "label": "Site Admin",
-      "href": "site-admin.html"
-     },
-     {
       "label": "Ops Admin Desk and Google Sheets",
       "href": "desk.html"
      }
@@ -568,7 +564,7 @@ var MENU = [
  }
 ];
 
-/* Site Admin (2026-09-13): nav.js publishes window.CW_NAV; the MENU above stays as the fallback. */
+/* nav.js sets window.CW_NAV; the MENU above stays as the fallback. Site Admin, which used to publish nav.js, was turned off 2026-11-22. */
 if(window.CWNav){ var __m = CWNav.menuFor("admin"); if(__m) MENU = __m; }
 
 function isExternal(href){ return /^https?:/.test(href) && href.indexOf("citywidelv.github.io") < 0; }
@@ -590,7 +586,7 @@ var FIND = {
   "Employee Uniform Request":"shirts apparel", "Office Inventory":"stock on hand", "Supplies Needed Reports":"building", "EnvirOx Orders":"chemical",
   "Order More EnvirOx":"chemical", "EnvirOx Catalog and Pricing":"chemical prices", "Opportunity Postings":"wall pay filled", "Vendor Responses":"wall quotes",
   "Post a New Opportunity":"wall", "Account FSM and CRM Upload":"building customer", "Account Directory":"customer building", "Team Roster":"staff employees fsm",
-  "ADP TotalSource":"payroll hr", "CW Sales CRM":"dynamics", "Jotform":"forms", "Site Admin":"menus lists switches", "Ops Admin Desk and Google Sheets":"sheet spreadsheet records",
+  "ADP TotalSource":"payroll hr", "CW Sales CRM":"dynamics", "Jotform":"forms", "Ops Admin Desk and Google Sheets":"sheet spreadsheet records",
   "Do Not Email or Remove":"block unsubscribe dne", "Add a Vendor of the Month":"goat plate", "Winners and Plates":"goat nominations vendor of the month",
   "Shop Codes and Certificates":"coupon", "Northern Nevada Directory":"reno vendors", "Las Vegas Directory":"vendors", "Add a Vendor":"new",
   "Reports and Targets":"power bi", "FSM and Director Reports":"power bi", "Sales Reports":"power bi", "Vendor Profile":"lookup record"

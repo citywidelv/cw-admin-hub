@@ -1,5 +1,5 @@
 /* nav.js for the Admin Hub. Seeded from the page menu on 2026-09-13 by Claude.
-   The Site Admin hub (cw-admin-hub/site-admin.html) republishes this file; do not edit by hand.
+   Site Admin was turned off 2026-11-22 at TJ's request. Nothing republishes this file any more. It is edited by hand, through Claude.
    The page keeps its own MENU as a fallback if this file is missing or malformed.
    Edited by hand 2026-11-21 (menus rebuilt by job: Vendors, Compliance, Orders and Supplies, Accounts and Postings, Team and Reports; every Ops Admin Desk tool now has a menu entry; the four hub links moved to the Other hubs button in the header; Account Changes still hidden): before the next Site Admin publish, click Import live menu. Earlier hand edits 2026-10-01 and 2026-09-25. */
 window.CW_NAV = {
@@ -490,10 +490,6 @@ window.CW_NAV = {
     {
      "sub": "Site",
      "items": [
-      {
-       "label": "Site Admin",
-       "href": "site-admin.html"
-      },
       {
        "label": "Ops Admin Desk and Google Sheets",
        "href": "desk.html"
