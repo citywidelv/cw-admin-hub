@@ -1,4 +1,4 @@
-/* CW Admin Hub shared script. Build 2026-10-01 (Vendor Recruiting queue: recruiting.html under Vendors). 2026-09-24 (Team & Admin rebuilt as side cascades, Uniform Orders page; group headings in any tall dropdown open to the side and every panel is kept on screen via CWNav.place). 2026-09-21 (Shop Codes & Certificates under Vendor of the Month). 2026-09-19b (Vendor Onboarding desk: onboarding.html; Asana onboarding boards and the Asana background check form retired from the menus). 2026-09-19 (Ops Admin Desk: desk.html, records.html, sheet.html under Team & Admin). 2026-09-13 (Site Admin: MENU below is the fallback, nav.js is live; cascade submenus; Vendor of the Month).
+/* CW Admin Hub shared script. Build 2026-11-21 (header and menu bar rebuilt on the Ops Hub pattern: one panel per menu with groups side by side, aria-expanded, a search box that finds every tool, an Other hubs button; menus regrouped by job; CWNav cascade helpers no longer used here). 2026-10-01 (Vendor Recruiting queue: recruiting.html under Vendors). 2026-09-24 (Team & Admin rebuilt as side cascades, Uniform Orders page; group headings in any tall dropdown open to the side and every panel is kept on screen via CWNav.place). 2026-09-21 (Shop Codes & Certificates under Vendor of the Month). 2026-09-19b (Vendor Onboarding desk: onboarding.html; Asana onboarding boards and the Asana background check form retired from the menus). 2026-09-19 (Ops Admin Desk: desk.html, records.html, sheet.html under Team & Admin). 2026-09-13 (Site Admin: MENU below is the fallback, nav.js is live; cascade submenus; Vendor of the Month).
    Gate, header, cascading nav, webhook helper, Asana project registry.
    Every page: <link admin.css> ... <div id="gate"> + <div id="app" class="hidden">, then
    this file, then ADMIN.init({page:'...'}). Data lives in Google Sheets through the
@@ -71,44 +71,353 @@ function esc(s){ return String(s == null ? "" : s).replace(/&/g,"&amp;").replace
 /* ---------- nav tree. Add a tool here and it shows on every Admin Hub page. ---------- */
 var MENU = [
  {
-  "label": "Background Checks",
+  "label": "Vendors",
+  "icon": "users",
+  "page": "vendors",
+  "items": [
+   {
+    "sub": "Find a vendor",
+    "items": [
+     {
+      "label": "Vendor Profile",
+      "href": "vendor-profile.html"
+     },
+     {
+      "label": "Vendor Activity",
+      "href": "vendor-activity.html"
+     },
+     {
+      "label": "Las Vegas Directory",
+      "href": "https://citywidelv.github.io/cw-ops-desk/vendors.html#/lv",
+      "tag": "Ops Hub"
+     },
+     {
+      "label": "Northern Nevada Directory",
+      "href": "https://citywidelv.github.io/cw-ops-desk/vendors.html#/nnv",
+      "tag": "Ops Hub"
+     },
+     {
+      "label": "Edit a Las Vegas Vendor Record",
+      "href": "records.html?s=vendors_lv"
+     },
+     {
+      "label": "Edit a Northern Nevada Vendor Record",
+      "href": "records.html?s=vendors_nnv"
+     }
+    ]
+   },
+   {
+    "sub": "Bring on a vendor",
+    "items": [
+     {
+      "label": "Vendor Recruiting",
+      "href": "recruiting.html"
+     },
+     {
+      "label": "Invite for Las Vegas",
+      "href": "https://citywidelv.github.io/cw-ops-desk/vendor-invite.html?region=lv",
+      "tag": "Ops Hub"
+     },
+     {
+      "label": "Invite for Northern Nevada",
+      "href": "https://citywidelv.github.io/cw-ops-desk/vendor-invite.html?region=nnv",
+      "tag": "Ops Hub"
+     },
+     {
+      "label": "Onboarding Desk",
+      "href": "onboarding.html"
+     },
+     {
+      "label": "Start Onboarding",
+      "href": "onboarding.html#start"
+     },
+     {
+      "label": "Add a Vendor",
+      "href": "https://citywidelv.github.io/cw-ops-desk/vendor-add.html",
+      "tag": "Ops Hub"
+     },
+     {
+      "label": "New Vendor Steps",
+      "href": "https://citywidelv.github.io/cw-vendor-hub/new-vendors.html",
+      "tag": "Vendor Hub"
+     }
+    ]
+   },
+   {
+    "sub": "Email and removal",
+    "items": [
+     {
+      "label": "Vendor Email",
+      "href": "https://citywidelv.github.io/cw-ops-desk/vendor-email.html?from=admin",
+      "tag": "Ops Hub"
+     },
+     {
+      "label": "Do Not Email or Remove",
+      "href": "https://citywidelv.github.io/cw-ops-desk/vendor-dne.html?from=admin",
+      "tag": "Ops Hub"
+     }
+    ]
+   },
+   {
+    "sub": "Vendor of the Month",
+    "items": [
+     {
+      "label": "Add a Vendor of the Month",
+      "href": "recognition.html#add"
+     },
+     {
+      "label": "Winners and Plates",
+      "href": "recognition.html"
+     },
+     {
+      "label": "Shop Codes and Certificates",
+      "href": "recognition.html#coupons"
+     },
+     {
+      "label": "Nominate",
+      "href": "https://citywidelv.github.io/cw-ops-desk/nominate.html",
+      "tag": "Ops Hub"
+     },
+     {
+      "label": "The Wall",
+      "href": "https://citywidelv.github.io/cw-vendor-hub/#recognition",
+      "tag": "Vendor Hub"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "label": "Compliance",
   "icon": "shield",
   "page": "bc",
   "items": [
    {
-    "label": "Review and Record Results",
-    "href": "background-checks.html",
-    "tag": "Hub"
+    "sub": "Background checks",
+    "items": [
+     {
+      "label": "Review and Record Results",
+      "href": "background-checks.html"
+     },
+     {
+      "label": "Add a Person",
+      "href": "background-checks.html#add"
+     },
+     {
+      "label": "Background Check Requests",
+      "href": "onboarding.html#bc"
+     },
+     {
+      "label": "Send Vendor Notices",
+      "href": "https://citywidelv.github.io/cw-ops-desk/bc-notices.html",
+      "tag": "Ops Hub"
+     },
+     {
+      "label": "Vendor Request Page",
+      "href": "https://citywidelv.github.io/cw-vendor-hub/background-check.html",
+      "tag": "Vendor Hub"
+     },
+     {
+      "label": "Background Checks Sheet",
+      "href": "https://docs.google.com/spreadsheets/d/1a_Usbs1FIzaZPnbUpc8vqFg2XV2_QjTAKtqVNPxBPh8/edit",
+      "tag": "Sheet"
+     },
+     {
+      "label": "Verified First",
+      "href": "https://portal.verifiedfirst.com/#/dashboard",
+      "tag": "Site"
+     }
+    ]
    },
    {
-    "label": "Add a Person",
-    "href": "background-checks.html#add",
-    "tag": "Hub"
+    "sub": "Customer COIs",
+    "items": [
+     {
+      "label": "Request Log and Status",
+      "href": "coi-log.html"
+     },
+     {
+      "label": "New COI Request",
+      "href": "https://citywidelv.github.io/cw-ops-desk/coi-request.html",
+      "tag": "Ops Hub"
+     },
+     {
+      "label": "COI Requests Sheet",
+      "href": "https://docs.google.com/spreadsheets/d/10orOD2OQGgq9GxJldMNJNKKGmy1fU6uhe4SmCLTDGLg/edit",
+      "tag": "Sheet"
+     },
+     {
+      "label": "InsurLink",
+      "href": "https://insurlink.vertafore.com/end-insured/2260313c6a34459c8a098ede23d21fb7/2094911/overview",
+      "tag": "Site"
+     }
+    ]
    },
    {
-    "label": "Background Check Requests",
-    "href": "onboarding.html#bc",
-    "tag": "Hub"
+    "sub": "Vendor insurance",
+    "items": [
+     {
+      "label": "Vendor COIs Coming In",
+      "href": "https://citywidelv.github.io/cw-ops-desk/insurance.html",
+      "tag": "Ops Hub"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "label": "Orders and Supplies",
+  "icon": "work",
+  "page": "orders",
+  "items": [
+   {
+    "sub": "Uniforms",
+    "items": [
+     {
+      "label": "Uniform Orders",
+      "href": "uniform-orders.html"
+     },
+     {
+      "label": "Vendor Shop Orders",
+      "href": "records.html?s=shop"
+     },
+     {
+      "label": "Employee Uniform Request",
+      "href": "https://citywidelv.github.io/cw-ops-desk/uniforms.html",
+      "tag": "Ops Hub"
+     },
+     {
+      "label": "Office Inventory",
+      "href": "https://citywidelv.github.io/cw-ops-desk/inventory-onhand.html",
+      "tag": "Ops Hub"
+     }
+    ]
    },
    {
-    "label": "Send Vendor Notices",
-    "href": "https://citywidelv.github.io/cw-ops-desk/bc-notices.html",
-    "tag": "Ops Hub"
+    "sub": "Supplies",
+    "items": [
+     {
+      "label": "Supplies Needed Reports",
+      "href": "records.html?s=supplies"
+     },
+     {
+      "label": "EnvirOx Orders",
+      "href": "records.html?s=envirox"
+     },
+     {
+      "label": "Order More EnvirOx",
+      "href": "https://citywidelv.github.io/cw-ops-desk/envirox.html",
+      "tag": "Ops Hub"
+     }
+    ]
    },
    {
-    "label": "Vendor Request Page",
-    "href": "https://citywidelv.github.io/cw-vendor-hub/background-check.html",
-    "tag": "Vendor Hub"
+    "sub": "Prices and catalogs",
+    "items": [
+     {
+      "label": "Vendor Shop Catalog and Prices",
+      "href": "sheet.html?b=shop",
+      "tag": "Sheet"
+     },
+     {
+      "label": "EnvirOx Catalog and Pricing",
+      "href": "sheet.html?b=supply",
+      "tag": "Sheet"
+     },
+     {
+      "label": "Building Supplies List",
+      "href": "https://citywidelv.github.io/cw-vendor-hub/building-supplies.html",
+      "tag": "Vendor Hub"
+     }
+    ]
    },
    {
-    "label": "Background Checks",
-    "href": "https://docs.google.com/spreadsheets/d/1a_Usbs1FIzaZPnbUpc8vqFg2XV2_QjTAKtqVNPxBPh8/edit",
-    "tag": "Sheet"
+    "sub": "Suppliers",
+    "items": [
+     {
+      "label": "Brady Industries",
+      "href": "https://www.bradyindustries.com/",
+      "tag": "Site"
+     },
+     {
+      "label": "Staples Advantage",
+      "href": "https://www.staplesadvantage.com/",
+      "tag": "Site"
+     },
+     {
+      "label": "HD Supply Solutions",
+      "href": "https://hdsupplysolutions.com/",
+      "tag": "Site"
+     },
+     {
+      "label": "Amazon Business",
+      "href": "https://www.amazon.com/business",
+      "tag": "Site"
+     },
+     {
+      "label": "City Wide Company Store",
+      "href": "https://shopcitywide.mybrightsites.com/",
+      "tag": "Site"
+     },
+     {
+      "label": "Order CW Merch",
+      "href": "https://cwlv.printful.me/",
+      "tag": "Site"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "label": "Accounts and Postings",
+  "icon": "board",
+  "page": "accounts",
+  "items": [
+   {
+    "sub": "Opportunity wall",
+    "items": [
+     {
+      "label": "Opportunity Postings",
+      "href": "records.html?s=postings"
+     },
+     {
+      "label": "Vendor Responses",
+      "href": "records.html?s=responses"
+     },
+     {
+      "label": "Post a New Opportunity",
+      "href": "https://citywidelv.github.io/cw-ops-desk/post.html",
+      "tag": "Ops Hub"
+     }
+    ]
    },
    {
-    "label": "Verified First",
-    "href": "https://portal.verifiedfirst.com/#/dashboard",
-    "tag": "Site"
+    "sub": "Accounts",
+    "items": [
+     {
+      "label": "Account FSM and CRM Upload",
+      "href": "account-fsm.html"
+     },
+     {
+      "label": "Account Directory",
+      "href": "accounts.html"
+     }
+    ]
+   },
+   {
+    "sub": "Exhibit A",
+    "items": [
+     {
+      "label": "Create an Exhibit A",
+      "href": "https://citywidelv.github.io/cw-ops-desk/create-exhibit-a.html",
+      "tag": "Ops Hub"
+     },
+     {
+      "label": "Exhibit A Requests",
+      "href": "https://app.asana.com/1/13140959242873/project/1211502025570262",
+      "tag": "Asana"
+     }
+    ]
    }
   ]
  },
@@ -162,333 +471,96 @@ var MENU = [
   ]
  },
  {
-  "label": "COI Requests",
-  "icon": "sheet",
-  "page": "coi",
-  "items": [
-   {
-    "label": "Request Log and Status",
-    "href": "coi-log.html",
-    "tag": "Hub"
-   },
-   {
-    "label": "New COI Request",
-    "href": "https://citywidelv.github.io/cw-ops-desk/coi-request.html",
-    "tag": "Ops Hub"
-   },
-   {
-    "label": "Vendor COIs Coming In",
-    "href": "https://citywidelv.github.io/cw-ops-desk/insurance.html",
-    "tag": "Ops Hub"
-   },
-   {
-    "label": "COI Requests",
-    "href": "https://docs.google.com/spreadsheets/d/10orOD2OQGgq9GxJldMNJNKKGmy1fU6uhe4SmCLTDGLg/edit",
-    "tag": "Sheet"
-   },
-   {
-    "label": "InsurLink",
-    "href": "https://insurlink.vertafore.com/end-insured/2260313c6a34459c8a098ede23d21fb7/2094911/overview",
-    "tag": "Site"
-   }
-  ]
- },
- {
-  "label": "Vendors",
-  "icon": "clip",
-  "page": "vendors",
-  "items": [
-   {
-    "label": "Vendor Profile",
-    "href": "vendor-profile.html",
-    "tag": "Hub"
-   },
-   {
-    "label": "Vendor Activity",
-    "href": "vendor-activity.html",
-    "tag": "Hub"
-   },
-   {
-    "label": "Vendor Recruiting",
-    "href": "recruiting.html",
-    "tag": "Hub"
-   },
-   {
-    "label": "Vendor Email",
-    "href": "https://citywidelv.github.io/cw-ops-desk/vendor-email.html?from=admin",
-    "tag": "Ops Hub"
-   },
-   {
-    "sub": "Onboarding",
-    "items": [
-     {
-      "label": "Onboarding Desk",
-      "href": "onboarding.html",
-      "tag": "Hub"
-     },
-     {
-      "label": "Start Onboarding",
-      "href": "onboarding.html#start",
-      "tag": "Hub"
-     },
-     {
-      "label": "Old Asana Boards",
-      "href": "asana.html",
-      "tag": "Hub"
-     }
-    ]
-   },
-   {
-    "sub": "New Vendors",
-    "items": [
-     {
-      "label": "Invite for Las Vegas",
-      "href": "https://citywidelv.github.io/cw-ops-desk/vendor-invite.html?region=lv",
-      "tag": "Ops Hub"
-     },
-     {
-      "label": "Invite for Northern Nevada",
-      "href": "https://citywidelv.github.io/cw-ops-desk/vendor-invite.html?region=nnv",
-      "tag": "Ops Hub"
-     },
-     {
-      "label": "New Vendor Steps",
-      "href": "https://citywidelv.github.io/cw-vendor-hub/new-vendors.html",
-      "tag": "Vendor Hub"
-     }
-    ]
-   },
-   {
-    "sub": "Vendor of the Month",
-    "items": [
-     {
-      "label": "Add a Vendor of the Month",
-      "href": "recognition.html#add",
-      "tag": "Hub"
-     },
-     {
-      "label": "Winners and Plates",
-      "href": "recognition.html",
-      "tag": "Hub"
-     },
-     {
-      "label": "Shop Codes and Certificates",
-      "href": "recognition.html#coupons",
-      "tag": "Hub"
-     },
-     {
-      "label": "Nominate",
-      "href": "https://citywidelv.github.io/cw-ops-desk/nominate.html",
-      "tag": "Ops Hub"
-     },
-     {
-      "label": "The Wall",
-      "href": "https://citywidelv.github.io/cw-vendor-hub/#recognition",
-      "tag": "Vendor Hub"
-     }
-    ]
-   },
-   {
-    "sub": "Directory",
-    "items": [
-     {
-      "label": "Edit a Vendor Record",
-      "href": "records.html?s=vendors_lv",
-      "tag": "Hub"
-     },
-     {
-      "label": "Add a Vendor",
-      "href": "https://citywidelv.github.io/cw-ops-desk/vendor-add.html",
-      "tag": "Ops Hub"
-     },
-     {
-      "label": "Do Not Email or Remove",
-      "href": "https://citywidelv.github.io/cw-ops-desk/vendor-dne.html?from=admin",
-      "tag": "Ops Hub"
-     },
-     {
-      "label": "Las Vegas",
-      "href": "https://citywidelv.github.io/cw-ops-desk/vendors.html#/lv",
-      "tag": "Ops Hub"
-     },
-     {
-      "label": "Northern Nevada",
-      "href": "https://citywidelv.github.io/cw-ops-desk/vendors.html#/nnv",
-      "tag": "Ops Hub"
-     }
-    ]
-   }
-  ]
- },
- {
-  "label": "Asana Boards",
-  "icon": "asana",
-  "page": "asana",
-  "items": [
-   {
-    "label": "All Boards, Live",
-    "href": "asana.html",
-    "tag": "Hub"
-   },
-   {
-    "label": "Business Ops Team",
-    "href": "https://app.asana.com/0/1211434492126259/overview",
-    "tag": "Asana"
-   },
-   {
-    "label": "Exhibit A Requests",
-    "href": "https://app.asana.com/1/13140959242873/project/1211502025570262",
-    "tag": "Asana"
-   },
-   {
-    "label": "Create an Exhibit A",
-    "href": "https://citywidelv.github.io/cw-ops-desk/create-exhibit-a.html",
-    "tag": "Ops Hub"
-   },
-   {
-    "label": "Office Management",
-    "href": "https://app.asana.com/1/13140959242873/project/1211522761691094",
-    "tag": "Asana"
-   }
-  ]
- },
- {
-  "label": "Team & Admin",
+  "label": "Team and Reports",
   "icon": "home",
   "page": "emails",
   "items": [
    {
-    "label": "Uniform Orders",
-    "href": "uniform-orders.html",
-    "tag": "Hub"
-   },
-   {
-    "label": "Ops Admin Desk",
-    "href": "desk.html",
-    "tag": "Hub"
-   },
-   {
-    "label": "Account FSM",
-    "href": "account-fsm.html",
-    "tag": "Hub"
-   },
-   {
-    "label": "Team Emails by Position",
-    "href": "team-emails.html",
-    "tag": "Hub"
-   },
-   {
-    "label": "Site Admin",
-    "href": "site-admin.html",
-    "tag": "Hub"
+    "sub": "Team",
+    "items": [
+     {
+      "label": "Team Roster",
+      "href": "records.html?s=staff"
+     },
+     {
+      "label": "Team Emails by Position",
+      "href": "team-emails.html"
+     },
+     {
+      "label": "Office Management Board",
+      "href": "https://app.asana.com/1/13140959242873/project/1211522761691094",
+      "tag": "Asana"
+     },
+     {
+      "label": "Business Ops Team",
+      "href": "https://app.asana.com/0/1211434492126259/overview",
+      "tag": "Asana"
+     },
+     {
+      "label": "All Asana Boards",
+      "href": "asana.html"
+     }
+    ]
    },
    {
     "sub": "Power BI",
     "items": [
      {
       "label": "Reports and Targets",
-      "href": "powerbi.html",
-      "tag": "Hub"
+      "href": "powerbi.html"
      },
      {
-      "label": "FSM and Director",
+      "label": "FSM and Director Reports",
       "href": "https://citywidelv.github.io/cw-ops-desk/powerbi.html",
       "tag": "Ops Hub"
      },
      {
-      "label": "Sales",
+      "label": "Sales Reports",
       "href": "https://citywidelv.github.io/sales-hub/powerbi.html",
       "tag": "Sales Hub"
      }
     ]
    },
    {
-    "sub": "Hubs",
-    "items": [
-     {
-      "label": "Nevada Team Portal",
-      "href": "https://citywidelv.github.io/"
-     },
-     {
-      "label": "Ops Hub",
-      "href": "https://citywidelv.github.io/cw-ops-desk/"
-     },
-     {
-      "label": "Vendor Hub",
-      "href": "https://citywidelv.github.io/cw-vendor-hub/"
-     },
-     {
-      "label": "Sales Hub",
-      "href": "https://citywidelv.github.io/sales-hub/"
-     }
-    ]
-   },
-   {
-    "sub": "HR and Systems",
+    "sub": "Systems",
     "items": [
      {
       "label": "ADP TotalSource",
-      "href": "https://workforcenow.adp.com/"
+      "href": "https://workforcenow.adp.com/",
+      "tag": "Site"
      },
      {
       "label": "CW Sales CRM",
-      "href": "https://gocitywide.crm.dynamics.com/main.aspx"
+      "href": "https://gocitywide.crm.dynamics.com/main.aspx",
+      "tag": "Site"
      },
-     {
-      "label": "Employee Uniforms",
-      "href": "https://citywidelv.github.io/cw-ops-desk/uniforms.html",
-      "tag": "Ops Hub"
-     },
-     {
-      "label": "Order CW Merch",
-      "href": "https://cwlv.printful.me/"
-     }
-    ]
-   },
-   {
-    "sub": "Team Apps",
-    "items": [
      {
       "label": "Microsoft Bookings",
-      "href": "https://bookings.cloud.microsoft/bookings/homepage"
+      "href": "https://bookings.cloud.microsoft/bookings/homepage",
+      "tag": "Site"
      },
      {
       "label": "Slack",
-      "href": "https://slack.com/signin"
+      "href": "https://slack.com/signin",
+      "tag": "Site"
      },
      {
       "label": "Jotform",
-      "href": "https://www.jotform.com/myforms/"
+      "href": "https://www.jotform.com/myforms/",
+      "tag": "Site"
      }
     ]
    },
    {
-    "sub": "Ordering",
+    "sub": "Site",
     "items": [
      {
-      "label": "Order More EnvirOx",
-      "href": "https://citywidelv.github.io/cw-ops-desk/envirox.html",
-      "tag": "Ops Hub"
+      "label": "Site Admin",
+      "href": "site-admin.html"
      },
      {
-      "label": "Brady Industries",
-      "href": "https://www.bradyindustries.com/"
-     },
-     {
-      "label": "Staples Advantage",
-      "href": "https://www.staplesadvantage.com/"
-     },
-     {
-      "label": "HD Supply Solutions",
-      "href": "https://hdsupplysolutions.com/"
-     },
-     {
-      "label": "Amazon Business",
-      "href": "https://www.amazon.com/business"
-     },
-     {
-      "label": "City Wide Company Store",
-      "href": "https://shopcitywide.mybrightsites.com/"
+      "label": "Ops Admin Desk and Google Sheets",
+      "href": "desk.html"
      }
     ]
    }
@@ -500,90 +572,183 @@ var MENU = [
 if(window.CWNav){ var __m = CWNav.menuFor("admin"); if(__m) MENU = __m; }
 
 function isExternal(href){ return /^https?:/.test(href) && href.indexOf("citywidelv.github.io") < 0; }
+
+/* Nov 21 2026: the header and menu bar follow the Ops Hub. Each menu opens as one panel with
+   its groups side by side, so every tool is named and one click away. The menu buttons say
+   open or closed (aria-expanded), Escape closes and returns focus, and a search box in the
+   header finds any tool by name ("/" jumps to it). The menu data contract is unchanged:
+   MENU and nav.js CW_NAV keep the shape TOP > { sub, items } | { ghead } | LEAF. */
+var SALES = "https://citywidelv.github.io/sales-hub/";
+var HUBS = [["Nevada Team Portal", PORTAL], ["Ops Hub", OPS], ["Sales Hub", SALES], ["Vendor Hub", VS]];
+ICONS.chev = '<path d="M6 9l6 6 6-6"/>';
+/* Extra words people type that are not in a tool's name. Keyed by the menu label. */
+var FIND = {
+  "Review and Record Results":"background check bg clear", "Add a Person":"background check bg crew", "Background Check Requests":"bg badge",
+  "Send Vendor Notices":"background check bg", "Vendor Request Page":"background check bg badge", "Verified First":"background check bg",
+  "Request Log and Status":"coi certificate insurance", "New COI Request":"certificate insurance", "InsurLink":"coi certificate insurance usi",
+  "Vendor COIs Coming In":"certificate insurance", "Uniform Orders":"bennett apparel shirts", "Vendor Shop Orders":"apparel uniform picked up",
+  "Employee Uniform Request":"shirts apparel", "Office Inventory":"stock on hand", "Supplies Needed Reports":"building", "EnvirOx Orders":"chemical",
+  "Order More EnvirOx":"chemical", "EnvirOx Catalog and Pricing":"chemical prices", "Opportunity Postings":"wall pay filled", "Vendor Responses":"wall quotes",
+  "Post a New Opportunity":"wall", "Account FSM and CRM Upload":"building customer", "Account Directory":"customer building", "Team Roster":"staff employees fsm",
+  "ADP TotalSource":"payroll hr", "CW Sales CRM":"dynamics", "Jotform":"forms", "Site Admin":"menus lists switches", "Ops Admin Desk and Google Sheets":"sheet spreadsheet records",
+  "Do Not Email or Remove":"block unsubscribe dne", "Add a Vendor of the Month":"goat plate", "Winners and Plates":"goat nominations vendor of the month",
+  "Shop Codes and Certificates":"coupon", "Northern Nevada Directory":"reno vendors", "Las Vegas Directory":"vendors", "Add a Vendor":"new",
+  "Reports and Targets":"power bi", "FSM and Director Reports":"power bi", "Sales Reports":"power bi", "Vendor Profile":"lookup record"
+};
+function navLeaves(list){
+  var out = [];
+  (list || []).forEach(function(it){
+    if(!it || it.hidden || it.ghead) return;
+    if(it.sub || it.items) out = out.concat(navLeaves(it.items));
+    else if(it.href) out.push(it);
+  });
+  return out;
+}
+function menuGroups(m){
+  var groups = [], loose = { title: m.label, items: [] }, cur = null;
+  (m.items || []).forEach(function(it){
+    if(!it || it.hidden) return;
+    if(it.ghead){ cur = { title: it.ghead, items: [] }; groups.push(cur); }
+    else if(it.sub || it.items){ groups.push({ title: it.sub || it.label, items: navLeaves(it.items) }); cur = null; }
+    else if(it.href){ (cur || loose).items.push(it); }
+  });
+  if(loose.items.length) groups.unshift(loose);
+  return groups.filter(function(g){ return g.items.length; });
+}
 function menuLink(it){
   var tgt = isExternal(it.href) ? ' target="_blank" rel="noopener"' : '';
   return '<a href="' + esc(it.href) + '"' + tgt + '>' + esc(it.label) + (it.tag ? '<span class="tag">' + esc(it.tag) + '</span>' : '') + '</a>';
 }
-function menuItems(list, depth){
-  var out = "";
-  depth = depth || 0;
-  list.forEach(function(it){
-    if(it.ghead) out += '<div class="ghead">' + esc(it.ghead) + '</div>';
-    else if(it.sub) out += '<div class="nsub"><a class="subbtn" href="#">' + esc(it.sub) + '</a><div class="nsubmenu">' + menuItems(it.items, depth + 1) + '</div></div>';
-    else out += menuLink(it);
-  });
-  return out;
+/* Which menu holds the page that is open. A full match (file and ?s= or ?b=) beats a file match. */
+function hereScore(href){
+  if(!href || /^https?:/.test(href)) return 0;
+  var file = location.pathname.split("/").pop() || "index.html";
+  var parts = href.split("#")[0].split("?");
+  if((parts[0] || "index.html") !== file) return 0;
+  return (parts[1] && location.search === "?" + parts[1]) ? 2 : 1;
 }
+var SEARCH_INDEX = [], SEARCH_SEL = -1;
 function renderHeader(page){
   var h = document.getElementById("adminhead");
   if(!h) return;
-  var nav = "";
+  var row = '<a class="nbtn' + (page === "home" ? ' here' : '') + '" href="index.html">Home</a>', panels = "";
+  var best = -1, bestScore = 0;
+  SEARCH_INDEX = [];
   MENU.forEach(function(m, mi){
-    if(m.hidden) return;                       // hidden:true hides a whole menu without deleting it
-    var here = !!page && m.page === page;
-    /* Sep 24 2026: a tall dropdown lists its section names and each section opens to the
-       side, so nothing runs off the bottom of the screen. Short menus keep inline headings. */
-    var tree = (window.CWNav && CWNav.cascadeGroups && !m.flat) ? CWNav.cascadeGroups(m.items) : m.items;
-    var items = menuItems(tree, 0);
-    nav += '<div class="nitem"><button class="nbtn' + (here ? ' here' : '') + '" data-dd="' + mi + '">' + icon(m.icon, 14) + esc(m.label) +
-      ' <span class="caret">&#9660;</span></button><div class="nmenu" id="dd-' + mi + '">' + items + '</div></div>';
+    if(!m || m.hidden) return;                       // hidden:true hides a whole menu without deleting it
+    var groups = menuGroups(m);
+    if(!groups.length) return;
+    groups.forEach(function(g){
+      g.items.forEach(function(x){
+        var s = hereScore(x.href);
+        if(s > bestScore){ bestScore = s; best = mi; }
+        SEARCH_INDEX.push({ label:x.label, href:x.href, path:m.label + ", " + g.title,
+          hay:(x.label + " " + g.title + " " + m.label + " " + (x.tag || "") + " " + (FIND[x.label] || "")).toLowerCase() });
+      });
+    });
+    row += '<button class="nbtn" type="button" aria-expanded="false" aria-controls="dd-' + mi + '" data-dd="' + mi + '">' + esc(m.label) + icon("chev", 12) + '</button>';
+    panels += '<div class="npanel" id="dd-' + mi + '" hidden><div class="npin">' + groups.map(function(g){
+      return '<div><h3>' + esc(g.title) + '</h3>' + g.items.map(menuLink).join("") + '</div>';
+    }).join("") + '</div></div>';
   });
+  HUBS.forEach(function(x){ SEARCH_INDEX.push({ label:x[0], href:x[1], path:"Other hubs", hay:(x[0] + " hub").toLowerCase() }); });
   h.innerHTML =
-    '<div class="bar"><a href="index.html" style="display:flex;align-items:center"><img src="' + LOGO + '" alt="City Wide Facility Solutions"></a>' +
-    '<span class="t"><b>Admin</b> Hub</span><span class="sp"></span>' +
-    '<span class="badge">Business Operations</span>' +
-    '<a class="out" href="index.html">Hub home</a>' +
-    '<a class="out" href="' + PORTAL + '">&larr; Team Portal</a>' +
+    '<div class="bar"><a class="logo" href="index.html"><img src="' + LOGO + '" alt="City Wide Facility Solutions, Admin Hub home"></a>' +
+    '<span class="t">Admin Hub</span>' +
+    '<div class="hsearch" role="search"><label class="sr" for="admsearch">Find an Admin Hub tool</label>' + icon("search", 16) +
+      '<input id="admsearch" type="search" placeholder="Find a tool or a page" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="admresults" aria-autocomplete="list">' +
+      '<button class="x" id="admsearchx" type="button" aria-label="Clear search">' + icon("x", 14) + '</button><kbd aria-hidden="true">/</kbd>' +
+      '<div class="spanel" id="admsearchzone" hidden><div id="admresults" role="listbox" aria-label="Search results"></div>' +
+      '<div class="noresults" id="admnores" hidden><b>No tool matches that.</b>Try one word, like uniform, COI, roster or postings.</div></div></div>' +
+    '<div class="hubsw"><button class="out" id="hubsbtn" type="button" aria-expanded="false" aria-controls="hubsmenu" aria-label="Other hubs"><span class="hw">Other hubs</span><span class="hn">Hubs</span>' + icon("chev", 12) + '</button>' +
+      '<div class="hubsmenu" id="hubsmenu" hidden>' + HUBS.map(function(x){ return '<a href="' + esc(x[1]) + '">' + esc(x[0]) + '</a>'; }).join("") + '</div></div>' +
     '<a class="out" id="adminsignout" href="#">Sign out</a></div>' +
-    '<nav class="mainnav"><div class="nav-in" id="mainnav"><a class="nbtn" href="index.html">' + icon("board", 14) + 'Home</a>' + nav + '</div></nav>';
-  var host = document.getElementById("mainnav");
-  if(window.CWNav && CWNav.bind) CWNav.bind(host);   // keeps every open panel on screen (flip left, shift up, scroll)
-  host.onclick = function(e){
+    '<nav class="mainnav" aria-label="Admin Hub menu"><div class="nav-in" id="mainnav">' + row + '</div><span class="navfade" aria-hidden="true"></span><div id="navpanels">' + panels + '</div></nav>';
+  if(best >= 0 && page !== "home"){ var hb = h.querySelector('.nbtn[data-dd="' + best + '"]'); if(hb) hb.classList.add("here"); }
+
+  document.getElementById("mainnav").onclick = function(e){
     var btn = e.target.closest ? e.target.closest(".nbtn[data-dd]") : null;
     if(!btn) return;
-    var dd = document.getElementById("dd-" + btn.getAttribute("data-dd"));
-    var wasOpen = dd.classList.contains("show");
+    var was = btn.getAttribute("aria-expanded") === "true";
     closeMenus();
-    if(!wasOpen){
-      dd.classList.add("show"); btn.classList.add("open");
-      if(window.matchMedia && matchMedia("(max-width:820px)").matches){
-        /* phones: move the open menu onto <body> (WebKit clips position:fixed inside a scrolling nav bar) */
-        var r = btn.getBoundingClientRect(); dd.style.top = Math.round(r.bottom + 6) + "px";
-        if(!dd._home) dd._home = dd.parentElement;
-        document.body.appendChild(dd); dd.classList.add("portal");
-      } else dd.style.top = "";
-    }
+    if(!was){ btn.setAttribute("aria-expanded", "true"); document.getElementById("dd-" + btn.getAttribute("data-dd")).hidden = false; }
   };
+  var hubsBtn = document.getElementById("hubsbtn");
+  hubsBtn.addEventListener("click", function(){
+    var was = hubsBtn.getAttribute("aria-expanded") === "true";
+    closeMenus();
+    if(!was){ hubsBtn.setAttribute("aria-expanded", "true"); document.getElementById("hubsmenu").hidden = false; }
+  });
   document.getElementById("adminsignout").addEventListener("click", function(e){
     e.preventDefault();
     if(window.CWAuth) CWAuth.signOut(); else location.reload();
   });
+
+  var box = document.getElementById("admsearch");
+  box.addEventListener("input", applySearch);
+  box.addEventListener("focus", function(){ if(box.value.trim()) applySearch(); });
+  box.addEventListener("keydown", function(e){
+    if(e.key === "ArrowDown"){ e.preventDefault(); searchMove(1); }
+    else if(e.key === "ArrowUp"){ e.preventDefault(); searchMove(-1); }
+    else if(e.key === "Enter"){ var o = document.querySelector('#admresults .srow[aria-selected="true"]'); if(o){ e.preventDefault(); o.click(); } }
+    else if(e.key === "Escape"){ e.stopPropagation(); box.value = ""; applySearch(); }
+  });
+  document.getElementById("admsearchx").addEventListener("click", function(){ box.value = ""; applySearch(); box.focus(); });
+
   document.addEventListener("click", function(e){
     var t = e.target;
     if(!t || !t.closest) return;
-    var sub = t.closest("a.subbtn");
-    if(sub){
-      e.preventDefault();
-      var menu = sub.parentElement.querySelector(".nsubmenu");
-      var was = menu.classList.contains("show");
-      document.querySelectorAll(".nsubmenu.show").forEach(function(x){ x.classList.remove("show"); });
-      if(!was) menu.classList.add("show");
-      return;
+    if(!t.closest("nav.mainnav") && !t.closest(".hubsw")) closeMenus();
+    if(!t.closest(".hsearch")) searchClose();
+  });
+  document.addEventListener("keydown", function(e){
+    if(e.key === "Escape"){ closeMenus(true); return; }
+    var a = document.activeElement, tag = a ? a.tagName : "";
+    if(e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey && tag !== "INPUT" && tag !== "TEXTAREA" && tag !== "SELECT" && !(a && a.isContentEditable)){
+      e.preventDefault(); box.focus();
     }
-    if(t.closest(".nitem") || t.closest(".nmenu")) return;
-    closeMenus();
   });
-  document.addEventListener("keydown", function(e){ if(e.key === "Escape") closeMenus(); });
-  window.addEventListener("resize", closeMenus);
+  window.addEventListener("resize", function(){ closeMenus(); });
 }
-function closeMenus(){
-  document.querySelectorAll(".nmenu.show").forEach(function(d){
-    d.classList.remove("show"); d.style.top = ""; d.style.maxHeight = ""; d.classList.remove("flip", "scroll");
-    if(d._home && d.parentElement !== d._home) d._home.appendChild(d);
-    d.classList.remove("portal");
+function closeMenus(focusBack){
+  document.querySelectorAll('#adminhead [aria-expanded="true"]').forEach(function(b){
+    if(b.id === "admsearch") return;
+    b.setAttribute("aria-expanded", "false");
+    var p = document.getElementById(b.getAttribute("aria-controls")); if(p) p.hidden = true;
+    if(focusBack) b.focus();
   });
-  document.querySelectorAll(".nsubmenu.show").forEach(function(d){ d.classList.remove("show"); d.style.top = ""; d.style.maxHeight = ""; d.style.left = ""; d.classList.remove("flip", "scroll"); });
-  document.querySelectorAll(".nbtn.open").forEach(function(b){ b.classList.remove("open"); });
+}
+function searchClose(){
+  var z = document.getElementById("admsearchzone"); if(!z) return;
+  z.hidden = true;
+  document.getElementById("admsearch").setAttribute("aria-expanded", "false");
+}
+function applySearch(){
+  var box = document.getElementById("admsearch");
+  var q = (box.value || "").toLowerCase().trim();
+  document.getElementById("admsearchx").classList.toggle("show", !!q);
+  if(!q){ searchClose(); return; }
+  closeMenus();
+  var words = q.split(/\s+/).filter(Boolean);
+  var hits = SEARCH_INDEX.filter(function(x){ return words.every(function(w){ return x.hay.indexOf(w) >= 0; }); });
+  hits.sort(function(a, b){ return (a.label.toLowerCase().indexOf(words[0]) < 0) - (b.label.toLowerCase().indexOf(words[0]) < 0); });
+  hits = hits.slice(0, 12);
+  document.getElementById("admresults").innerHTML = hits.map(function(x, i){
+    var tgt = isExternal(x.href) ? ' target="_blank" rel="noopener"' : '';
+    return '<a class="srow" role="option" id="admopt' + i + '" aria-selected="' + (i === 0) + '" href="' + esc(x.href) + '"' + tgt + '>' + esc(x.label) + '<span class="path">' + esc(x.path) + '</span></a>';
+  }).join("");
+  SEARCH_SEL = hits.length ? 0 : -1;
+  document.getElementById("admnores").hidden = !!hits.length;
+  document.getElementById("admsearchzone").hidden = false;
+  box.setAttribute("aria-expanded", "true");
+  if(hits.length) box.setAttribute("aria-activedescendant", "admopt0"); else box.removeAttribute("aria-activedescendant");
+}
+function searchMove(d){
+  var opts = document.querySelectorAll("#admresults .srow"); if(!opts.length) return;
+  SEARCH_SEL = (SEARCH_SEL + d + opts.length) % opts.length;
+  opts.forEach(function(o, i){ o.setAttribute("aria-selected", i === SEARCH_SEL); });
+  if(opts[SEARCH_SEL].scrollIntoView) opts[SEARCH_SEL].scrollIntoView({ block:"nearest" });
+  document.getElementById("admsearch").setAttribute("aria-activedescendant", "admopt" + SEARCH_SEL);
 }
 
 /* ---------- webhook ---------- */
@@ -612,9 +777,9 @@ function toast(msg, kind){
 /* ---------- gate ---------- */
 function gateHtml(){
   return '<div class="box"><img src="' + LOGO + '" alt="City Wide Facility Solutions">' +
-    '<div class="k">Business Operations Management</div><h1>Admin Hub</h1>' +
+    '<h1>Admin Hub</h1>' +
     '<p id="gnote">Internal team access. Enter the team passcode. This browser stays signed in.</p>' +
-    '<input type="password" id="pc" placeholder="Team passcode" autocomplete="current-password" autofocus>' +
+    '<label class="sr" for="pc">Team passcode</label><input type="password" id="pc" placeholder="Team passcode" autocomplete="current-password" autofocus>' +
     '<button id="enter">Enter</button><div class="err" id="gerr"></div>' +
     '<div class="note">Ask TJ if you do not have the passcode.</div>' +
     '<a class="backlink" href="' + PORTAL + '">&larr; Back to the Nevada Team Portal</a></div>';

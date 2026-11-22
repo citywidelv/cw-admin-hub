@@ -5,113 +5,106 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>CW Admin Hub | Business Operations Management</title>
-<!-- build 2026-10-03 (Task Queue card for the ops admin between Most Used and the feature cards: evaluations, signed PandaDoc IC documents and crew background checks from the last 21 days, backend AdminQueue.gs aq_ kinds). 2026-09-24 (Uniform Orders feature card). 2026-09-22a (Vendor Profile feature card and quick link). 2026-09-19b (Vendor Onboarding desk replaces the Asana boards on this page; old boards demoted to a footer link, no Asana calls on load). 2026-09-19 (Ops Admin Desk feature card). 2026-09-11b: retired the vendor packet, walkthrough email and Exhibit A request Asana forms; the Ops Hub does all three itself now (vendor-invite.html, postings.html, create-exhibit-a.html). 2026-09-11 (renamed Admin Hub, Vendor of the Month card). 2026-09-05b (Team Emails quick link; gate via cw-auth.js in admin-shared.js). 2026-09-05a (COI request card + quick link). The Business Operations Manager's front door, a sibling of the
-Ops Hub (cw-ops-desk) on the Nevada Team Portal. Passcode gate checked server-side
-(kind vd_bom_auth in VendorDirectory.gs; the Ops Hub team passcode also unlocks it).
-Background check roster and Asana boards are read live; nothing on this page is
-hardcoded data except the menu tree and the Asana project registry in admin-shared.js. -->
+<!-- build 2026-11-21-overhaul: home page overhaul on the Ops Hub rules. The Task Queue is first (hero, photo band,
+helper card, the seven feature cards and the two at-a-glance cards removed). Start here holds six links. Desks is one
+list with a count line per desk, painted from this browser's saved copy and refreshed after the queue when the copy is
+older than 15 minutes. The two browser confirm boxes in the queue became an in-row Yes or Cancel. Menus, search and the
+Other hubs button live in admin-shared.js and admin.css. No Apps Script change: the same kinds as before
+(aq_list, aq_done, aq_bc, vd_bc_rows, vd_coi_rows, rec_list). The page before this build is commit 8b02c3f.
+Earlier: 2026-10-03 Task Queue (AdminQueue.gs aq_ kinds). 2026-09-24 Uniform Orders. 2026-09-22a Vendor Profile.
+2026-09-19b Vendor Onboarding desk replaced the Asana boards.
+Passcode gate checked server-side (kind vd_bom_auth in VendorDirectory.gs; the team passcode unlocks it). -->
 <link rel="stylesheet" href="admin.css">
 <link rel="icon" href="https://citywidelv.github.io/cw-ops-desk/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="https://citywidelv.github.io/cw-ops-desk/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="https://citywidelv.github.io/cw-ops-desk/favicon-16x16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="https://citywidelv.github.io/cw-ops-desk/apple-touch-icon.png">
 <style>
-.feature{margin-top:18px}
-.fcard{display:flex;align-items:center;gap:22px;background:#fff;border:1px solid var(--border);border-left:5px solid var(--red);border-radius:14px;box-shadow:var(--shadow);padding:18px 22px;flex-wrap:wrap}
-.fcard .ficon{width:44px;height:44px;border-radius:10px;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;flex:none}
-.fcard .ftext{flex:1;min-width:240px}
-.fcard h3{font-size:15px;margin-bottom:2px}
-.fcard p{font-size:12.5px;color:var(--grey)}
-.fcard .fbtns{display:flex;gap:10px;flex-wrap:wrap}
-.bcstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:12px}
-.bclist{font-size:12.5px}
-.bclist .row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--light)}
-.bclist .row:last-child{border-bottom:none}
-.bclist .row b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bclist .row .m{color:var(--grey);font-size:11px;white-space:nowrap}
-.pcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
-.pcard{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:8px;transition:all .15s;position:relative;overflow:hidden}
-.pcard::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--pc,#9aa0a6)}
-.pcard:hover{border-color:var(--red);box-shadow:var(--shadow-lift);transform:translateY(-2px)}
-.pcard .pn{font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:8px}
-.pcard .pn .grp{margin-left:auto;font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--grey)}
-.pcard .pm{font-size:11.5px;color:var(--grey);display:flex;gap:12px;flex-wrap:wrap}
-.pcard .pm b{color:var(--black);font-size:16px}
-.pcard .pm .late{color:var(--red)}
-.pcard .pt{font-size:11.5px;color:var(--grey);border-top:1px solid var(--light);padding-top:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pcard .pt b{color:var(--black);font-weight:700}
-.pcard .links{display:flex;gap:8px;margin-top:2px}
-.pcard .links a{font-size:11px;font-weight:700;color:var(--red);text-decoration:none}
-.pcard .links a:hover{text-decoration:underline}
-.helper{background:var(--black);color:#fff;border-radius:14px;box-shadow:var(--shadow);padding:20px 22px}
-.helper h3{font-size:14px;margin-bottom:6px}
-.helper h3::after{content:"";display:block;width:34px;height:3px;background:var(--red);border-radius:2px;margin-top:8px}
-.helper p{font-size:12px;color:#cfcdc9;margin-top:8px}
-.helper ul{list-style:none;margin-top:10px}
-.helper li{font-size:12px;color:#e6e4e1;padding:3px 0}
-.helper li span{color:var(--gold);font-weight:700}
-.photoband{padding:30px 0 10px}
-.photoband .pb{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-.photoband figure{position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--border);box-shadow:var(--shadow);margin:0;aspect-ratio:16/9;background:var(--black)}
-.photoband img{width:100%;height:100%;object-fit:cover;display:block}
-.photoband figcaption{position:absolute;left:0;right:0;bottom:0;padding:26px 16px 11px;background:linear-gradient(180deg,rgba(20,18,16,0) 0%,rgba(20,18,16,.82) 100%);color:#fff;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
-@media(max-width:760px){.photoband .pb{grid-template-columns:1fr}}
-/* Task Queue (Oct 3 2026): the ops admin's work list. Renders from the browser cache first, then refreshes. */
-.aqcard{background:#fff;border:1px solid var(--border);border-top:4px solid var(--red);border-radius:14px;box-shadow:var(--shadow-lift);padding:16px 18px 14px}
-.aqhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
-.aqhead h2{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--grey)}
-.aqcount{font-size:11px;font-weight:700;background:var(--red);color:#fff;border-radius:10px;padding:2px 9px;min-width:22px;text-align:center}
+/* Six type sizes (12 caption, 13 UI, 15 body, 17 lead, 21 h2, 28 h1). Controls 44px. 4px grid.
+   Radius 6 controls, 11 cards, 18 pills. Red only for the primary action and urgent rows. */
+body{font-size:var(--fs-body)}
+::selection{background:var(--red);color:#fff}
+h1,h2,h3{line-height:1.25;text-wrap:balance}
+.main{padding-top:20px;padding-bottom:32px;display:grid;gap:28px}
+.phead{display:flex;align-items:baseline;gap:8px 16px;flex-wrap:wrap}
+.phead h1{font-size:var(--fs-h1)}
+.phead p{font-size:var(--fs-ui);color:var(--grey)}
+.sec h2{font-size:var(--fs-h2);margin-bottom:12px}
+.tagp{display:inline-flex;align-items:center;min-height:24px;padding:0 8px;border:1px solid var(--border);border-radius:var(--r-pill);font-size:var(--fs-caption);font-weight:700;color:var(--grey);background:#fff;white-space:nowrap}
+.tagp.urgent{border-color:var(--red);color:var(--red-dark);background:var(--red-tint)}
+
+/* Task queue */
+.aqcard{background:#fff;border:1px solid var(--border);border-radius:var(--r-card);box-shadow:var(--shadow);padding:20px}
+.aqhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+.aqhead h2{font-size:var(--fs-h2);margin:0}
+.aqcount{font-size:var(--fs-ui);font-weight:700;background:var(--black);color:#fff;border-radius:var(--r-pill);padding:0 10px;min-width:28px;line-height:24px;text-align:center;font-variant-numeric:tabular-nums}
 .aqcount:empty{display:none}
-.aqsub{font-size:12px;color:var(--grey);flex:1;min-width:220px}
-.aqwho{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;color:var(--grey)}
-.aqwho input{font:inherit;font-weight:600;color:var(--black);border:1px solid var(--border);border-radius:8px;padding:6px 9px;width:130px;min-height:34px}
-.aqrefresh{font-size:16px;line-height:1;border:1px solid var(--border);background:#fff;border-radius:8px;width:34px;min-height:34px;cursor:pointer;color:var(--grey)}
-.aqrefresh:hover{border-color:var(--red);color:var(--red)}
-.aqtabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
-.aqtab{font-size:12px;font-weight:700;border:1.5px solid var(--border);border-radius:20px;padding:6px 13px;background:#fff;cursor:pointer;color:var(--black);min-height:34px;display:inline-flex;align-items:center;gap:7px}
-.aqtab b{font-size:11px;background:var(--light);border-radius:9px;padding:1px 7px;color:var(--grey)}
+.aqwho{display:inline-flex;align-items:center;gap:8px;font-size:var(--fs-ui);color:var(--grey);margin-left:auto}
+.aqwho input{font-size:16px;color:var(--black);border:1px solid var(--line);border-radius:var(--r-ctl);padding:0 12px;width:160px;height:44px;background:#fff}
+.aqrefresh{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 16px;font-size:var(--fs-ui);font-weight:700;border:1px solid var(--border);background:#fff;border-radius:var(--r-ctl);cursor:pointer;color:var(--black)}
+.aqrefresh[disabled]{opacity:.5;cursor:wait}
+.aqsub{font-size:var(--fs-ui);color:var(--grey);margin-bottom:16px;max-width:75ch}
+.aqtabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.aqtab{font-size:var(--fs-ui);font-weight:700;border:1px solid var(--border);border-radius:var(--r-pill);padding:0 16px;background:#fff;cursor:pointer;color:var(--black);height:44px;display:inline-flex;align-items:center;gap:8px}
+.aqtab b{color:var(--grey);font-variant-numeric:tabular-nums}
 .aqtab.on{border-color:var(--black);background:var(--black);color:#fff}
-.aqtab.on b{background:var(--red);color:#fff}
-.aqlist{display:flex;flex-direction:column}
-.aqrow{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--light)}
+.aqtab.on b{color:#fff}
+.aqlist{border:1px solid var(--border);border-radius:var(--r-card);overflow:hidden}
+.aqrow{display:grid;grid-template-columns:auto 1fr auto;gap:12px 16px;align-items:center;padding:12px 16px;border-top:1px solid var(--border)}
 .aqrow:first-child{border-top:none}
 .aqrow.busy{opacity:.5;pointer-events:none}
-.aqrow .ic{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;flex:none}
-.aqrow .ic.bc{background:var(--black)}
-.aqrow.sp{background:#FFF3F3;border-left:4px solid #D22730;padding-left:10px;border-radius:0 8px 8px 0}
-.aqrow .spline{font-size:12px;font-weight:700;color:#D22730;margin-top:3px}
-.pill.sp{background:#D22730;color:#fff;font-size:10px;letter-spacing:.04em}
-
-.aqrow .ic.eval{background:var(--blue)}
-.aqrow .ic.packet{background:var(--green)}
-.aqrow .ic svg{color:#fff}
+.aqrow.sp{background:var(--red-tint);outline:1px solid var(--red);outline-offset:-1px}
+.aqrow .ic{width:36px;height:36px;border-radius:var(--r-ctl);background:var(--light);color:var(--black);display:flex;align-items:center;justify-content:center;flex:none}
+.aqrow.sp .ic{background:#fff}
 .aqrow .t{min-width:0}
-.aqrow .t .n{font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.aqrow .t .n a{color:inherit;text-decoration:none}
-.aqrow .t .n a:hover{color:var(--red)}
-.aqrow .t .s{font-size:11.5px;color:var(--grey);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.aqrow .t .st{font-size:12px;font-weight:700;color:var(--black);margin-top:3px}
-.aqrow .t .st::before{content:"Next: ";color:var(--red)}
-.aqrow .a{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
-.aqbtn{font:inherit;font-size:12px;font-weight:700;border:1.5px solid var(--border);background:#fff;color:var(--black);border-radius:9px;padding:8px 12px;min-height:36px;cursor:pointer;white-space:nowrap}
-.aqbtn:hover{border-color:var(--red);color:var(--red)}
-.aqbtn.go{background:var(--red);border-color:var(--red);color:#fff}
-.aqbtn.go:hover{background:var(--red-dark);border-color:var(--red-dark);color:#fff}
-.aqbtn.ok{border-color:var(--green);color:var(--green)}
-.aqbtn.ok:hover{background:var(--green);color:#fff}
-.aqbtn.no{border-color:var(--border);color:var(--grey)}
-.aqbtn.no:hover{border-color:var(--red);color:var(--red)}
-.aqempty{font-size:13px;color:var(--grey);padding:14px 0 6px}
-.aqempty b{color:var(--green)}
-.aqfoot{font-size:11px;color:var(--grey);margin-top:10px;display:flex;gap:14px;flex-wrap:wrap;align-items:center}
-.aqfoot a{color:var(--red);font-weight:700;text-decoration:none}
-.aqfoot .warn{color:var(--amber);font-weight:700}
-.aqdone{font-size:11.5px;color:var(--grey);margin-top:8px}
-.aqdone a{color:var(--red);font-weight:700;text-decoration:none;cursor:pointer}
-@media(max-width:700px){.aqrow{grid-template-columns:auto 1fr}.aqrow .a{grid-column:1/-1;justify-content:flex-start}}
-.loading{color:var(--grey);font-size:12.5px}
+.aqrow .t .n{font-size:var(--fs-body);font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.aqrow .t .n a{color:inherit;text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--line)}
+.aqrow .t .s{font-size:var(--fs-ui);color:var(--grey)}
+.aqrow .t .spline{font-size:var(--fs-ui);font-weight:700;color:var(--red-dark);margin-top:4px}
+.aqrow .t .st{font-size:var(--fs-ui);font-weight:700;margin-top:4px}
+.aqrow .a{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+.aqrow .ask{flex-basis:100%;text-align:right;font-size:var(--fs-ui);font-weight:700}
+.aqbtn{display:inline-flex;align-items:center;font-size:var(--fs-ui);font-weight:700;border:1px solid var(--line);background:#fff;color:var(--black);border-radius:var(--r-ctl);padding:0 16px;height:44px;cursor:pointer;white-space:nowrap;text-decoration:none}
+.aqbtn.go,.aqbtn.ok{background:var(--black);border-color:var(--black);color:#fff}
+.aqempty{font-size:var(--fs-body);padding:20px 16px;border:1px solid var(--border);border-radius:var(--r-card)}
+.aqfoot{font-size:var(--fs-ui);color:var(--grey);margin-top:12px;display:flex;gap:4px 16px;flex-wrap:wrap;align-items:center}
+.aqfoot a{color:var(--black);font-weight:700;text-underline-offset:3px}
+.aqfoot .warn{color:var(--red-dark);font-weight:700}
+.aqdone{flex-basis:100%}
+.aqdone button{background:none;border:none;font-size:var(--fs-ui);font-weight:700;color:var(--black);text-decoration:underline;text-underline-offset:3px;cursor:pointer;min-height:44px;padding:0 8px}
+.loading{color:var(--grey);font-size:var(--fs-ui)}
 .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:sp .8s linear infinite;vertical-align:middle;margin-right:8px}
 @keyframes sp{to{transform:rotate(360deg)}}
+
+/* Start here and Desks */
+.hbtn{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 16px;border:1px solid var(--line);border-radius:var(--r-ctl);background:#fff;font-size:var(--fs-ui);font-weight:700;color:var(--black);text-decoration:none;white-space:nowrap}
+.hbtn.primary{background:var(--red);border-color:var(--red);color:#fff}
+.qrow2{display:flex;gap:8px;flex-wrap:wrap}
+.desks{background:#fff;border:1px solid var(--border);border-radius:var(--r-card);box-shadow:var(--shadow);overflow:hidden}
+.desk{display:flex;align-items:center;gap:12px 16px;padding:12px 16px;border-top:1px solid var(--border);flex-wrap:wrap}
+.desk:first-child{border-top:none}
+.desk .dt{flex:1 1 300px;min-width:0}
+.desk .dt h3{font-size:var(--fs-body)}
+.desk .dt p{font-size:var(--fs-ui);color:var(--grey)}
+.desk .dc{font-size:var(--fs-ui);font-weight:700;color:var(--black)}
+.desk .dc:empty{display:none}
+.desk .da{display:flex;gap:8px;flex-wrap:wrap}
+.asof{font-size:var(--fs-caption);color:var(--grey);margin-top:8px;min-height:18px}
+@media(hover:hover){
+.aqbtn:hover,.aqtab:hover,.aqrefresh:hover,.hbtn:hover{border-color:var(--black)}
+.aqbtn.go:hover,.aqbtn.ok:hover{background:#1d1b18}
+.hbtn.primary:hover{background:var(--red-dark);border-color:var(--red-dark)}
+}
+@media(max-width:700px){
+.main{padding-top:12px;gap:20px}
+.phead h1{font-size:var(--fs-h2)}
+.aqcard{padding:12px}
+.aqwho{margin-left:0;flex:1 1 100%}
+.aqwho input{flex:1;width:auto}
+.aqrow{grid-template-columns:auto 1fr;padding:12px}
+.aqrow .a{grid-column:1/-1;justify-content:flex-start}
+.aqrow .ask{text-align:left}
+}
 </style>
 <link rel="stylesheet" href="https://citywidelv.github.io/cw-base.css">
 </head>
@@ -119,291 +112,126 @@ hardcoded data except the menu tree and the Asana project registry in admin-shar
 <div id="gate" class="gate"></div>
 <div id="app" class="hidden">
 <header class="head" id="adminhead"></header>
+<main class="wrap main">
+<div class="phead"><h1>Admin Hub</h1><p>Las Vegas and Northern Nevada</p></div>
 
-<section class="hero">
-<div class="bg" style="background-image:url('https://citywidelv.github.io/cw-vendor-hub/images/bldg-campus.jpg')"></div>
-<div class="wrap">
-<div class="htext">
-<div class="kick">Business Operations Management</div>
-<h1>City Wide Admin Hub</h1>
-<p>Background checks, IC onboarding, COI requests, Vendor of the Month, office management. The Business Operations Manager's desk, one page. Vendor onboarding and crew background checks run from here, not from Asana.</p>
-<div class="cities"><b>Las Vegas</b><span class="dot">&bull;</span><b>Northern Nevada</b>&nbsp;&nbsp;Proudly serving the Silver State</div>
-</div>
-<div class="hphoto">
-<div class="ph1"><img src="https://citywidelv.github.io/cw-ops-desk/images/fsm-uniform-phone.jpg" alt="City Wide team member on the phone" style="object-position:center 25%"></div>
-<div class="pcap">Business Operations &middot; <b>Run the Business</b></div>
-</div>
-</div>
-</section>
-
-<div class="wrap quick">
-<div class="qcard">
-<div class="qhead"><span class="bar-accent"></span><h2>Most Used</h2></div>
-<div class="qrow" id="quickrow"></div>
-</div>
-</div>
-
-<div class="wrap feature" id="aqwrap">
-<div class="aqcard">
+<section class="aqcard" id="aqwrap" aria-labelledby="aqh">
 <div class="aqhead">
-<span class="bar-accent"></span><h2>Task Queue</h2>
+<h2 id="aqh">Task queue</h2>
 <span class="aqcount" id="aqcount"></span>
-<span class="aqsub">Evaluations, signed PandaDoc documents and crew background checks from the last 3 weeks. Click a step when it is done.</span>
-<label class="aqwho">Working as <input id="aqwho" placeholder="your name" maxlength="40"></label>
-<button class="aqrefresh" id="aqrefresh" type="button" title="Refresh">&#8635;</button>
+<label class="aqwho" for="aqwho">Working as <input id="aqwho" placeholder="Your name" maxlength="40" autocomplete="off"></label>
+<button class="aqrefresh" id="aqrefresh" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>Refresh</button>
 </div>
+<p class="aqsub">Evaluations, signed PandaDoc documents and crew background checks from the last 3 weeks. Click a step when it is done.</p>
 <div class="aqtabs" id="aqtabs"></div>
 <div class="aqbody" id="aqbody"><span class="loading"><span class="spin"></span>Reading the queue...</span></div>
 <div class="aqfoot" id="aqfoot"></div>
-</div>
-</div>
+</section>
 
-<div class="wrap feature">
-<div class="fcard">
-<span class="ficon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg></span>
-<div class="ftext"><h3>Ops Admin Desk</h3>
-<p>Postings, vendor responses, supplies reports, shop orders, vendors and the team roster, each shown as one full page you can read and edit. The Google Sheet updates underneath; every change is logged with an undo.</p></div>
-<div class="fbtns">
-<a class="btn solid" href="desk.html">Open the Desk</a>
-<a class="btn" href="records.html?s=postings">Opportunity Postings</a>
-<a class="btn" href="records.html?s=vendors_lv">Vendors</a>
-</div>
-</div>
-</div>
+<section class="sec" aria-labelledby="sth">
+<h2 id="sth">Start here</h2>
+<div class="qrow2" id="quickrow"></div>
+</section>
 
-<div class="wrap feature" style="margin-top:12px">
-<div class="fcard">
-<span class="ficon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.4 6.5L16 4l-1.5 2.5h-5L8 4 3.6 6.5 5 11l2-.7V20h10v-9.7l2 .7z"/></svg></span>
-<div class="ftext"><h3>Uniform Orders</h3>
-<p>Every uniform waiting to go to Bennett, in one list: the uniform lines from vendor shop orders (chemicals and supplies left out) and every employee uniform request. One tick marks it ordered. Custom orders go in on the 1st and the 15th.</p></div>
-<div class="fbtns">
-<a class="btn solid" href="uniform-orders.html">Open Uniform Orders</a>
-<a class="btn" href="https://citywidelv.github.io/cw-ops-desk/uniforms.html">Employee request page</a>
-</div>
-</div>
-</div>
-
-<div class="wrap feature" style="margin-top:12px">
-<div class="fcard">
-<span class="ficon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
-<div class="ftext"><h3>Vendor Profile</h3>
-<p>One vendor, everything, one page: their record, evaluation, onboarding checklist, crew background checks, interest letters, uploads, insurance and notices. Search by company, owner, email or vendor number, and change what needs changing without opening a Sheet.</p></div>
-<div class="fbtns">
-<a class="btn solid" href="vendor-profile.html">Open a Vendor Profile</a>
-<a class="btn" href="https://citywidelv.github.io/cw-ops-desk/vendor-email.html?from=admin">Vendor Email</a>
-</div>
-</div>
-</div>
-
-<div class="wrap feature" style="margin-top:12px">
-<div class="fcard">
-<span class="ficon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 12l2 2 4-4"/></svg></span>
-<div class="ftext"><h3>Vendor Onboarding</h3>
-<p>Every vendor in the door, what is on file, what is left before activation, and every crew background check request. Evaluations, uploads and requests from the Vendor Hub land here on their own. <span id="obsum" style="color:var(--black);font-weight:700"></span></p></div>
-<div class="fbtns">
-<a class="btn solid" href="onboarding.html">Open the Desk</a>
-<a class="btn" href="onboarding.html#bc">Background Check Requests</a>
-<a class="btn" href="onboarding.html#start">Start Onboarding</a>
-<a class="btn" href="recruiting.html">Vendor Recruiting</a>
-</div>
-</div>
-</div>
-
-<div class="wrap feature" style="margin-top:12px">
-<div class="fcard">
-<span class="ficon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span>
-<div class="ftext"><h3>Background Checks</h3>
-<p>Clear every person a vendor puts in a City Wide building, Standard or the 10-Year Arroweye package. Cleared names reach the Ops Hub vendor directory the moment you click.</p></div>
-<div class="fbtns">
-<a class="btn solid" href="background-checks.html">Review &amp; Record Results</a>
-<a class="btn" href="background-checks.html#add">Add a Person</a>
-</div>
-</div>
-</div>
-
-<div class="wrap feature" style="margin-top:12px">
-<div class="fcard" style="border-left-color:var(--black)">
-<span class="ficon" style="background:var(--black)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg></span>
-<div class="ftext"><h3>Customer COI Requests</h3>
-<p>Every certificate of insurance a customer asks for, with the broker checklist and its status: requested, sent to broker, received, delivered. <span id="coisum" style="color:var(--black);font-weight:700"></span></p></div>
-<div class="fbtns">
-<a class="btn solid" href="coi-log.html">Open the Request Log</a>
-<a class="btn" href="https://citywidelv.github.io/cw-ops-desk/coi-request.html">New Request</a>
-</div>
-</div>
-</div>
-
-<div class="wrap feature" style="margin-top:12px">
-<div class="fcard" style="border-left-color:var(--gold)">
-<span class="ficon" style="background:var(--gold);color:var(--black)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/></svg></span>
-<div class="ftext"><h3>Vendor of the Month and G.O.A.T. of the Month</h3>
-<p>The only place a plate gets logged. Pick the month and year, the name goes on the wall on the Vendor Hub the same minute. Nominations from the team and from vendors wait here. <span id="recsum" style="color:var(--black);font-weight:700"></span></p></div>
-<div class="fbtns">
-<a class="btn solid" href="recognition.html#add">Add a Vendor of the Month</a>
-<a class="btn" href="recognition.html">Nominations</a>
-</div>
-</div>
-</div>
-
-<div class="wrap section">
-<div class="grid2">
-<div>
-<div class="card" style="margin-bottom:16px">
-<div class="chead"><span class="bar-accent"></span><h3>Background checks at a glance</h3><span class="sub"><a href="background-checks.html">Open the review desk &rarr;</a></span></div>
-<div class="cbody" id="bcbody"><span class="loading"><span class="spin"></span>Reading the roster...</span></div>
-</div>
-<div class="card">
-<div class="chead"><span class="bar-accent"></span><h3>Vendor onboarding at a glance</h3><span class="sub"><a href="onboarding.html">Open the desk &rarr;</a></span></div>
-<div class="cbody" id="obbody"></div>
-</div>
-</div>
-<aside>
-<div class="helper" style="margin-bottom:14px">
-<h3>What lives here</h3>
-<p>The Business Operations Manager runs and checks every background check, onboards new ICs, and handles Exhibit A and office requests. Everything for that role is in the menus above.</p>
-<ul>
-<li><span>Background Checks</span> &nbsp;record, request, notify</li>
-<li><span>COI Requests</span> &nbsp;customer certificates, broker checklist, status</li>
-<li><span>Vendors</span> &nbsp;onboarding desk, new vendor invites, Vendor of the Month</li>
-<li><span>Asana Boards</span> &nbsp;Exhibit A requests and office management only</li>
-<li><span>Team &amp; Admin</span> &nbsp;uniform orders, the Ops Admin Desk, portal, hubs, ADP, CRM</li>
-</ul>
-</div>
-<div class="card">
-<div class="chead"><span class="bar-accent"></span><h3>Vendor requests</h3></div>
-<div class="cbody" id="formlinks"></div>
-</div>
-</aside>
-</div>
-</div>
-
-<div class="wrap photoband" aria-hidden="true">
-<div class="pb">
-<figure><img src="https://citywidelv.github.io/cw-ops-desk/images/fsm-team.jpg" alt=""><figcaption>One Team</figcaption></figure>
-<figure><img src="https://citywidelv.github.io/cw-ops-desk/images/fsm-uniform-hallway.jpg" alt="" style="object-position:center 30%"><figcaption>Every Building, Every Person Cleared</figcaption></figure>
-<figure><img src="https://citywidelv.github.io/cw-ops-desk/images/ops-training.jpg" alt=""><figcaption>Never Stop Learning</figcaption></figure>
-</div>
-</div>
-
+<section class="sec" aria-labelledby="dkh">
+<h2 id="dkh">Desks</h2>
+<div class="desks" id="desks"></div>
+<div class="asof" id="deskasof"></div>
+</section>
+</main>
 <footer class="foot"><div class="fin">
-<b>City Wide Facility Solutions</b> &middot; Admin Hub &middot; Internal use only &middot; Something missing? Tell TJ. &middot; <a href="https://www.gocitywide.com" target="_blank" rel="noopener">GoCityWide.com</a> &middot; <a href="asana.html" title="The retired onboarding and background check boards, read only">Old Asana boards</a>
+<b>City Wide Facility Solutions</b> &middot; Admin Hub &middot; Internal use only &middot; Something missing? Tell TJ. &middot; <a href="https://www.gocitywide.com" target="_blank" rel="noopener">GoCityWide.com</a>
 <span class="fr">Las Vegas<span>&bull;</span>Reno</span>
 </div></footer>
 </div>
-
 <script src="https://citywidelv.github.io/cw-ops-desk/cw-auth.js"></script>
 <script src="nav.js"></script>
 <script src="https://citywidelv.github.io/cw-ops-desk/cw-nav.js"></script>
 <script src="admin-shared.js"></script>
 <script>
 (function(){
-var esc = ADMIN.esc, api = ADMIN.api, icon = ADMIN.icon;
+var esc = ADMIN.esc, api = ADMIN.api;
+
+/* ---------- Start here: the six most used doors. Everything else is in the menus and the search box. ---------- */
 var QUICK = [
-  { label:"Record a Result", href:"background-checks.html", icon:"shield", primary:true },
-  { label:"Add a Person", href:"background-checks.html#add", icon:"plus" },
-  { label:"Vendor Profile", href:"vendor-profile.html", icon:"search" },
-  { label:"Vendor Onboarding", href:"onboarding.html", icon:"clip" },
-  { label:"Vendor Recruiting", href:"recruiting.html", icon:"users" },
-  { label:"Background Check Requests", href:"onboarding.html#bc", icon:"shield" },
-  { label:"Vendor Request Page", href:ADMIN.FORMS.bgcheck, icon:"mail" },
-  { label:"Exhibit A Requests", href:ADMIN.asanaUrl("1211502025570262"), icon:"sheet" },
-  { label:"COI Requests", href:"coi-log.html", icon:"sheet" },
-  { label:"Team Emails by Position", href:"team-emails.html", icon:"mail" },
-  { label:"Add a Vendor of the Month", href:"recognition.html#add", icon:"plus" },
-  { label:"Add a Vendor", href:ADMIN.OPS + "vendor-add.html", icon:"users" },
-  { label:"Ops Hub", href:ADMIN.OPS, icon:"board", dark:true }
+  { label:"Record a background check result", href:"background-checks.html", primary:true },
+  { label:"Open a vendor profile", href:"vendor-profile.html" },
+  { label:"Onboarding Desk", href:"onboarding.html" },
+  { label:"Uniform Orders", href:"uniform-orders.html" },
+  { label:"COI request log", href:"coi-log.html" },
+  { label:"Opportunity Postings", href:"records.html?s=postings" }
 ];
 document.getElementById("quickrow").innerHTML = QUICK.map(function(q){
-  var tgt = ADMIN.isExternal(q.href) ? ' target="_blank" rel="noopener"' : '';
-  return '<a class="qbtn' + (q.primary ? ' primary' : q.dark ? ' dark' : '') + '" href="' + esc(q.href) + '"' + tgt + '>' + icon(q.icon, 15) + esc(q.label) + '</a>';
+  return '<a class="hbtn' + (q.primary ? ' primary' : '') + '" href="' + esc(q.href) + '">' + esc(q.label) + '</a>';
 }).join("");
 
-var FL = [
-  ["Background Check and Name Badge", ADMIN.FORMS.bgcheck, "Vendor Hub"],
-  ["Invite a New Vendor", ADMIN.OPS + "vendor-invite.html", "Ops Hub"],
-  ["Create an Exhibit A", ADMIN.OPS + "create-exhibit-a.html", "Ops Hub"]
+/* ---------- Desks: one row per desk, a count line where the hub already has one ---------- */
+var DESKS = [
+  { id:"ob", title:"Vendor onboarding", sub:"Every vendor in the door and what is left before activation", links:[["Open the desk","onboarding.html"],["Start onboarding","onboarding.html#start"]] },
+  { id:"bc", title:"Background checks", sub:"Every person a vendor puts in a City Wide building", links:[["Review results","background-checks.html"],["Add a person","background-checks.html#add"]] },
+  { id:"coi", title:"Customer COI requests", sub:"Requested, sent to broker, received, delivered", links:[["Open the log","coi-log.html"],["New request", ADMIN.OPS + "coi-request.html"]] },
+  { id:"uni", title:"Uniform orders", sub:"Vendor shop lines and employee requests waiting to go to Bennett", links:[["Open uniform orders","uniform-orders.html"],["Vendor shop orders","records.html?s=shop"]] },
+  { id:"wall", title:"Opportunity wall", sub:"Postings on the Vendor Hub and what vendors sent back", links:[["Postings","records.html?s=postings"],["Vendor responses","records.html?s=responses"]] },
+  { id:"rec", title:"Vendor of the Month", sub:"Plates, nominations and shop codes", links:[["Add a winner","recognition.html#add"],["Nominations","recognition.html"]] }
 ];
-document.getElementById("formlinks").innerHTML = '<div class="bclist">' + FL.map(function(f){
-  return '<div class="row">' + icon("mail", 13) + '<b><a href="' + esc(f[1]) + '" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">' + esc(f[0]) + '</a></b><span class="m">' + esc(f[2]) + '</span></div>';
-}).join("") + '</div>';
+document.getElementById("desks").innerHTML = DESKS.map(function(d){
+  return '<div class="desk"><div class="dt"><h3>' + esc(d.title) + '</h3><p>' + esc(d.sub) + '</p></div>' +
+    '<span class="dc" id="dk-' + d.id + '"></span>' +
+    '<div class="da">' + d.links.map(function(l){ return '<a class="hbtn" href="' + esc(l[1]) + '">' + esc(l[0]) + '</a>'; }).join("") + '</div></div>';
+}).join("");
 
-function loadBc(){
-  api({ kind:"vd_bc_rows" }).then(function(r){
-    var host = document.getElementById("bcbody");
-    if(!r.ok){ host.innerHTML = '<span class="loading">Could not read the roster: ' + esc(r.error || "") + '</span>'; return; }
-    var rows = r.rows || [], n = { pass:0, fail:0, pend:0, none:0, unm:0, ten:0, lv:0, nnv:0 };
-    rows.forEach(function(x){
-      if(x.result === "Clear") n.pass++; else if(x.result === "Not clear") n.fail++; else if(x.result === "Pending") n.pend++; else n.none++;
-      if(!x.matched) n.unm++; if(/10-Year/.test(x.check_type)) n.ten++; n[x.market]++;
-    });
-    var recent = rows.filter(function(x){ return x.result_date; }).sort(function(a,b){ return a.result_date < b.result_date ? 1 : -1; }).slice(0, 6);
-    var added = rows.slice().sort(function(a,b){ return (a.added || "") < (b.added || "") ? 1 : -1; }).slice(0, 5);
-    host.innerHTML = '<div class="bcstats">' +
-      '<a class="stat" href="background-checks.html"><div class="n">' + rows.length + '</div><div class="l">On file</div></a>' +
-      '<a class="stat pass" href="background-checks.html"><div class="n">' + n.pass + '</div><div class="l">Cleared</div></a>' +
-      '<a class="stat fail" href="background-checks.html"><div class="n">' + n.fail + '</div><div class="l">Not cleared</div></a>' +
-      '<a class="stat pend" href="background-checks.html"><div class="n">' + n.pend + '</div><div class="l">Pending</div></a>' +
-      '<a class="stat todo" href="background-checks.html"><div class="n">' + n.none + '</div><div class="l">Not reviewed</div></a>' +
-      '<a class="stat" href="background-checks.html"><div class="n">' + n.ten + '</div><div class="l">10-Year</div></a></div>' +
-      '<div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">' + n.lv + ' Las Vegas &middot; ' + n.nnv + ' Northern Nevada &middot; ' +
-        (n.unm ? '<span style="color:var(--amber);font-weight:700">' + n.unm + ' not matched to a vendor</span>' : 'everyone matched to a vendor') + '</div>' +
-      '<div class="bclist">' + (recent.length ? recent.map(function(x){
-        var cls = x.result === "Clear" ? "pass" : x.result === "Not clear" ? "fail" : "pend";
-        return '<div class="row"><span class="pill ' + cls + '">' + esc(x.result) + '</span><b>' + esc(x.first_name + " " + x.last_name) + '</b><span class="m">' + esc(x.vendor || x.roster_company_as_typed) + ' &middot; ' + esc(ADMIN.fmtDate(x.result_date)) + '</span></div>';
-      }).join("") : '<div class="row"><span class="pill todo">Start here</span><b>No results recorded yet.</b><span class="m">Newest on file: ' + added.map(function(x){ return esc(x.first_name + " " + x.last_name); }).join(", ") + '</span></div>') + '</div>';
-  }).catch(function(){ document.getElementById("bcbody").innerHTML = '<span class="loading">Could not reach the server.</span>'; });
-}
-
-function loadOb(){
-  var host = document.getElementById("obbody"), sum = document.getElementById("obsum");
+/* Counts paint from this browser's saved copy, so the page never waits on them. They are read
+   again after the queue has loaded, and only when the saved copy is older than 15 minutes
+   (or Refresh was pressed). The onboarding line is the copy the Onboarding Desk leaves behind. */
+var DKKEY = "cwAdminDeskCounts", DK = { at:"" };
+function dkSet(id, text){ var el = document.getElementById("dk-" + id); if(el) el.textContent = text || ""; }
+function dkPaint(){
+  dkSet("bc", DK.bc); dkSet("coi", DK.coi); dkSet("rec", DK.rec);
   var c = null; try { c = JSON.parse(sessionStorage.getItem("cwObDesk") || "null"); } catch(e){}
-  if(!c || !c.onboarding){
-    host.innerHTML = '<div class="bclist"><div class="row">' + icon("clip", 13) + '<b><a href="onboarding.html" style="text-decoration:none;color:inherit">Open the desk</a></b><span class="m">counts show here after the first open in this browser</span></div>' +
-      '<div class="row">' + icon("mail", 13) + '<b><a href="onboarding.html#bc" style="text-decoration:none;color:inherit">Background check requests</a></b><span class="m">to send, sent, to review</span></div>' +
-      '<div class="row">' + icon("plus", 13) + '<b><a href="onboarding.html#start" style="text-decoration:none;color:inherit">Start onboarding for a vendor</a></b><span class="m">vendors who fill out the evaluation start on their own</span></div></div>';
-    return;
+  if(c && c.onboarding){
+    var inproc = c.onboarding.filter(function(o){ return o.stage === "New" || o.stage === "In Process"; }).length;
+    var toSend = (c.requests || []).filter(function(r){ return r.status === "New" && !r.dupe_of; }).length;
+    dkSet("ob", inproc + " in process, " + toSend + (toSend === 1 ? " check to send" : " checks to send"));
   }
-  var n = { "New":0, "In Process":0, "Complete":0, "Not Approved":0, "Ops Support":0 };
-  c.onboarding.forEach(function(o){ n[o.stage] = (n[o.stage] || 0) + 1; });
-  var toSend = (c.requests || []).filter(function(r){ return r.status === "New" && !r.dupe_of; }).length;
-  var pend = (c.crew || []).filter(function(x){ return x.result !== "Clear" && x.result !== "Not clear"; }).length;
-  host.innerHTML = '<div class="bcstats">' +
-    '<a class="stat todo" href="onboarding.html"><div class="n">' + (n["New"] + n["In Process"]) + '</div><div class="l">In process</div></a>' +
-    '<a class="stat pass" href="onboarding.html"><div class="n">' + n["Complete"] + '</div><div class="l">Complete</div></a>' +
-    '<a class="stat fail" href="onboarding.html"><div class="n">' + n["Not Approved"] + '</div><div class="l">Not approved</div></a>' +
-    '<a class="stat pend" href="onboarding.html#bc"><div class="n">' + toSend + '</div><div class="l">Checks to send</div></a>' +
-    '<a class="stat pend" href="background-checks.html"><div class="n">' + pend + '</div><div class="l">Crew pending</div></a></div>' +
-    '<div style="font-size:11.5px;color:var(--grey)">As of ' + esc(ADMIN.ago(c.fetched)) + ' in this browser. <a href="onboarding.html" style="color:var(--red);font-weight:700;text-decoration:none">Open the desk</a> for the live list.</div>';
-  if(sum) sum.textContent = (n["New"] + n["In Process"]) + " in process, " + toSend + " checks to send.";
+  document.getElementById("deskasof").textContent = DK.at ? "Counts as of " + ADMIN.ago(DK.at) + "." : "";
 }
-
-function loadCoi(){
+function dkSave(){ DK.at = new Date().toISOString(); try { localStorage.setItem(DKKEY, JSON.stringify(DK)); } catch(e){} dkPaint(); }
+function dkLoad(force){
+  if(!force && DK.at && (Date.now() - new Date(DK.at).getTime()) < 15 * 60 * 1000) return;
+  api({ kind:"vd_bc_rows" }).then(function(r){
+    if(!r || !r.ok) return;
+    var none = 0, pend = 0;
+    (r.rows || []).forEach(function(x){ if(x.result === "Pending") pend++; else if(x.result !== "Clear" && x.result !== "Not clear") none++; });
+    DK.bc = none + " not reviewed, " + pend + " pending"; dkSave();
+  }).catch(function(){});
   api({ kind:"vd_coi_rows" }).then(function(r){
-    var el = document.getElementById("coisum"); if(!el || !r || !r.ok) return;
+    if(!r || !r.ok) return;
     var rows = (r.rows || []).filter(function(x){ return String(x.test || "").toUpperCase() !== "TRUE"; });
     var open = rows.filter(function(x){ return x.status !== "Delivered to customer"; }).length;
     var atb = rows.filter(function(x){ return x.status === "Sent to broker"; }).length;
-    el.textContent = open ? open + " open" + (atb ? ", " + atb + " at the broker" : "") + "." : (rows.length ? "Nothing open." : "");
+    DK.coi = open ? open + " open" + (atb ? ", " + atb + " at the broker" : "") : "Nothing open"; dkSave();
   }).catch(function(){});
-}
-function loadRec(){
   api({ kind:"rec_list" }).then(function(r){
-    var el = document.getElementById("recsum"); if(!el || !r || !r.ok) return;
+    if(!r || !r.ok) return;
     var open = (r.nominations || []).filter(function(n){ return !n.status || n.status === "New"; }).length;
-    el.textContent = open ? open + (open === 1 ? " nomination waiting." : " nominations waiting.") : "";
+    DK.rec = open ? open + (open === 1 ? " nomination waiting" : " nominations waiting") : "No nominations waiting"; dkSave();
   }).catch(function(){});
 }
+try { var saved = JSON.parse(localStorage.getItem(DKKEY) || "null"); if(saved && saved.at) DK = saved; } catch(e){}
+dkPaint();
+
 /* ---------- Task Queue (Oct 3 2026) ----------
    Backend: AdminQueue.gs (aq_list, aq_done, aq_bc). Items are the last 21 days of
    vendor evaluations, signed PandaDoc IC documents and crew background check
    requests from both markets. The cached copy paints first so the page never waits. */
-var AQ = { items:[], done:[], counts:{}, pd:{}, filter:"all", fetched:"" };
+var AQ = { items:[], done:[], counts:{}, pd:{}, filter:"all", fetched:"", ask:null };
 var AQKEY = "cwAdminQueue";
 var AQ_TYPE = { bc:"Background check", eval:"Evaluation", packet:"PandaDoc" };
+function aqSvg(d){ return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>'; }
 var AQ_ICON = {
-  bc:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg>',
-  eval:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>',
-  packet:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 15l2 2 4-4"/></svg>'
+  bc:aqSvg('<path d="M12 3l8 3v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/>'),
+  eval:aqSvg('<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/>'),
+  packet:aqSvg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 15l2 2 4-4"/>')
 };
 var AQ_BTN = {
   sent:{ label:"Submitted to Verified First", cls:"go" },
@@ -411,6 +239,11 @@ var AQ_BTN = {
   notclear:{ label:"Not cleared", cls:"no" },
   badge:{ label:"Badge printed", cls:"go" },
   notify:{ label:"Notify Jeremy", cls:"go" }
+};
+/* These two steps cannot be taken back with a click, so the row asks once before it saves. */
+var AQ_ASK = {
+  notclear:function(it){ return { text:"Record " + it.title + " as NOT cleared? Their row on the background check list is set to Not clear.", yes:"Yes, record not cleared" }; },
+  notify:function(it){ return { text:"Email Jeremy Walker that " + it.title + " is approved for a name badge?", yes:"Yes, send the email" }; }
 };
 function aqWho(){
   var el = document.getElementById("aqwho");
@@ -435,6 +268,7 @@ function aqAgo(s){
   if(days === 1) return "yesterday";
   return days + " days ago";
 }
+function aqSaveCache(){ try { sessionStorage.setItem(AQKEY, JSON.stringify({ items:AQ.items, done:AQ.done, pd:AQ.pd, fetched:AQ.fetched })); } catch(e){} }
 function aqRender(){
   var host = document.getElementById("aqbody"), tabs = document.getElementById("aqtabs"), cnt = document.getElementById("aqcount"), foot = document.getElementById("aqfoot");
   var items = AQ.items || [];
@@ -442,17 +276,23 @@ function aqRender(){
   items.forEach(function(it){ c[it.type] = (c[it.type] || 0) + 1; });
   cnt.textContent = items.length ? String(items.length) : "";
   tabs.innerHTML = [["all","Everything"],["bc","Background checks"],["eval","Evaluations"],["packet","PandaDoc"]].map(function(t){
-    return '<button type="button" class="aqtab' + (AQ.filter === t[0] ? ' on' : '') + '" data-f="' + t[0] + '">' + t[1] + '<b>' + (c[t[0]] || 0) + '</b></button>';
+    var on = AQ.filter === t[0];
+    return '<button type="button" class="aqtab' + (on ? ' on' : '') + '" aria-pressed="' + on + '" data-f="' + t[0] + '">' + t[1] + ' <b>' + (c[t[0]] || 0) + '</b></button>';
   }).join("");
   var show = items.filter(function(it){ return AQ.filter === "all" || it.type === AQ.filter; });
   if(!show.length){
     host.innerHTML = '<div class="aqempty"><b>Nothing waiting.</b> ' + (items.length ? 'Nothing in this group.' : 'Every evaluation, signed document and background check from the last 3 weeks is handled.') + '</div>';
   } else {
     host.innerHTML = '<div class="aqlist">' + show.map(function(it){
-      var mk = '<span class="pill ' + (it.market === "nnv" ? "nnv" : "lv") + '">' + (it.market === "nnv" ? "Northern Nevada" : "Las Vegas") + '</span>';
+      var mk = '<span class="tagp">' + (it.market === "nnv" ? "Northern Nevada" : "Las Vegas") + '</span>';
       var title = it.link ? '<a href="' + esc(it.link) + '"' + (ADMIN.isExternal(it.link) ? ' target="_blank" rel="noopener"' : '') + '>' + esc(it.title) + '</a>' : esc(it.title);
       var btns = "";
-      if(it.type === "bc"){
+      var asking = AQ.ask && AQ.ask.key === it.key ? AQ_ASK[AQ.ask.act](it) : null;
+      if(asking){
+        btns = '<span class="ask" role="alert">' + esc(asking.text) + '</span>' +
+          '<button type="button" class="aqbtn" data-cancel="1">Cancel</button>' +
+          '<button type="button" class="aqbtn go" data-yes="1" data-act="' + AQ.ask.act + '" data-key="' + esc(it.key) + '">' + esc(asking.yes) + '</button>';
+      } else if(it.type === "bc"){
         btns = (it.actions || []).map(function(a){ var b = AQ_BTN[a]; return b ? '<button type="button" class="aqbtn ' + b.cls + '" data-act="' + a + '" data-key="' + esc(it.key) + '">' + b.label + '</button>' : ''; }).join("");
         if(it.report_link) btns = '<a class="aqbtn" href="' + esc(it.report_link) + '" target="_blank" rel="noopener">Open report</a>' + btns;
       } else {
@@ -463,39 +303,39 @@ function aqRender(){
       var extra = it.type === "bc" && it.sent ? ' &middot; sent ' + esc(ADMIN.fmtDate(it.sent)) : '';
       // Oct 6 2026: Arroweye needs the 10-Year check, a credit check and a drug screen. Say so in red.
       var sp = it.type === "bc" ? (it.special || (/arrow\s*eye/i.test(it.sub || "") ? "10-Year check + credit check + drug screen" : "")) : "";
-      return '<div class="aqrow' + (sp ? ' sp' : '') + '" data-key="' + esc(it.key) + '"><span class="ic ' + it.type + '">' + AQ_ICON[it.type] + '</span>' +
-        '<div class="t"><div class="n">' + title + mk + '<span class="pill grey">' + AQ_TYPE[it.type] + '</span>' + (sp ? '<span class="pill sp">Arroweye 10-Year</span>' : '') + '</div>' +
+      return '<div class="aqrow' + (sp ? ' sp' : '') + '" data-key="' + esc(it.key) + '"><span class="ic">' + AQ_ICON[it.type] + '</span>' +
+        '<div class="t"><div class="n">' + title + mk + '<span class="tagp">' + AQ_TYPE[it.type] + '</span>' + (sp ? '<span class="tagp urgent">Arroweye 10-Year</span>' : '') + '</div>' +
         '<div class="s">' + esc(it.sub || "") + ' &middot; ' + esc(aqAgo(it.received)) + extra + '</div>' +
-        (sp ? '<div class="spline">Special check: 10-year background, credit check and drug screen. Not the standard Verified First check.</div>' : '') +
-        '<div class="st">' + esc(it.step_label || "") + '</div></div>' +
+        (sp ? '<div class="spline">Special check. 10-year background, credit check and drug screen. Not the standard Verified First check.</div>' : '') +
+        (it.step_label ? '<div class="st">Next step. ' + esc(it.step_label) + '</div>' : '') + '</div>' +
         '<div class="a">' + btns + '</div></div>';
     }).join("") + '</div>';
   }
   var f = [];
-  if(AQ.fetched) f.push('As of ' + esc(ADMIN.ago(AQ.fetched)) + '.');
+  if(AQ.fetched) f.push('<span>As of ' + esc(ADMIN.ago(AQ.fetched)) + '.</span>');
   if(AQ.pd && AQ.pd.on === false) f.push('<span class="warn">PandaDoc is not connected yet.</span>');
-  else if(AQ.pd && AQ.pd.error) f.push('<span class="warn">PandaDoc: ' + esc(AQ.pd.error) + '</span>');
-  f.push('<a href="onboarding.html">Onboarding desk</a>');
+  else if(AQ.pd && AQ.pd.error) f.push('<span class="warn">PandaDoc. ' + esc(AQ.pd.error) + '</span>');
   f.push('<a href="onboarding.html#bc">All background check requests</a>');
-  f.push('<a href="background-checks.html">Review desk</a>');
   var dn = (AQ.done || []).slice(0, 5);
-  if(dn.length) f.push('<span class="aqdone">Recently reviewed: ' + dn.map(function(d){ return esc(d.title) + ' (' + esc(d.done_by) + ') <a data-undo="' + esc(d.key) + '" data-type="' + esc(d.type) + '" data-title="' + esc(d.title) + '" data-market="' + esc(d.market) + '">undo</a>'; }).join(', ') + '</span>');
+  if(dn.length) f.push('<span class="aqdone">Recently reviewed. ' + dn.map(function(d){ return esc(d.title) + ' (' + esc(d.done_by) + ') <button type="button" data-undo="' + esc(d.key) + '" data-type="' + esc(d.type) + '" data-title="' + esc(d.title) + '" data-market="' + esc(d.market) + '">Undo</button>'; }).join(' ') + '</span>');
   foot.innerHTML = f.join(' ');
 }
-function aqLoad(){
+function aqLoad(force){
   var btn = document.getElementById("aqrefresh"); if(btn) btn.disabled = true;
   return api({ kind:"aq_list" }).then(function(r){
     if(btn) btn.disabled = false;
-    if(!r || !r.ok){ document.getElementById("aqfoot").innerHTML = '<span class="warn">Could not read the queue: ' + esc((r && r.error) || "") + '</span>'; if(!AQ.items.length) document.getElementById("aqbody").innerHTML = '<div class="aqempty">The queue did not load. Try the refresh button.</div>'; return; }
+    if(!r || !r.ok){ document.getElementById("aqfoot").innerHTML = '<span class="warn">Could not read the queue. ' + esc((r && r.error) || "") + '</span>'; if(!AQ.items.length) document.getElementById("aqbody").innerHTML = '<div class="aqempty">The queue did not load. Press Refresh to try again.</div>'; return; }
     AQ.items = r.items || []; AQ.done = r.done || []; AQ.counts = r.counts || {}; AQ.pd = r.pandadoc || {}; AQ.fetched = r.fetched || new Date().toISOString();
-    try { sessionStorage.setItem(AQKEY, JSON.stringify({ items:AQ.items, done:AQ.done, pd:AQ.pd, fetched:AQ.fetched })); } catch(e){}
+    AQ.ask = null;
+    aqSaveCache();
     aqRender();
-  }).catch(function(){ if(btn) btn.disabled = false; document.getElementById("aqfoot").innerHTML = '<span class="warn">Could not reach the server.</span>'; });
+  }).catch(function(){ if(btn) btn.disabled = false; document.getElementById("aqfoot").innerHTML = '<span class="warn">Could not reach the server. Check your connection, then press Refresh.</span>'; })
+    .then(function(){ dkLoad(force); });
 }
 function aqFind(key){ return (AQ.items || []).filter(function(it){ return it.key === key; })[0]; }
 function aqBusy(key, on){ var row = document.querySelector('.aqrow[data-key="' + key.replace(/"/g, '\\"') + '"]'); if(row) row.classList.toggle("busy", !!on); }
 function aqRemove(key){ AQ.items = (AQ.items || []).filter(function(it){ return it.key !== key; }); }
-function aqAct(act, key){
+function aqAct(act, key, confirmed){
   var it = aqFind(key); if(!it) return;
   var who = aqNeedWho(); if(!who) return;
   if(act === "done"){
@@ -504,12 +344,12 @@ function aqAct(act, key){
       if(!r.ok) throw new Error(r.error || "Save failed");
       aqRemove(key); AQ.done.unshift({ key:key, type:it.type, title:it.title, market:it.market, done_by:who, done_at:"now" });
       ADMIN.toast("Marked reviewed", "ok"); aqRender();
-      try { sessionStorage.setItem(AQKEY, JSON.stringify({ items:AQ.items, done:AQ.done, pd:AQ.pd, fetched:AQ.fetched })); } catch(e){}
+      aqSaveCache();
     }).catch(function(e){ aqBusy(key, false); ADMIN.toast(String(e.message || e), "err"); });
     return;
   }
-  var confirmText = { notclear:"Record " + it.title + " as NOT cleared? Their row on the background check list is set to Not clear.", notify:"Email Jeremy Walker that " + it.title + " is approved for a name badge?" }[act];
-  if(confirmText && !confirm(confirmText)) return;
+  if(AQ_ASK[act] && !confirmed){ AQ.ask = { key:key, act:act }; aqRender(); return; }
+  AQ.ask = null;
   aqBusy(key, true);
   api({ kind:"aq_bc", req_id:it.req_id, action:act, who:who }).then(function(r){
     if(!r.ok) throw new Error(r.error || "Save failed");
@@ -517,8 +357,8 @@ function aqAct(act, key){
     else { it.status = r.status; it.badge = r.badge; it.step = r.step; it.step_label = r.step_label; it.actions = r.actions; if(act === "sent") it.sent = new Date().toISOString().slice(0,10); }
     ADMIN.toast({ sent:"Marked submitted to Verified First", clear:"Cleared", notclear:"Recorded as not cleared", badge:"Badge printed", notify:"Jeremy Walker notified" }[act] || "Saved", "ok");
     aqRender();
-    try { sessionStorage.setItem(AQKEY, JSON.stringify({ items:AQ.items, done:AQ.done, pd:AQ.pd, fetched:AQ.fetched })); } catch(e){}
-  }).catch(function(e){ aqBusy(key, false); ADMIN.toast(String(e.message || e), "err"); });
+    aqSaveCache();
+  }).catch(function(e){ aqBusy(key, false); aqRender(); ADMIN.toast(String(e.message || e), "err"); });
 }
 function aqUndo(key, type, title, market){
   var who = aqNeedWho(); if(!who) return;
@@ -531,15 +371,16 @@ function aqUndo(key, type, title, market){
   var w = document.getElementById("aqwho"); if(w) w.value = ADMIN.who() || "";
   try { var c = JSON.parse(sessionStorage.getItem(AQKEY) || "null"); if(c && c.items){ AQ.items = c.items; AQ.done = c.done || []; AQ.pd = c.pd || {}; AQ.fetched = c.fetched || ""; aqRender(); } } catch(e){}
   document.getElementById("aqwrap").addEventListener("click", function(ev){
-    var t = ev.target.closest("[data-f],[data-act],[data-undo]"); if(!t) return;
+    var t = ev.target.closest("[data-f],[data-act],[data-undo],[data-cancel]"); if(!t) return;
     if(t.dataset.f){ AQ.filter = t.dataset.f; aqRender(); return; }
+    if(t.dataset.cancel){ AQ.ask = null; aqRender(); return; }
     if(t.dataset.undo){ ev.preventDefault(); aqUndo(t.dataset.undo, t.dataset.type, t.dataset.title, t.dataset.market); return; }
-    aqAct(t.dataset.act, t.dataset.key);
+    aqAct(t.dataset.act, t.dataset.key, t.dataset.yes === "1");
   });
-  document.getElementById("aqrefresh").addEventListener("click", function(){ aqLoad(); });
+  document.getElementById("aqrefresh").addEventListener("click", function(){ aqLoad(true); });
 })();
 
-ADMIN.init({ page:"home", onReady:function(){ setTimeout(aqLoad, 0); loadBc(); loadOb(); loadCoi(); loadRec(); } });
+ADMIN.init({ page:"home", onReady:function(){ setTimeout(aqLoad, 0); } });
 })();
 </script>
 </body>
